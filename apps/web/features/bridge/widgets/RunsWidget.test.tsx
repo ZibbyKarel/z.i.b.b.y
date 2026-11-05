@@ -19,14 +19,13 @@ vi.mock("../../workflows", () => ({ useWorkflowsQuery: () => ({ data: [] }) }));
 const widget: BridgeWidget = { id: "w-r", type: "runs", x: 0, y: 0, w: 4, h: 8 };
 const props: BridgeWidgetProps = {
   widget,
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
 };
 const run = (runId: string, status: string) => ({
   runId,

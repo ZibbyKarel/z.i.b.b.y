@@ -17,16 +17,14 @@ interface Report {
   refreshing?: boolean;
   /** The fetch failed — an error state is shown, so the widget must not collapse as empty. */
   failed?: boolean;
-  /** The widget has its own affordance when empty (e.g. an add button), so it must never collapse. */
-  keepOpen?: boolean;
 }
 
 /** Feeds the frame: emptiness (never while loading) and the count / YOU / aside header info. */
 export function useWidgetReport(
-  { loading, count, you, aside, onRefresh, refreshing, failed, keepOpen }: Report,
+  { loading, count, you, aside, onRefresh, refreshing, failed }: Report,
   { onEmptyChange, onCountChange }: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">,
 ) {
-  const empty = !loading && !count && !failed && !keepOpen;
+  const empty = !loading && !count && !failed;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
   useEffect(
     () => onCountChange?.({ count, you, loading, aside, onRefresh, refreshing }),

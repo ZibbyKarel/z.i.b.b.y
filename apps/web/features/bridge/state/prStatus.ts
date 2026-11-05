@@ -65,13 +65,6 @@ export function prStatus(pr: InboxPr): { tone: PrTone; label: string } {
 
 /** The PR card's CI slot. A merge conflict takes it: it blocks the merge just like red CI. */
 export type PrCiState = "conflict" | "failing" | "running" | "passing" | "none";
-export const PR_CI_STATES: readonly PrCiState[] = [
-  "conflict",
-  "failing",
-  "running",
-  "passing",
-  "none",
-];
 
 export function prCiState(pr: InboxPr): PrCiState {
   if (pr.mergeable === false) return "conflict";
@@ -86,12 +79,18 @@ export function prCiState(pr: InboxPr): PrCiState {
  * review (a request, a re-request, or new commits since my approval) > changes requested > waiting.
  */
 export type PrReviewState = "review" | "approved" | "changes" | "waiting";
-export const PR_REVIEW_STATES: readonly PrReviewState[] = [
-  "review",
-  "changes",
-  "approved",
-  "waiting",
-];
+
+/** The review filter: `review` (mine to do) and `waiting` (on others) are one option, "waiting". */
+export type PrReviewFilter = "waiting" | "changes" | "approved";
+export const PR_REVIEW_FILTERS: readonly PrReviewFilter[] = ["waiting", "changes", "approved"];
+
+export function prReviewFilter(state: PrReviewState): PrReviewFilter {
+  return state === "review" ? "waiting" : state;
+}
+
+/** The CI filter offers only the states that need a look; running / none stay card-icon only. */
+export type PrCiFilter = "conflict" | "failing" | "passing";
+export const PR_CI_FILTERS: readonly PrCiFilter[] = ["conflict", "failing", "passing"];
 
 /** My approval no longer covers the head: commits landed after it. */
 export function prApprovalStale(pr: InboxPr): boolean {

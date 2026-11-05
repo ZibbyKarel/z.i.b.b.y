@@ -134,17 +134,28 @@ describe("useBridgeState", () => {
     );
   });
 
-  it("configure sets one widget's scope and persists", () => {
+  it("updateWidget replaces one widget and persists", () => {
     const { result } = renderHook(() => useBridgeState());
     act(() => result.current.applyPreset("REVIEW"));
     act(() => result.current.add("teamKb"));
-    const id = result.current.layout.find((w) => w.type === "teamKb")?.id ?? "";
+    const w = result.current.layout.find((x) => x.type === "teamKb");
+    if (!w) throw new Error("teamKb missing");
     setBridge.mockClear();
-    act(() => result.current.configure(id, { teamId: "t" }));
-    expect(result.current.saved["REVIEW"]?.find((w) => w.id === id)?.scope).toEqual({
-      teamId: "t",
+    act(() => result.current.updateWidget(w.id, { ...w, scope: { teamId: "t" }, title: "Sales" }));
+    expect(result.current.saved["REVIEW"]?.find((x) => x.id === w.id)).toMatchObject({
+      scope: { teamId: "t" },
+      title: "Sales",
     });
     expect(setBridge).toHaveBeenCalledTimes(1);
+  });
+
+  it("add creates a second instance of a type already on the board", () => {
+    const { result } = renderHook(() => useBridgeState());
+    act(() => result.current.add("prs"));
+    act(() => result.current.add("prs"));
+    const prs = result.current.layout.filter((w) => w.type === "prs").map((w) => w.id);
+    expect(new Set(prs).size).toBe(prs.length);
+    expect(prs.length).toBeGreaterThanOrEqual(2);
   });
 
   it("applyPreset always works", () => {

@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { Icon } from "../Icon/Icon";
+import { Typography } from "../Typography/Typography";
 import { StatCell, StatCellGrid } from "./StatCell";
 
 const meta: Meta<typeof StatCell> = {
@@ -19,9 +21,32 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-4">
       <StatCellGrid>
-        <StatCell label="REVIEW" tone="blocked" value="CHANGES REQUESTED" />
-        <StatCell label="CHECKS" tone="working" value="3 / 4" />
-        <StatCell label="CHANGES" tone="faint" value="+120 −14" />
+        <StatCell
+          icon={<Icon name="check" size="sm" tone="ok" />}
+          label="REVIEW"
+          tone="done"
+          value="APPROVED"
+        />
+        <StatCell
+          icon={<Icon name="ok" size="sm" tone="ok" />}
+          label="CHECKS"
+          tone="done"
+          value="PASSING"
+        />
+        <StatCell
+          label="CHANGES"
+          tone="faint"
+          value={
+            <>
+              <Typography as="span" tone="ok" type="title">
+                +120
+              </Typography>{" "}
+              <Typography as="span" tone="bad" type="title">
+                −14
+              </Typography>
+            </>
+          }
+        />
       </StatCellGrid>
       <StatCellGrid columns="fit">
         <StatCell

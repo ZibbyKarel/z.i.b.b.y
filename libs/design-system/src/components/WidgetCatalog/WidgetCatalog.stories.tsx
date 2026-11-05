@@ -8,10 +8,20 @@ const meta: Meta<typeof WidgetCatalog> = {
     title: "WIDGET CATALOG",
     addLabel: "ADD",
     closeLabel: "Close",
-    emptyText: "Every widget is already on the board.",
+    emptyText: "No widgets available.",
     entries: [
-      { id: "prs", label: "PULL REQUESTS", description: "Agent PRs and your own, with stacks" },
-      { id: "runs", label: "RUNNING NOW", description: "Tasks moving through a workflow" },
+      {
+        id: "prs",
+        label: "PULL REQUESTS",
+        description: "Agent PRs and your own, with stacks",
+        icon: "branch",
+      },
+      {
+        id: "runs",
+        label: "RUNNING NOW",
+        description: "Tasks moving through a workflow",
+        icon: "play",
+      },
     ],
     onAdd: () => {},
     onClose: () => {},
@@ -23,4 +33,9 @@ export default meta;
 type Story = StoryObj<typeof WidgetCatalog>;
 
 export const Overview: Story = {};
+export const WithoutIcons: Story = {
+  args: {
+    entries: [{ id: "prs", label: "PULL REQUESTS", description: "Agent PRs and your own" }],
+  },
+};
 export const Empty: Story = { args: { entries: [] } };

@@ -1,5 +1,11 @@
 import type { InboxPr } from "@zibby/contracts";
-import { AnchoredSheetTestId, StackCrumbsTestId, StatCellTestId } from "@zibby/design-system";
+import {
+  AnchoredSheetTestId,
+  IconTestId,
+  StackCrumbsTestId,
+  StatCellTestId,
+  TypographyTestId,
+} from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
 import { ChatProvider, useChat } from "../../../chat/ChatContext";
@@ -166,6 +172,45 @@ describe("PrSheet content", () => {
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`)).toHaveTextContent("#11");
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`)).toHaveTextContent("#10");
     expect(screen.getByTestId("pr-diff")).toBeInTheDocument();
+  });
+
+  it("shows green approved/passing cells with status icons and coloured +/- counts", () => {
+    hooks.diff = ["diff --git a/x.ts b/x.ts", "@@ -1 +1,2 @@", "-a", "+b", "+c"].join("\n");
+    show(pr(30, { ci: "passing", review: "approved" }));
+    const [review, checks, changes] = screen.getAllByTestId(StatCellTestId.Root) as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement,
+    ];
+    for (const cell of [review, checks]) {
+      expect(cell.className).toContain("border-b-state-done");
+      expect(within(cell).getByTestId(StatCellTestId.Icon)).toContainElement(
+        within(cell).getByTestId(IconTestId.Root),
+      );
+      expect(within(cell).getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-ok");
+    }
+    expect(within(changes).queryByTestId(StatCellTestId.Icon)).toBeNull();
+    const [add, del] = within(changes).getAllByTestId(TypographyTestId.Root);
+    expect(add).toHaveTextContent("+2");
+    expect(add?.className).toContain("text-ok");
+    expect(del).toHaveTextContent("−1");
+    expect(del?.className).toContain("text-bad");
+  });
+
+  it("uses bad/run icons for failing/pending checks", () => {
+    const { unmount } = show(pr(31, { ci: "failing" }));
+    expect(
+      within(screen.getAllByTestId(StatCellTestId.Root)[1]!)
+        .getByTestId(IconTestId.Root)
+        .getAttribute("class"),
+    ).toContain("text-bad");
+    unmount();
+    show(pr(32, { ci: "pending" }));
+    expect(
+      within(screen.getAllByTestId(StatCellTestId.Root)[1]!)
+        .getByTestId(IconTestId.Root)
+        .getAttribute("class"),
+    ).toContain("text-run");
   });
 
   it("title links to GitHub in a new tab; no open-on-GitHub button", () => {

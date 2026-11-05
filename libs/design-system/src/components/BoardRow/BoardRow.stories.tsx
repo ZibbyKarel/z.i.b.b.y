@@ -17,7 +17,7 @@ const meta: Meta<typeof BoardRow> = {
     },
     padding: { control: "radio", options: ["row", "pr"] },
   },
-  args: { tone: "blocked", selected: false, needsYou: false },
+  args: { tone: "blocked", bar: true, selected: false, needsYou: false },
   decorators: [(Story) => <div className="w-[420px] bg-panel">{Story()}</div>],
 };
 export default meta;
@@ -102,3 +102,12 @@ export const Overview: Story = {
 };
 
 export const Playground: Story = { render: (args) => <BoardRow {...args}>{issue()}</BoardRow> };
+
+/** `bar={false}`: the row without its left status bar (PR cards). */
+export const NoBar: Story = {
+  render: (args) => (
+    <BoardRow {...args} bar={false}>
+      {issue()}
+    </BoardRow>
+  ),
+};

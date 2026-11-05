@@ -2,10 +2,13 @@ import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/
 import { describe, expect, it } from "vitest";
 import type { RunView } from "../../runs/run";
 import {
+  type PrFilterPick,
   type PrNodeVm,
   compareIssues,
   formatUsd,
   issueGroups,
+  prTeamLabel,
+  prTeams,
   prTree,
   runRows,
   spendTodayUsd,
@@ -181,7 +184,7 @@ describe("pull requests", () => {
       pr({ number: 3, headRef: "c", baseRef: "b", mergeable: false }),
       pr({ number: 4, headRef: "d", baseRef: "main" }),
     ];
-    const { nodes, total, you, counts } = prTree("p", all, none, { ci: "conflict" }, ago);
+    const { nodes, total, you, counts } = prTree("p", all, none, { ci: ["conflict"] }, ago);
     expect(flat(nodes)).toEqual([
       ["#1", 0],
       ["#2", 1],
@@ -191,11 +194,72 @@ describe("pull requests", () => {
     expect(muted(nodes[0])).toBe(true);
     expect(muted(nodes[0]?.kids[0])).toBe(true);
     expect(muted(nodes[0]?.kids[0]?.kids[0])).toBe(false);
-    expect(prTree("p", all, none, { review: "approved" }, ago).nodes).toEqual([]);
+    expect(prTree("p", all, none, { review: ["approved"] }, ago).nodes).toEqual([]);
     // counts and totals describe the whole listed set, whatever is picked
     expect({ total, you }).toEqual({ total: 4, you: 1 });
-    expect(counts.review).toEqual({ review: 4, changes: 0, approved: 0, waiting: 0 });
-    expect(counts.ci).toEqual({ conflict: 1, failing: 0, running: 0, passing: 3, none: 0 });
+    // "waiting" merges the review and waiting states
+    expect(counts.review).toEqual({ waiting: 4, changes: 0, approved: 0 });
+    expect(counts.ci).toEqual({ conflict: 1, failing: 0, passing: 3 });
+  });
+
+  it("multi-pick: OR within a group, AND across groups, empty group = no filter", () => {
+    const all = [
+      pr({ number: 1, mergeable: false }),
+      pr({ number: 2, ci: "failing" }),
+      pr({ number: 3, ci: "pending" }),
+      pr({ number: 4, ci: "failing", review: "changes-requested" }),
+    ];
+    const nums = (pick: PrFilterPick) =>
+      prTree("p", all, none, pick, ago).nodes.map((n) => n.row.number);
+    expect(nums({ ci: ["conflict", "failing"] })).toEqual(["#1", "#2", "#4"]);
+    expect(nums({ ci: ["conflict", "failing"], review: ["changes"] })).toEqual(["#4"]);
+    expect(nums({ ci: [], review: [] })).toEqual(["#1", "#2", "#3", "#4"]);
+  });
+
+  it("the waiting filter covers both review and waiting states", () => {
+    const all = [
+      pr({ number: 1 }), // mine, no review yet -> review
+      pr({ number: 2, bucket: "reviewed", myReview: "commented" }), // someone else's -> waiting
+      pr({ number: 3, review: "approved" }),
+    ];
+    const { nodes, counts } = prTree("p", all, none, { review: ["waiting"] }, ago);
+    expect(nodes.map((n) => n.row.number).sort()).toEqual(["#1", "#2"]);
+    expect(nodes.map((n) => n.row.review).sort()).toEqual(["review", "waiting"]);
+    expect(counts.review.waiting).toBe(2);
+  });
+
+  it("mine keeps others' ancestors and descendants of my PRs as muted context", () => {
+    const other = { bucket: "to-review", author: "jana" } as const;
+    const all = [
+      pr({ number: 1, headRef: "a", baseRef: "main", ...other }), // ancestor of mine
+      pr({ number: 2, headRef: "b", baseRef: "a" }), // mine
+      pr({ number: 3, headRef: "c", baseRef: "b", ...other }), // descendant of mine
+      pr({ number: 4, headRef: "d", baseRef: "main", ...other }), // unrelated
+    ];
+    const { nodes } = prTree("p", all, none, { mine: true }, ago);
+    expect(flat(nodes)).toEqual([
+      ["#1", 0],
+      ["#2", 1],
+      ["#3", 2],
+    ]);
+    expect(nodes[0]?.row.muted).toBe(true);
+    expect(nodes[0]?.kids[0]?.row.muted).toBe(false);
+    expect(nodes[0]?.kids[0]?.kids[0]?.row.muted).toBe(true);
+  });
+
+  it("teams match on reviewTeam; prTeams lists distinct slugs plus extras, sorted", () => {
+    const all = [
+      pr({ number: 1, reviewTeam: "o/blue" }),
+      pr({ number: 2, reviewTeam: "o/red" }),
+      pr({ number: 3 }),
+      pr({ number: 4, reviewTeam: "o/blue" }),
+    ];
+    const nums = (teams: string[]) =>
+      prTree("p", all, none, { teams }, ago).nodes.map((n) => n.row.number);
+    expect(nums(["o/blue"])).toEqual(["#1", "#4"]);
+    expect(nums(["o/blue", "o/red"])).toEqual(["#1", "#2", "#4"]);
+    expect(prTeams(all, ["o/green"])).toEqual(["o/blue", "o/green", "o/red"]);
+    expect(prTeamLabel("o/blue")).toBe("blue");
   });
 
   it("applies the inbox filters before anything else", () => {

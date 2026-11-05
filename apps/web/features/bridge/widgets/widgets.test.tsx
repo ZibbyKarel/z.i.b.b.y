@@ -15,6 +15,7 @@ import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
+import { PrFilterControlsTestId } from "./PrFilterControls";
 import { PrsWidget, PrsWidgetTestId } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
@@ -84,14 +85,13 @@ const widget = (id: string, type: BridgeWidget["type"]): BridgeWidget => ({
 });
 const setup = (over: Partial<BridgeWidgetProps> & { widget: BridgeWidget }) => {
   const props: BridgeWidgetProps = {
-    editing: false,
+    adding: false,
     onEmptyChange: vi.fn(),
     onCountChange: vi.fn(),
     selection: null,
     onOpen: vi.fn(),
     epicClosed: {},
     onEpicToggle: vi.fn(),
-    onScopeChange: vi.fn(),
     ...over,
   };
   return props;
@@ -326,7 +326,7 @@ describe("PrsWidget", () => {
     expect(screen.getAllByTestId(IconBadgeTestId.Root)).toHaveLength(1);
   });
 
-  it("the filter picks one state; the picked PR keeps its stack as muted context", async () => {
+  it("the filter multi-selects; the picked PR keeps its stack as muted context; deselect unfilters", async () => {
     d.prs = [
       pr(1, { headRef: "a", baseRef: "main" }),
       pr(2, { headRef: "b", baseRef: "a", mergeable: false }),
@@ -336,20 +336,57 @@ describe("PrsWidget", () => {
     renderWithProviders(<PrsWidget {...props} />);
     const conflict = screen.getByTestId(`${ButtonGroupTestId.Option}-conflict`);
     expect(conflict).toHaveTextContent("Konflikt1");
+    expect(screen.queryByText("Vše")).not.toBeInTheDocument();
+    // review (clock) and waiting merge into one option
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-waiting`)).toHaveTextContent("Čeká3");
+    expect(screen.queryByTestId(`${ButtonGroupTestId.Option}-running`)).not.toBeInTheDocument();
 
     await userEvent.click(conflict);
     expect(conflict).toHaveAttribute("aria-pressed", "true");
-    const rows = screen.getAllByTestId(BoardRowTestId.Root);
-    expect(rows).toHaveLength(2);
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2);
     expect(screen.getByText("PR 1").closest("button")).toHaveClass("opacity-50");
     expect(screen.getByText("PR 2").closest("button")).not.toHaveClass("opacity-50");
     // the header still counts the whole set, so the widget never collapses under a pick
     expect(props.onCountChange).toHaveBeenLastCalledWith(expect.objectContaining({ count: 3 }));
 
-    await userEvent.click(
-      screen.getAllByTestId(`${ButtonGroupTestId.Option}-all`)[1] as HTMLElement,
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`));
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2); // OR within the group
+
+    await userEvent.click(conflict);
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`));
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(3); // empty = unfiltered
+  });
+
+  it("starts from widget.prFilters and resets to them when they change", async () => {
+    d.prs = [pr(1), pr(2, { bucket: "to-review", author: "jana" })];
+    const props = setup({ widget: { ...widget("w", "prs"), prFilters: { mine: true } } });
+    const { rerender } = renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(1);
+    expect(screen.getByTestId(PrFilterControlsTestId.Mine)).toHaveAttribute("aria-pressed", "true");
+
+    await userEvent.click(screen.getByTestId(PrFilterControlsTestId.Mine));
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2);
+
+    rerender(<PrsWidget {...props} widget={{ ...props.widget, prFilters: { ci: ["failing"] } }} />);
+    expect(screen.getByTestId(PrFilterControlsTestId.Mine)).toHaveAttribute(
+      "aria-pressed",
+      "false",
     );
-    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(3);
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`)).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("hides the team control without teams and offers them from the PRs", () => {
+    d.prs = [pr(1)];
+    const props = setup({ widget: widget("w", "prs") });
+    const first = renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.queryByLabelText("Týmy")).not.toBeInTheDocument();
+    first.unmount();
+    d.prs = [pr(1, { reviewTeam: "o/blue" })];
+    renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.getByLabelText("Týmy")).toBeInTheDocument();
   });
 
   it("is empty with no PRs", () => {

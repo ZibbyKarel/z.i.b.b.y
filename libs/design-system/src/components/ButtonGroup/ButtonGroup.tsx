@@ -36,15 +36,8 @@ export interface ButtonGroupOption {
   trailing?: ReactNode;
 }
 
-export interface ButtonGroupProps {
+export interface ButtonGroupBaseProps {
   options: ButtonGroupOption[];
-  /** The active option `id`, or `""` for no selection. */
-  value: string;
-  /** Fires with the clicked option `id`, or `""` when the active option is
-   *  toggled off (only possible when `deselectable`). */
-  onChange: (value: string) => void;
-  /** Allow clicking the active option to clear the selection (emits `""`). */
-  deselectable?: boolean;
   onAdd?: () => void;
   /** Accessible label for the add-option affordance. */
   addLabel?: string;
@@ -56,18 +49,48 @@ export interface ButtonGroupProps {
   ariaDescribedby?: string;
 }
 
-/** Generic segmented button group — a row of mutually exclusive toggle buttons. */
+export type ButtonGroupProps = ButtonGroupBaseProps &
+  (
+    | {
+        multiple?: false;
+        /** The active option `id`, or `""` for no selection. */
+        value: string;
+        /** Fires with the clicked option `id`, or `""` when the active option is
+         *  toggled off (only possible when `deselectable`). */
+        onChange: (value: string) => void;
+        /** Allow clicking the active option to clear the selection (emits `""`). */
+        deselectable?: boolean;
+      }
+    | {
+        multiple: true;
+        /** Selected option ids; empty = nothing selected. */
+        value: readonly string[];
+        /** Fires with the new selected ids (in `options` order) after a toggle. */
+        onChange: (value: string[]) => void;
+      }
+  );
+
+/** Generic segmented button group — mutually exclusive toggle buttons, or a multiselect with `multiple`. */
 export function ButtonGroup({
   options,
-  value,
-  onChange,
-  deselectable = false,
   onAdd,
   addLabel = "Přidat",
   ariaLabel,
   ariaLabelledby,
   ariaDescribedby,
+  ...selection
 }: ButtonGroupProps) {
+  const isActive = (id: string) =>
+    selection.multiple ? selection.value.includes(id) : selection.value === id;
+  const select = (id: string, active: boolean) => {
+    if (selection.multiple) {
+      selection.onChange(
+        options.map((o) => o.id).filter((x) => (x === id ? !active : selection.value.includes(x))),
+      );
+    } else {
+      selection.onChange(selection.deselectable && active ? "" : id);
+    }
+  };
   return (
     <div
       aria-describedby={ariaDescribedby}
@@ -79,7 +102,7 @@ export function ButtonGroup({
     >
       <Stack inline align="center" direction="row" gap="25">
         {options.map((o) => {
-          const active = value === o.id;
+          const active = isActive(o.id);
           return (
             <button
               aria-pressed={active}
@@ -92,7 +115,7 @@ export function ButtonGroup({
               )}
               data-testid={`${ButtonGroupTestId.Option}-${o.id}`}
               key={o.id}
-              onClick={() => onChange(deselectable && active ? "" : o.id)}
+              onClick={() => select(o.id, active)}
               type="button"
             >
               {o.leading && (

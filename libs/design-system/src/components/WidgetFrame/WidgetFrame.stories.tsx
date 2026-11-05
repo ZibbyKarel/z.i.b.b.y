@@ -11,7 +11,6 @@ const meta: Meta<typeof WidgetFrame> = {
     you: "02 YOU",
     style: { left: 16, top: 16, width: 360, height: 220 },
     onToggleCollapse: () => {},
-    onRemove: () => {},
     children: <div className="p-4 text-[13px]">Rows go here</div>,
   },
   decorators: [(Story) => <div className="relative h-[260px]">{Story()}</div>],
@@ -23,6 +22,6 @@ type Story = StoryObj<typeof WidgetFrame>;
 export const View: Story = {};
 export const Collapsed: Story = { args: { collapsed: true } };
 export const EmptyAllClear: Story = { args: { empty: true, aside: "ALL CLEAR" } };
-export const Configurable: Story = { args: { onConfigure: () => {}, onRemove: () => {} } };
-export const Configuring: Story = { args: { ...Configurable.args, configuring: true } };
+export const Configurable: Story = { args: { onAdd: () => {}, onSettings: () => {} } };
+export const Adding: Story = { args: { ...Configurable.args, adding: true } };
 export const Dragging: Story = { args: { dragging: true, sizeLabel: "4 × 6" } };

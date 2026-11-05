@@ -24,6 +24,19 @@ describe("WidgetCatalog", () => {
     await userEvent.click(screen.getByTestId(WidgetCatalogTestId.Close));
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByTestId(WidgetCatalogTestId.Empty)).toBeNull();
+    expect(screen.queryByTestId(`${WidgetCatalogTestId.Icon}-prs`)).toBeNull();
+  });
+
+  it("shows an entry's icon when given", () => {
+    render(
+      <WidgetCatalog
+        {...base}
+        entries={[{ id: "prs", label: "PULL REQUESTS", description: "Agent PRs", icon: "branch" }]}
+        onAdd={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId(`${WidgetCatalogTestId.Icon}-prs`)).toBeInTheDocument();
   });
 
   it("shows the empty text when nothing is left to add", () => {

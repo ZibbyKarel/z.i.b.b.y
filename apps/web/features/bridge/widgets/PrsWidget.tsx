@@ -5,7 +5,6 @@ import {
   BoardLine,
   BoardRow,
   BoardText,
-  ButtonGroup,
   Container,
   FilterBar,
   Icon,
@@ -21,14 +20,9 @@ import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxPrsQuery } from "../../inbox/queries";
-import {
-  PR_CI_STATES,
-  PR_REVIEW_STATES,
-  type PrCiState,
-  type PrReviewState,
-} from "../state/prStatus";
-import { type PrFilterPick, type PrNodeVm, type PrRowVm, prTree } from "../state/rows";
+import { type PrFilterPick, type PrNodeVm, type PrRowVm, prTeams, prTree } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
+import { CI_ICON, PrFilterControls, REVIEW_ICON } from "./PrFilterControls";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
@@ -37,21 +31,6 @@ export enum PrsWidgetTestId {
   Ci = "prs-widget-ci",
   Review = "prs-widget-review",
 }
-
-const CI_ICON: Record<PrCiState, { name: IconName; tone: IconTone }> = {
-  conflict: { name: "branch", tone: "bad" },
-  failing: { name: "x", tone: "bad" },
-  running: { name: "run", tone: "run" },
-  passing: { name: "ok", tone: "ok" },
-  none: { name: "dots", tone: "faint" },
-};
-
-const REVIEW_ICON: Record<PrReviewState, { name: IconName; tone: IconTone }> = {
-  review: { name: "search", tone: "accent" },
-  changes: { name: "edit", tone: "warn" },
-  approved: { name: "check", tone: "ok" },
-  waiting: { name: "wait", tone: "faint" },
-};
 
 /** Stack levels drawn as indentation; deeper PRs line up with the last one. */
 const MAX_INDENT = 3;
@@ -76,7 +55,7 @@ function StateIcon({
 /**
  * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters) as
  * one flat list, newest first, each stack kept together (base -> head, indented behind a rail).
- * The filter row above narrows by review / CI state and doubles as the legend of the card icons.
+ * The filter row above narrows by review / CI state, mine and team and doubles as the legend of the card icons.
  * No action buttons here; they live in the detail sheet.
  */
 export function PrsWidget({
@@ -95,7 +74,20 @@ export function PrsWidget({
   // A failed sync just re-enables the button; the previous data stays on screen.
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
-  const [pick, setPick] = useState<PrFilterPick>({});
+  const defaults = widget.prFilters;
+  const [pick, setPick] = useState<PrFilterPick>(defaults ?? {});
+  // Saving new defaults in the widget settings resets the local pick to them. Keyed by content:
+  // the parent may rebuild the object without the defaults having changed.
+  const defaultsKey = JSON.stringify(defaults ?? {});
+  const [seenKey, setSeenKey] = useState(defaultsKey);
+  if (seenKey !== defaultsKey) {
+    setSeenKey(defaultsKey);
+    setPick(defaults ?? {});
+  }
+  const teams = useMemo(
+    () => prTeams(prsQuery.data?.prs ?? [], defaults?.teams),
+    [prsQuery.data, defaults?.teams],
+  );
 
   const { nodes, counts, total, you } = useMemo(
     () => prTree(widget.id, prsQuery.data?.prs ?? [], filters, pick, (iso) => compactAgo(iso, now)),
@@ -117,6 +109,7 @@ export function PrsWidget({
 
   const card = (r: PrRowVm) => (
     <BoardRow
+      bar={false}
       key={r.key}
       muted={r.muted}
       needsYou={r.needsYou}
@@ -187,44 +180,11 @@ export function PrsWidget({
     );
   };
 
-  const option = <K extends string>(
-    id: K,
-    label: string,
-    icon: { name: IconName; tone: IconTone },
-    count: number,
-  ) => ({
-    id,
-    label,
-    leading: <Icon name={icon.name} size="sm" tone={icon.tone} />,
-    trailing: String(count),
-  });
-
   return (
     <>
       <Container padding={["100", "150"]}>
         <FilterBar>
-          <ButtonGroup
-            ariaLabel={t("filter.review")}
-            onChange={(v) =>
-              setPick((p) => ({ ...p, review: PR_REVIEW_STATES.find((s) => s === v) }))
-            }
-            options={[
-              { id: "all", label: t("filter.all") },
-              ...PR_REVIEW_STATES.map((s) =>
-                option(s, t(`review.${s}`), REVIEW_ICON[s], counts.review[s]),
-              ),
-            ]}
-            value={pick.review ?? "all"}
-          />
-          <ButtonGroup
-            ariaLabel={t("filter.ci")}
-            onChange={(v) => setPick((p) => ({ ...p, ci: PR_CI_STATES.find((s) => s === v) }))}
-            options={[
-              { id: "all", label: t("filter.all") },
-              ...PR_CI_STATES.map((s) => option(s, t(`ci.${s}`), CI_ICON[s], counts.ci[s])),
-            ]}
-            value={pick.ci ?? "all"}
-          />
+          <PrFilterControls counts={counts} onChange={setPick} pick={pick} teams={teams} />
         </FilterBar>
       </Container>
       {nodes.map((n) => tree(n, 0))}

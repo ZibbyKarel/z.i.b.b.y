@@ -59,14 +59,13 @@ vi.mock("../../workflows/queries", () => ({
 const widget: BridgeWidget = { id: "w-qa", type: "quickActions", x: 0, y: 0, w: 4, h: 8 };
 const setup = (over: Partial<BridgeWidgetProps> = {}): BridgeWidgetProps => ({
   widget,
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
   ...over,
 });
 
@@ -124,15 +123,15 @@ describe("QuickActionsWidget", () => {
     expect(screen.getAllByTestId(BoardRowTestId.Root)[0]).toHaveTextContent("Zařazeno do fronty");
   });
 
-  it("not editing: no add form and no remove", () => {
+  it("not adding: no add form and no remove", () => {
     renderWithProviders(<QuickActionsWidget {...setup()} />);
     expect(screen.queryByTestId(QuickActionFormTestId.Submit)).toBeNull();
     expect(screen.queryByTestId(QuickActionsWidgetTestId.Remove)).toBeNull();
   });
 
-  it("editing: Remove drops only that action", async () => {
+  it("adding: Remove drops only that action", async () => {
     d.actions = [deploy, lint, { id: "a3", label: "Test", text: "t" }];
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.click(screen.getAllByTestId(QuickActionsWidgetTestId.Remove)[1] as HTMLElement);
     expect(d.set.mock.calls[0]?.[0]).toEqual({
       body: [deploy, { id: "a3", label: "Test", text: "t" }],
@@ -146,8 +145,8 @@ describe("QuickActionsWidget", () => {
     expect(d.create.mock.calls[0]?.[0].body).toMatchObject({ immediate: true });
   });
 
-  it("editing: checking Run immediately stores immediate: true on the added action", async () => {
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+  it("adding: checking Run immediately stores immediate: true on the added action", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "Now");
     await userEvent.type(screen.getByTestId("cl-input"), "do it");
     const box = screen.getByTestId(QuickActionFormTestId.Immediate);
@@ -157,8 +156,8 @@ describe("QuickActionsWidget", () => {
     expect((d.set.mock.calls[0]?.[0].body as QuickAction[])[2]).toMatchObject({ immediate: true });
   });
 
-  it("editing: Add appends a trimmed action with the chosen target", async () => {
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+  it("adding: Add appends a trimmed action with the chosen target", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), " Deploy ");
     await userEvent.type(screen.getByTestId("cl-input"), " Run deploy ");
     const target = screen.getByTestId(QuickActionFormTestId.Target);
@@ -176,8 +175,8 @@ describe("QuickActionsWidget", () => {
     expect(body[2]?.id).toMatch(/^qa-/);
   });
 
-  it("editing: blank label or text disables Add and a real submit is ignored", async () => {
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+  it("adding: blank label or text disables Add and a real submit is ignored", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "  ");
     await userEvent.type(screen.getByTestId("cl-input"), "something");
     expect(screen.getByTestId(QuickActionFormTestId.Submit)).toBeDisabled();
@@ -185,8 +184,8 @@ describe("QuickActionsWidget", () => {
     expect(d.set).not.toHaveBeenCalled();
   });
 
-  it("editing: the label forwards its length limit; the text field offers / skills", () => {
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+  it("adding: the label forwards its length limit; the text field offers / skills", () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     expect(screen.getByTestId(QuickActionFormTestId.Label)).toHaveAttribute("maxlength", "80");
     expect(screen.getByTestId(QuickActionFormTestId.Text)).toContainElement(
       screen.getByTestId("cl-input"),
@@ -194,25 +193,25 @@ describe("QuickActionsWidget", () => {
     expect(screen.getByTestId("cl-input")).toHaveAttribute("data-allow-skills", "true");
   });
 
-  it("editing: Enter in the text field adds the action like the Add button", async () => {
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+  it("adding: Enter in the text field adds the action like the Add button", async () => {
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "Standup");
     await userEvent.type(screen.getByTestId("cl-input"), "/zibby:standup-post{Enter}");
     const body = d.set.mock.calls[0]?.[0].body as QuickAction[];
     expect(body[2]).toMatchObject({ label: "Standup", text: "/zibby:standup-post" });
   });
 
-  it("editing: Add is disabled at 50 actions", async () => {
+  it("adding: Add is disabled at 50 actions", async () => {
     d.actions = Array.from({ length: 50 }, (_, i) => ({ id: `a${i}`, label: `L${i}`, text: "t" }));
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "x");
     await userEvent.type(screen.getByTestId("cl-input"), "y");
     expect(screen.getByTestId(QuickActionFormTestId.Submit)).toBeDisabled();
   });
 
-  it("editing: Remove and Add are disabled while the list mutation is pending", async () => {
+  it("adding: Remove and Add are disabled while the list mutation is pending", async () => {
     d.setPending = true;
-    renderWithProviders(<QuickActionsWidget {...setup({ editing: true })} />);
+    renderWithProviders(<QuickActionsWidget {...setup({ adding: true })} />);
     for (const b of screen.getAllByTestId(QuickActionsWidgetTestId.Remove))
       expect(b).toBeDisabled();
     await userEvent.type(screen.getByTestId(QuickActionFormTestId.Label), "x");
@@ -220,13 +219,13 @@ describe("QuickActionsWidget", () => {
     expect(screen.getByTestId(QuickActionFormTestId.Submit)).toBeDisabled();
   });
 
-  it("editing: Remove builds the next list from the latest cache, not the rendered prop", async () => {
+  it("adding: Remove builds the next list from the latest cache, not the rendered prop", async () => {
     const qc = new QueryClient();
     // A newer saved list than the (stale) rendered one: it already lacks "a2".
     qc.setQueryData(["quick-actions"], { status: 200, body: [deploy] });
     renderWithProviders(
       <QueryClientProvider client={qc}>
-        <QuickActionsWidget {...setup({ editing: true })} />
+        <QuickActionsWidget {...setup({ adding: true })} />
       </QueryClientProvider>,
     );
     await userEvent.click(screen.getAllByTestId(QuickActionsWidgetTestId.Remove)[0] as HTMLElement);
@@ -279,12 +278,11 @@ describe("QuickActionsWidget", () => {
     }
   });
 
-  it("never reports empty (keeps the New action button reachable)", () => {
+  it("reports empty without actions (the header + toggle adds them)", () => {
     d.actions = [];
     const empty = setup();
     const { unmount } = renderWithProviders(<QuickActionsWidget {...empty} />);
-    expect(empty.onEmptyChange).toHaveBeenLastCalledWith(false);
-    expect(screen.getByTestId(QuickActionsWidgetTestId.New)).toBeInTheDocument();
+    expect(empty.onEmptyChange).toHaveBeenLastCalledWith(true);
     unmount();
     d.actions = [lint];
     const one = setup();

@@ -3205,7 +3205,14 @@
       "open": "Otevřená"
     },
     "addWidget": "Přidat widget",
-    "configure": "Nastavit",
+    "add": "Přidat",
+    "settings": {
+      "open": "Nastavení",
+      "title": "Nastavení widgetu",
+      "name": "Název",
+      "remove": "Odebrat z dashboardu",
+      "removeConfirm": "Opravdu odebrat"
+    },
     "editLayout": "Upravit rozložení",
     "catalog": {
       "title": "Katalog widgetů",
@@ -3214,7 +3221,6 @@
       "empty": "Všechny widgety už jsou na plochě."
     },
     "collapse": "Sbalit",
-    "remove": "Odebrat widget",
     "resize": "Změnit velikost",
     "resizeNw": "vlevo nahoře",
     "resizeNe": "vpravo nahoře",
@@ -3238,10 +3244,10 @@
         "filter": {
           "review": "Filtrovat podle stavu review",
           "ci": "Filtrovat podle CI",
-          "all": "Vše"
+          "mine": "Jen moje",
+          "teams": "Týmy"
         },
         "review": {
-          "review": "Čeká na review",
           "changes": "Požadované změny",
           "approved": "Schváleno",
           "waiting": "Čeká"
@@ -3315,13 +3321,12 @@
         "textPlaceholder": "Co se má udělat…",
         "target": "Cíl",
         "add": "Přidat",
-        "new": "Nová akce",
         "cancel": "Zrušit",
         "targetMissing": "Cíl už neexistuje"
       },
       "teamKb": {
         "team": "Tým",
-        "pick": "Vyber tým v režimu úprav.",
+        "pick": "Vyber tým v nastavení widgetu.",
         "noKb": "Tým nemá znalostní bázi.",
         "questions": "Otevřené otázky",
         "decisions": "Dohody",

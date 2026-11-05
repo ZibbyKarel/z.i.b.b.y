@@ -114,6 +114,20 @@ describe("add/remove/view", () => {
     const l = addWidget(fromArr([["issues", 0, 0, 4, 5]]), "runs");
     expect(get(l, "runs")).toMatchObject({ x: 0, y: 5, w: 4, h: 6 });
   });
+  it("addWidget gives a second instance of a type the smallest free -N id", () => {
+    const one = addWidget([], "prs");
+    expect(one.map((w) => w.id)).toEqual(["prs"]);
+    const two = addWidget(one, "prs");
+    expect(two.map((w) => w.id)).toEqual(["prs", "prs-2"]);
+    expect(two.every((w) => w.type === "prs")).toBe(true);
+    const gap = addWidget(
+      two.filter((w) => w.id !== "prs"),
+      "prs",
+    );
+    expect(gap.map((w) => w.id).sort()).toEqual(["prs", "prs-2"]);
+    const three = addWidget(two, "prs");
+    expect(three.map((w) => w.id)).toContain("prs-3");
+  });
   it("removeWidget compacts", () => {
     const l = removeWidget(
       fromArr([

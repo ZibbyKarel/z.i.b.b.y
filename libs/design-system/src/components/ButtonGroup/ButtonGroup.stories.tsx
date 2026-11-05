@@ -29,6 +29,7 @@ export const Overview: Story = {
     const [value, setValue] = useState("home");
     const [valueAdd, setValueAdd] = useState("home");
     const [decision, setDecision] = useState("allow");
+    const [multi, setMulti] = useState<string[]>(["allow", "ask"]);
     return (
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
@@ -65,6 +66,18 @@ export const Overview: Story = {
             onChange={setDecision}
             options={decisionOptions}
             value={decision}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Typography mono type="subtitle" variant="tertiary">
+            multiple (click toggles; empty = nothing selected)
+          </Typography>
+          <ButtonGroup
+            multiple
+            ariaLabel="Decision multi filter"
+            onChange={setMulti}
+            options={decisionOptions}
+            value={multi}
           />
         </div>
       </div>

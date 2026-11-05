@@ -5,7 +5,7 @@ import { BoardRow, BoardText, Button, Container, Stack } from "@zibby/design-sys
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { type MouseEvent, useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
@@ -13,6 +13,7 @@ import { useCreateTodoMutation, useDeleteTodoMutation } from "../../todo/mutatio
 import { useTodoQuery } from "../../todo/queries";
 import { todoTaskTitle } from "../../todo/todoTaskTitle";
 import type { BridgeWidgetProps } from "./registry";
+import { useWidgetReport } from "./useWidgetReport";
 
 export enum TodoWidgetTestId {
   Add = "todo-widget-add",
@@ -24,12 +25,12 @@ export enum TodoWidgetTestId {
 const TODO_SCOPE_KINDS: readonly ScopeKind[] = ["company", "team", "project"];
 
 /**
- * TODO: the operator's quick notes (`/api/todo`) — rows (oldest first) above a chat-style
- * composer (`@` agents/workflows/departments, `#` company/team/project, `/` skills). The mention
+ * TODO: the operator's quick notes (`/api/todo`) — rows (oldest first); the header `+` toggle
+ * shows a chat-style composer below them (`@` agents/workflows/departments, `#` company/team/project, `/` skills). The mention
  * tokens stay in the note's text. Implement opens `/work/tasks/new` prefilled; the task created
  * there removes the note server-side.
  */
-export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidgetProps) {
+export function TodoWidget({ widget, adding, onEmptyChange, onCountChange }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.todo");
   const now = useNow(60_000);
   const router = useRouter();
@@ -42,9 +43,7 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
   const items = useMemo(() => query.data?.items ?? [], [query.data]);
   const loading = query.isPending;
   const count = loading ? undefined : items.length;
-  // Never empty: the composer is always available.
-  useEffect(() => onEmptyChange(false), [onEmptyChange]);
-  useEffect(() => onCountChange?.({ count, you: 0, loading }), [count, loading, onCountChange]);
+  useWidgetReport({ loading, count, you: 0 }, { onEmptyChange, onCountChange });
 
   const implement = (e: MouseEvent, item: TodoItem) => {
     e.stopPropagation();
@@ -93,39 +92,41 @@ export function TodoWidget({ widget, onEmptyChange, onCountChange }: BridgeWidge
           </BoardText>
         </BoardRow>
       ))}
-      <Container padding={["100", "150"]}>
-        <CommandLine
-          allowSkillMentions
-          hideLabel
-          multipleTargets
-          chrome={false}
-          key={composerKey}
-          label={t("input")}
-          onSubmit={(text) => {
-            const trimmed = text.trim();
-            if (trimmed && !create.isPending)
-              create.mutate(
-                { body: { text: trimmed } },
-                { onSuccess: () => setComposerKey((k) => k + 1) },
-              );
-          }}
-          placeholder={t("placeholder")}
-          renderTrailing={({ canSubmit, submit }) => (
-            <Button
-              data-testid={TodoWidgetTestId.Add}
-              disabled={!canSubmit || create.isPending}
-              intent="secondary"
-              onClick={submit}
-              size="sm"
-            >
-              {t("add")}
-            </Button>
-          )}
-          resetOnSubmit={false}
-          scopeKinds={TODO_SCOPE_KINDS}
-          showAttach={false}
-        />
-      </Container>
+      {adding ? (
+        <Container padding={["100", "150"]}>
+          <CommandLine
+            allowSkillMentions
+            hideLabel
+            multipleTargets
+            chrome={false}
+            key={composerKey}
+            label={t("input")}
+            onSubmit={(text) => {
+              const trimmed = text.trim();
+              if (trimmed && !create.isPending)
+                create.mutate(
+                  { body: { text: trimmed } },
+                  { onSuccess: () => setComposerKey((k) => k + 1) },
+                );
+            }}
+            placeholder={t("placeholder")}
+            renderTrailing={({ canSubmit, submit }) => (
+              <Button
+                data-testid={TodoWidgetTestId.Add}
+                disabled={!canSubmit || create.isPending}
+                intent="secondary"
+                onClick={submit}
+                size="sm"
+              >
+                {t("add")}
+              </Button>
+            )}
+            resetOnSubmit={false}
+            scopeKinds={TODO_SCOPE_KINDS}
+            showAttach={false}
+          />
+        </Container>
+      ) : null}
     </>
   );
 }

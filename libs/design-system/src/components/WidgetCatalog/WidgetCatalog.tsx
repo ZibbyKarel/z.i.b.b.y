@@ -1,4 +1,6 @@
 import type { Ref } from "react";
+import type { IconName } from "../../assets/icons";
+import { Icon } from "../Icon/Icon";
 
 export enum WidgetCatalogTestId {
   Root = "widget-catalog-root",
@@ -7,6 +9,8 @@ export enum WidgetCatalogTestId {
   Entry = "widget-catalog-entry",
   /** Suffixed with the entry id. */
   Add = "widget-catalog-add",
+  /** Suffixed with the entry id. */
+  Icon = "widget-catalog-icon",
   Empty = "widget-catalog-empty",
 }
 
@@ -14,6 +18,8 @@ export interface WidgetCatalogEntry {
   id: string;
   label: string;
   description: string;
+  /** Glyph of the entry (e.g. the widget type's icon), left of the label. */
+  icon?: IconName;
 }
 
 export interface WidgetCatalogProps {
@@ -29,7 +35,7 @@ export interface WidgetCatalogProps {
 }
 
 /**
- * Popover listing the widgets not yet on a board, each with an ADD button. Positioned
+ * Popover listing the widgets that can be added to a board, each with an ADD button. Positioned
  * `absolute` (top 54px / right 150px, z 40) — render it inside the screen's
  * `relative` root, below the `CommandBar`.
  */
@@ -67,6 +73,13 @@ export function WidgetCatalog({
           data-testid={`${WidgetCatalogTestId.Entry}-${entry.id}`}
           key={entry.id}
         >
+          {entry.icon ? (
+            <Icon
+              data-testid={`${WidgetCatalogTestId.Icon}-${entry.id}`}
+              name={entry.icon}
+              tone="dim"
+            />
+          ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
             <span className="text-[13px] font-medium">{entry.label}</span>
             <span className="text-[12px] text-ink-2">{entry.description}</span>

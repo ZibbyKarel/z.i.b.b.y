@@ -110,4 +110,44 @@ describe("ButtonGroup", () => {
     await userEvent.click(add);
     expect(onAdd).toHaveBeenCalledOnce();
   });
+
+  describe("multiple", () => {
+    const three: ButtonGroupOption[] = [...options, { id: "away", label: "away" }];
+    const opt = (id: string) => screen.getByTestId(`${ButtonGroupTestId.Option}-${id}`);
+
+    it("reflects membership in aria-pressed", () => {
+      render(<ButtonGroup multiple onChange={() => {}} options={three} value={["home", "away"]} />);
+      expect(opt("home")).toHaveAttribute("aria-pressed", "true");
+      expect(opt("work")).toHaveAttribute("aria-pressed", "false");
+      expect(opt("away")).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("toggles an option on", async () => {
+      const onChange = vi.fn();
+      render(<ButtonGroup multiple onChange={onChange} options={three} value={[]} />);
+      await userEvent.click(opt("work"));
+      expect(onChange).toHaveBeenCalledWith(["work"]);
+    });
+
+    it("toggles the last selected option off to an empty list", async () => {
+      const onChange = vi.fn();
+      render(<ButtonGroup multiple onChange={onChange} options={three} value={["work"]} />);
+      await userEvent.click(opt("work"));
+      expect(onChange).toHaveBeenCalledWith([]);
+    });
+
+    it("adds to an existing selection and keeps options order", async () => {
+      const onChange = vi.fn();
+      render(<ButtonGroup multiple onChange={onChange} options={three} value={["away"]} />);
+      await userEvent.click(opt("home"));
+      expect(onChange).toHaveBeenCalledWith(["home", "away"]);
+    });
+
+    it("removes one of several selected options", async () => {
+      const onChange = vi.fn();
+      render(<ButtonGroup multiple onChange={onChange} options={three} value={["home", "work"]} />);
+      await userEvent.click(opt("home"));
+      expect(onChange).toHaveBeenCalledWith(["work"]);
+    });
+  });
 });

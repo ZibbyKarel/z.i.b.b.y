@@ -21,14 +21,13 @@ vi.mock("../../integrations/queries", () => ({
 const widget: BridgeWidget = { id: "w-m", type: "mentions", x: 0, y: 0, w: 4, h: 8 };
 const setup = (): BridgeWidgetProps => ({
   widget,
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
 });
 
 const ago = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();

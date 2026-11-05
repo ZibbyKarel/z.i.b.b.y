@@ -15,9 +15,10 @@ export enum WidgetFrameTestId {
   /** The per-widget "sync" button (disabled + spinning while `refreshing`). */
   Refresh = "widget-frame-refresh",
   Collapse = "widget-frame-collapse",
-  Remove = "widget-frame-remove",
-  /** The per-widget "configure" toggle (aria-pressed). */
-  Configure = "widget-frame-configure",
+  /** The per-widget "add" (+) toggle (aria-pressed). */
+  Add = "widget-frame-add",
+  /** The per-widget settings (gear) button. */
+  Settings = "widget-frame-settings",
   Body = "widget-frame-body",
   /** Plain wrapper around the children inside the body (hidden while the empty state shows). */
   Content = "widget-frame-content",
@@ -47,7 +48,7 @@ export interface WidgetFrameProps {
   refreshLabel?: string;
   /** Body hidden, header only. */
   collapsed?: boolean;
-  /** Shows the ▾/▸ caret (for non-empty widgets) when provided. */
+  /** Shows the ▾/▸ caret (always the last header control) when provided. */
   onToggleCollapse?: () => void;
   collapseLabel?: string;
   /** Being dragged/resized: ink border, no geometry transition, raised z-index. */
@@ -62,14 +63,14 @@ export interface WidgetFrameProps {
   loadingLabel?: string;
   /** `W × H` label shown bottom-left while `dragging`. */
   sizeLabel?: string;
-  /** Shows the `×` (on header hover / focus-within). */
-  onRemove?: () => void;
-  removeLabel?: string;
-  /** Shows a header "configure" toggle (gear, `aria-pressed={configuring}`). */
-  onConfigure?: () => void;
-  /** The widget is being configured: toggle pressed, body forced open. */
-  configuring?: boolean;
-  configureLabel?: string;
+  /** Shows a header "add" toggle (`+`, `aria-pressed={adding}`). */
+  onAdd?: () => void;
+  /** The widget is in add mode: toggle pressed, body forced open. */
+  adding?: boolean;
+  addLabel?: string;
+  /** Shows a header settings button (gear). */
+  onSettings?: () => void;
+  settingsLabel?: string;
   /** Header pointer-down — start a move drag. */
   onMovePointerDown?: (e: PointerEvent<HTMLElement>) => void;
   /** Resize handle pointer-down — start a resize drag from `corner`. */
@@ -103,7 +104,7 @@ const headerBtn = "cursor-pointer bg-transparent px-[6px] py-[2px] text-ink-3 ho
 
 /**
  * A board widget's chrome: square panel, header (label · count · YOU badge · aside ·
- * caret · configure · ×), scrolling body, and the always-on affordances (header move
+ * refresh · add · settings · caret), scrolling body, and the always-on affordances (header move
  * cursor, four corner resize handles; size label while dragging). Positioned `absolute` — the caller supplies geometry via `style`
  * (fixed width × height) inside a `WidgetBoard`. Sizes read the `--bridge-*` density variables.
  */
@@ -124,11 +125,11 @@ export function WidgetFrame({
   loading = false,
   loadingLabel,
   sizeLabel,
-  onRemove,
-  removeLabel,
-  onConfigure,
-  configuring = false,
-  configureLabel,
+  onAdd,
+  adding = false,
+  addLabel,
+  onSettings,
+  settingsLabel,
   onMovePointerDown,
   onResizePointerDown,
   resizeLabel,
@@ -137,9 +138,8 @@ export function WidgetFrame({
   children,
   ref,
 }: WidgetFrameProps) {
-  const open = configuring || !collapsed;
-  const showEmpty = empty && !configuring;
-  const canToggle = !!onToggleCollapse && !empty;
+  const open = adding || !collapsed;
+  const showEmpty = empty && !adding;
 
   return (
     <section
@@ -203,7 +203,34 @@ export function WidgetFrame({
             </span>
           </button>
         ) : null}
-        {canToggle ? (
+        {onAdd ? (
+          <button
+            aria-label={addLabel ?? "Add"}
+            aria-pressed={adding}
+            className={cn(headerBtn, adding && "text-ink")}
+            data-testid={WidgetFrameTestId.Add}
+            onClick={onAdd}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={addLabel ?? "Add"}
+            type="button"
+          >
+            <Icon name="plus" size="sm" />
+          </button>
+        ) : null}
+        {onSettings ? (
+          <button
+            aria-label={settingsLabel ?? "Settings"}
+            className={headerBtn}
+            data-testid={WidgetFrameTestId.Settings}
+            onClick={onSettings}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={settingsLabel ?? "Settings"}
+            type="button"
+          >
+            <Icon name="gear" size="sm" />
+          </button>
+        ) : null}
+        {onToggleCollapse ? (
           <button
             aria-expanded={!collapsed}
             aria-label={collapseLabel}
@@ -215,36 +242,6 @@ export function WidgetFrame({
             type="button"
           >
             {collapsed ? "▸" : "▾"}
-          </button>
-        ) : null}
-        {onConfigure ? (
-          <button
-            aria-label={configureLabel ?? "Configure"}
-            aria-pressed={configuring}
-            className={cn(headerBtn, configuring && "text-ink")}
-            data-testid={WidgetFrameTestId.Configure}
-            onClick={onConfigure}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={configureLabel ?? "Configure"}
-            type="button"
-          >
-            <Icon name="gear" size="sm" />
-          </button>
-        ) : null}
-        {onRemove ? (
-          <button
-            aria-label={removeLabel}
-            className={cn(
-              headerBtn,
-              "opacity-0 focus-visible:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100",
-            )}
-            data-testid={WidgetFrameTestId.Remove}
-            onClick={onRemove}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={removeLabel}
-            type="button"
-          >
-            ×
           </button>
         ) : null}
       </header>

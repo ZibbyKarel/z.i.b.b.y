@@ -13,6 +13,7 @@ import {
 import type { BridgeState } from "../state/useBridgeState";
 import { type BridgeSelection, type BridgeWidgetInfo, WIDGETS } from "../widgets/registry";
 import { boardHeight, colWidth, widgetRect } from "../grid/positions";
+import { WidgetSettingsDialog } from "./WidgetSettingsDialog";
 import type { Density, ResizeCorner } from "@zibby/design-system";
 
 /** Pointer travel (px) before a header/corner press becomes a drag. */
@@ -26,13 +27,13 @@ interface HostProps {
   sheetSide: "left" | "right";
   onOpen: (selection: BridgeSelection) => void;
   empty: boolean;
-  configuring: boolean;
+  adding: boolean;
   info: BridgeWidgetInfo | undefined;
   style: { left: number; top: number; width: number; height: number };
   onEmpty: (id: string, empty: boolean) => void;
   onInfo: (id: string, info: BridgeWidgetInfo) => void;
-  onConfigure: (id: string) => void;
-  onRemove: (id: string) => void;
+  onToggleAdd: (id: string) => void;
+  onSettings: (id: string) => void;
   /** Omitted on the stacked phone board — no move/resize there. */
   onDragStart?: (id: string, mode: "move" | ResizeCorner, e: PointerEvent<HTMLElement>) => void;
 }
@@ -44,13 +45,13 @@ function BridgeWidgetHost({
   sheetSide,
   onOpen,
   empty,
-  configuring,
+  adding,
   info,
   style,
   onEmpty,
   onInfo,
-  onConfigure,
-  onRemove,
+  onToggleAdd,
+  onSettings,
   onDragStart,
 }: HostProps) {
   const t = useTranslations();
@@ -58,35 +59,29 @@ function BridgeWidgetHost({
   const def = WIDGETS[widget.type];
   const onEmptyChange = useCallback((e: boolean) => onEmpty(id, e), [onEmpty, id]);
   const onCountChange = useCallback((i: BridgeWidgetInfo) => onInfo(id, i), [onInfo, id]);
-  const { selection, configure } = state;
-  const onScopeChange = useCallback(
-    (scope: BridgeWidget["scope"]) => configure(id, scope),
-    [configure, id],
-  );
 
   return (
     <WidgetFrame
-      aside={empty && !configuring ? t("bridge.allClear") : info?.aside}
+      addLabel={t("bridge.add")}
+      adding={adding}
+      aside={empty && !adding ? t("bridge.allClear") : info?.aside}
       collapseLabel={t("bridge.collapse")}
       collapsed={!!state.collapsed[id]}
-      configureLabel={t("bridge.configure")}
-      configuring={configuring}
       count={info?.count === undefined ? undefined : pad2(info.count)}
       dragging={state.draggingId === id}
       empty={empty}
       emptyIcon={def.icon}
-      label={t(def.labelKey)}
+      label={widget.title ?? t(def.labelKey)}
       loading={info?.loading}
       loadingLabel={t("bridge.loading")}
-      onConfigure={def.configurable ? () => onConfigure(id) : undefined}
+      onAdd={def.addable ? () => onToggleAdd(id) : undefined}
       onMovePointerDown={onDragStart && ((e) => onDragStart(id, "move", e))}
       onRefresh={info?.onRefresh}
-      onRemove={() => onRemove(id)}
       onResizePointerDown={onDragStart && ((e, corner) => onDragStart(id, corner, e))}
+      onSettings={() => onSettings(id)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
       refreshLabel={t("bridge.refresh")}
       refreshing={info?.refreshing}
-      removeLabel={t("bridge.remove")}
       resizeCornerLabels={{
         nw: t("bridge.resizeNw"),
         ne: t("bridge.resizeNe"),
@@ -94,19 +89,19 @@ function BridgeWidgetHost({
         se: t("bridge.resizeSe"),
       }}
       resizeLabel={t("bridge.resize")}
+      settingsLabel={t("bridge.settings.open")}
       sizeLabel={`${widget.w} × ${widget.h}`}
       style={style}
       you={info?.you ? t("bridge.you", { n: pad2(info.you) }) : undefined}
     >
       <def.Component
-        editing={configuring}
+        adding={adding}
         epicClosed={state.epicClosed}
         onCountChange={onCountChange}
         onEmptyChange={onEmptyChange}
         onEpicToggle={state.setEpicClosed}
         onOpen={onOpen}
-        onScopeChange={onScopeChange}
-        selection={selection}
+        selection={state.selection}
         sheetSide={sheetSide}
         widget={widget}
       />
@@ -141,25 +136,21 @@ export function BridgeBoard({
   const dragging = draggingId !== null;
   const [width, setWidth] = useState(0);
   const [empty, setEmpty] = useState<Record<string, boolean>>({});
-  const [configuring, setConfiguring] = useState<Record<string, boolean>>({});
+  const [adding, setAdding] = useState<Record<string, boolean>>({});
+  /** Widget whose settings dialog is open. */
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [info, setInfo] = useState<Record<string, BridgeWidgetInfo>>({});
 
   const onEmpty = useCallback(
     (id: string, e: boolean) => setEmpty((p) => (p[id] === e ? p : { ...p, [id]: e })),
     [],
   );
-  // Forget the configure toggle of a removed widget (re-adding it starts unconfigured).
-  const onRemove = useCallback(
-    (id: string) => {
-      setConfiguring((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== id)));
-      state.remove(id);
-    },
-    [state],
-  );
-  const onConfigure = useCallback(
-    (id: string) => setConfiguring((p) => ({ ...p, [id]: !p[id] })),
-    [],
-  );
+  // Forget the + toggle of a removed widget (a re-added widget with the same id starts closed).
+  const onRemove = (id: string) => {
+    setAdding((p) => Object.fromEntries(Object.entries(p).filter(([k]) => k !== id)));
+    state.remove(id);
+  };
+  const onToggleAdd = useCallback((id: string) => setAdding((p) => ({ ...p, [id]: !p[id] })), []);
   const onInfo = useCallback(
     (id: string, i: BridgeWidgetInfo) =>
       setInfo((p) => {
@@ -179,12 +170,11 @@ export function BridgeBoard({
 
   const shown = useMemo(() => {
     if (dragging) return layout;
-    const shrink = new Set(
-      layout.filter((w) => !configuring[w.id] && collapsed[w.id]).map((w) => w.id),
-    );
+    const shrink = new Set(layout.filter((w) => !adding[w.id] && collapsed[w.id]).map((w) => w.id));
     const view = viewLayout(layout, shrink);
     return stacked ? stackLayout(view) : view;
-  }, [dragging, layout, collapsed, configuring, stacked]);
+  }, [dragging, layout, collapsed, adding, stacked]);
+  const settingsWidget = layout.find((w) => w.id === settingsId);
 
   const colW = colWidth(width, gap);
 
@@ -222,40 +212,51 @@ export function BridgeBoard({
   };
 
   return (
-    <WidgetBoard
-      colWidth={colW}
-      gap={gap}
-      height={Math.round(boardHeight(shown, rowHeight, gap, dragging ? 2 : 0))}
-      onMeasure={setWidth}
-    >
-      {width > 0
-        ? shown.map((w) => {
-            const r = widgetRect(w, colW, gap, rowHeight);
-            return (
-              <BridgeWidgetHost
-                configuring={!!configuring[w.id]}
-                empty={!!empty[w.id]}
-                info={info[w.id]}
-                key={w.id}
-                onConfigure={onConfigure}
-                onDragStart={stacked ? undefined : onDragStart}
-                onEmpty={onEmpty}
-                onInfo={onInfo}
-                onOpen={onOpen ?? state.setSelection}
-                onRemove={onRemove}
-                sheetSide={sheetSide}
-                state={state}
-                style={{
-                  left: Math.round(r.left),
-                  top: Math.round(r.top),
-                  width: Math.round(r.width),
-                  height: Math.round(r.height),
-                }}
-                widget={w}
-              />
-            );
-          })
-        : null}
-    </WidgetBoard>
+    <>
+      <WidgetBoard
+        colWidth={colW}
+        gap={gap}
+        height={Math.round(boardHeight(shown, rowHeight, gap, dragging ? 2 : 0))}
+        onMeasure={setWidth}
+      >
+        {width > 0
+          ? shown.map((w) => {
+              const r = widgetRect(w, colW, gap, rowHeight);
+              return (
+                <BridgeWidgetHost
+                  adding={!!adding[w.id]}
+                  empty={!!empty[w.id]}
+                  info={info[w.id]}
+                  key={w.id}
+                  onDragStart={stacked ? undefined : onDragStart}
+                  onEmpty={onEmpty}
+                  onInfo={onInfo}
+                  onOpen={onOpen ?? state.setSelection}
+                  onSettings={setSettingsId}
+                  onToggleAdd={onToggleAdd}
+                  sheetSide={sheetSide}
+                  state={state}
+                  style={{
+                    left: Math.round(r.left),
+                    top: Math.round(r.top),
+                    width: Math.round(r.width),
+                    height: Math.round(r.height),
+                  }}
+                  widget={w}
+                />
+              );
+            })
+          : null}
+      </WidgetBoard>
+      {settingsWidget ? (
+        <WidgetSettingsDialog
+          key={settingsWidget.id}
+          onClose={() => setSettingsId(null)}
+          onRemove={() => onRemove(settingsWidget.id)}
+          onSave={(next) => state.updateWidget(settingsWidget.id, next)}
+          widget={settingsWidget}
+        />
+      ) : null}
+    </>
   );
 }

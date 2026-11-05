@@ -6,7 +6,7 @@ import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import type { BridgeWidgetProps } from "./registry";
 import { ResolveQuestionDialogTestId } from "../../teams/components/ResolveQuestionDialog";
-import { TeamKbWidget, TeamKbWidgetTestId } from "./TeamKbWidget";
+import { TeamKbWidget, TeamKbWidgetSettings, TeamKbWidgetTestId } from "./TeamKbWidget";
 
 const d = vi.hoisted(() => ({
   teams: [] as { id: string; name: string }[],
@@ -42,14 +42,13 @@ const widget = (scope?: BridgeWidget["scope"]): BridgeWidget => ({
 });
 const setup = (over: Partial<BridgeWidgetProps> = {}): BridgeWidgetProps => ({
   widget: widget({ teamId: "devrel" }),
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
   ...over,
 });
 
@@ -64,24 +63,25 @@ beforeEach(() => {
 });
 
 describe("TeamKbWidget", () => {
-  it("without a scope shows the pick copy and reports empty outside edit mode", () => {
+  it("without a scope shows the pick copy and stays non-empty so it is visible", () => {
     const props = setup({ widget: widget() });
     renderWithProviders(<TeamKbWidget {...props} />);
     expect(screen.getByTestId(TeamKbWidgetTestId.Pick)).toHaveTextContent(
-      "Vyber tým v režimu úprav.",
+      "Vyber tým v nastavení widgetu.",
     );
-    expect(props.onEmptyChange).toHaveBeenLastCalledWith(true);
+    expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
-  it("in edit mode lists teams and choosing one calls onScopeChange", async () => {
-    const props = setup({ widget: widget(), editing: true });
-    renderWithProviders(<TeamKbWidget {...props} />);
+  it("settings lists teams and choosing one sets the draft scope", async () => {
+    const onChange = vi.fn();
+    const draft = widget();
+    renderWithProviders(<TeamKbWidgetSettings draft={draft} onChange={onChange} />);
     const select = screen.getByTestId(TeamKbWidgetTestId.TeamSelect);
     await userEvent.click(within(select).getByTestId(DropdownTestId.Trigger));
     const options = screen.getAllByTestId(DropdownTestId.Option);
     expect(options.map((o) => o.textContent)).toEqual(["DevRel", "Sales"]);
     await userEvent.click(options[1] as HTMLElement);
-    expect(props.onScopeChange).toHaveBeenCalledWith({ teamId: "sales" });
+    expect(onChange).toHaveBeenCalledWith({ ...draft, scope: { teamId: "sales" } });
   });
 
   it("a 404 digest shows the no-KB copy", () => {
@@ -132,7 +132,7 @@ describe("TeamKbWidget", () => {
       href: "/knowledge/vault?source=team%3Adevrel&note=meetings%2Fa%20b.md",
     });
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, aside: "DevRel" }),
+      expect.objectContaining({ count: 3, aside: undefined }),
     );
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
     expect(screen.queryByTestId(TeamKbWidgetTestId.TeamSelect)).not.toBeInTheDocument();
@@ -161,11 +161,6 @@ describe("TeamKbWidget", () => {
       await userEvent.click(screen.getByTestId(TeamKbWidgetTestId.Resolve));
       expect(screen.getByTestId(ResolveQuestionDialogTestId.Answer)).toBeInTheDocument();
       expect(props.onOpen).not.toHaveBeenCalled();
-    });
-
-    it("hides Resolve in edit mode", () => {
-      renderWithProviders(<TeamKbWidget {...setup({ editing: true })} />);
-      expect(screen.queryAllByTestId(TeamKbWidgetTestId.Resolve)).toHaveLength(0);
     });
   });
 });

@@ -28,11 +28,12 @@ export function BridgeScreen() {
   const [manageOpen, setManageOpen] = useState(false);
   const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
 
-  const onBoard = new Set(state.layout.map((w) => w.type));
-  const entries = WIDGET_TYPES.filter((type) => !onBoard.has(type)).map((type) => ({
+  // Every type, even ones already on the board — a widget type can have several instances.
+  const entries = WIDGET_TYPES.map((type) => ({
     id: type,
     label: t(WIDGETS[type].labelKey),
     description: t(WIDGETS[type].descKey),
+    icon: WIDGETS[type].icon,
   }));
 
   // Phones skip the side sheet: a row with a detail page navigates there.

@@ -1,7 +1,7 @@
 "use client";
 
 import type { QuickAction, QuickActionTarget } from "@zibby/contracts";
-import { BoardLine, BoardRow, BoardText, Button, Container } from "@zibby/design-system";
+import { BoardLine, BoardRow, BoardText, Button } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAgentsQuery } from "../../agents/queries";
@@ -19,18 +19,17 @@ import { useWidgetReport } from "./useWidgetReport";
 export enum QuickActionsWidgetTestId {
   Run = "quick-actions-run",
   Remove = "quick-actions-remove",
-  New = "quick-actions-new",
 }
 
 const newId = () => `qa-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 /**
  * Quick actions: operator-saved one-click tasks. Run enqueues the stored task straight into
- * the run queue (createTask); while the widget is being configured a row offers Remove and an add form appears below.
+ * the run queue (createTask); while the header `+` toggle is on, a row offers Remove and an add form appears below.
  */
 export function QuickActionsWidget({
   widget,
-  editing,
+  adding,
   onEmptyChange,
   onCountChange,
   selection,
@@ -41,15 +40,13 @@ export function QuickActionsWidget({
   const agentsQuery = useAgentsQuery();
   const workflowsQuery = useWorkflowsQuery();
   const t = useTranslations("bridge.widgets.quickActions");
-  // The "New" button reveals the add form without opening the configure toggle.
-  const [adding, setAdding] = useState(false);
   const actions = useMemo(() => query.data ?? [], [query.data]);
   const agents = agentsQuery.data;
   const workflows = workflowsQuery.data;
   const { update, pending } = useUpdateQuickActions(actions);
 
   useWidgetReport(
-    { loading: query.isPending, count: actions.length, you: 0, keepOpen: true },
+    { loading: query.isPending, count: actions.length, you: 0 },
     { onEmptyChange, onCountChange },
   );
 
@@ -58,8 +55,8 @@ export function QuickActionsWidget({
       {actions.map((a) => (
         <QuickActionRow
           action={a}
+          adding={adding}
           agents={agents}
-          editing={editing}
           key={a.id}
           onOpen={() =>
             onOpen({
@@ -77,38 +74,18 @@ export function QuickActionsWidget({
           workflows={workflows}
         />
       ))}
-      {editing || adding ? (
+      {adding ? (
         <QuickActionForm
           agents={agents ?? []}
           disabled={actions.length >= MAX_ACTIONS}
           onSubmit={(values, done) =>
-            update(
-              (latest) => [...latest, { id: newId(), ...values }],
-              () => {
-                done();
-                setAdding(false);
-              },
-            )
+            update((latest) => [...latest, { id: newId(), ...values }], done)
           }
           pending={pending}
           submitLabel={t("add")}
           workflows={workflows ?? []}
         />
       ) : null}
-      {editing ? null : (
-        <Container padding={["100", "150"]}>
-          <Button
-            data-testid={QuickActionsWidgetTestId.New}
-            disabled={actions.length >= MAX_ACTIONS}
-            icon={adding ? "x" : "plus"}
-            intent="ghost"
-            onClick={() => setAdding((v) => !v)}
-            size="sm"
-          >
-            {adding ? t("cancel") : t("new")}
-          </Button>
-        </Container>
-      )}
     </>
   );
 }
@@ -121,7 +98,7 @@ interface QuickActionRowProps {
   action: QuickAction;
   agents: NamedEntity[] | undefined;
   workflows: NamedEntity[] | undefined;
-  editing: boolean;
+  adding: boolean;
   pending: boolean;
   rowKey: string;
   selected: boolean;
@@ -134,7 +111,7 @@ function QuickActionRow({
   action: a,
   agents,
   workflows,
-  editing,
+  adding,
   pending,
   rowKey,
   selected,
@@ -181,7 +158,7 @@ function QuickActionRow({
   return (
     <BoardRow
       action={
-        editing ? (
+        adding ? (
           <Button
             aria-label={t("removeLabel", { label: a.label })}
             data-testid={QuickActionsWidgetTestId.Remove}
@@ -207,7 +184,7 @@ function QuickActionRow({
           </Button>
         )
       }
-      onClick={editing ? undefined : onOpen}
+      onClick={adding ? undefined : onOpen}
       rowKey={rowKey}
       selected={selected}
       sheetSide={sheetSide}

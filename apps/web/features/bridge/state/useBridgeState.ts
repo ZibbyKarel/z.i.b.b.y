@@ -34,8 +34,8 @@ type BridgeUi = UiSettings["bridge"];
 
 /**
  * Detail-sheet kinds mirrored in the URL (`?issue=<project>/<item>`, `?pull-request=<url>`,
- * `?run=<runId>`) so an open sheet survives a reload and can be linked. Widget ids equal their
- * type, so the row key is derivable. A task row keys by its run, not the task id — it stays local.
+ * `?run=<runId>`) so an open sheet survives a reload and can be linked. The row key is derived
+ * from the type's first instance (id = type); a further instance (`prs-2`) isn't restored. A task row keys by its run, not the task id — it stays local.
  */
 const SELECTION_PARAMS = { issue: "issue", pr: "pull-request", run: "run" } as const;
 const SELECTION_WIDGETS = { issue: "issues", pr: "prs", run: "runs" } as const;
@@ -57,7 +57,7 @@ export function selectionFromParams(
  * Bridge screen state. Persisted bits (layout / preset / saved / arranged / removed / collapsed /
  * epicClosed) live in `ui.bridge` (server, debounced by `useUiSettings.setBridge`); a local overlay
  * keeps every change instant so drags and toggles don't wait for the round trip. There is no edit
- * mode: add / remove / configure and drag end persist straight into the active layout
+ * mode: add / remove / updateWidget and drag end persist straight into the active layout
  * (`saved[preset]`, DEFAULT included); drag frames stay local until `endDrag`. Catalog / dragging
  * / selection are local. Esc closes selection → catalog.
  */
@@ -193,10 +193,10 @@ export function useBridgeState() {
     [commitLayout],
   );
 
-  /** Set one widget's scope (e.g. the team of a `teamKb` widget) — persists immediately. */
-  const configure = useCallback(
-    (id: string, scope: BridgeWidget["scope"]) =>
-      commitLayout(layoutRef.current.map((w) => (w.id === id ? { ...w, scope } : w))),
+  /** Replace one widget's settings (title, scope, filters, …) — persists immediately. */
+  const updateWidget = useCallback(
+    (id: string, next: BridgeWidget) =>
+      commitLayout(layoutRef.current.map((w) => (w.id === id ? next : w))),
     [commitLayout],
   );
 
@@ -271,7 +271,7 @@ export function useBridgeState() {
     resize,
     add,
     remove,
-    configure,
+    updateWidget,
     beginDrag,
     endDrag,
     toggleCatalog,

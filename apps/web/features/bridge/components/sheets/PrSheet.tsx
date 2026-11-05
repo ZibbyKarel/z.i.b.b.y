@@ -3,6 +3,9 @@
 import type { InboxPr } from "@zibby/contracts";
 import {
   AnchoredSheet,
+  Icon,
+  type IconName,
+  type IconTone,
   SheetBlock,
   SheetSection,
   type SheetTone,
@@ -81,11 +84,30 @@ const NOTE_KEY: Record<
 };
 
 const CI_TONE: Record<InboxPr["ci"], SheetTone> = {
-  passing: "working",
+  passing: "done",
   failing: "error",
   pending: "thinking",
   unknown: "idle",
 };
+
+type StatIcon = { name: IconName; tone: IconTone };
+
+const CI_ICON: Record<InboxPr["ci"], StatIcon> = {
+  passing: { name: "ok", tone: "ok" },
+  failing: { name: "x", tone: "bad" },
+  pending: { name: "run", tone: "run" },
+  unknown: { name: "dots", tone: "faint" },
+};
+
+const REVIEW_ICON: Record<ReturnType<typeof reviewCell>["key"], StatIcon> = {
+  approved: { name: "check", tone: "ok" },
+  changesRequested: { name: "edit", tone: "warn" },
+  pending: { name: "clock", tone: "faint" },
+  yourReview: { name: "search", tone: "accent" },
+  draft: { name: "dots", tone: "faint" },
+};
+
+const statIcon = ({ name, tone }: StatIcon) => <Icon name={name} size="sm" tone={tone} />;
 
 function reviewCell(pr: InboxPr): {
   key: "approved" | "changesRequested" | "yourReview" | "draft" | "pending";
@@ -94,7 +116,7 @@ function reviewCell(pr: InboxPr): {
   if (pr.bucket === "to-review" && !pr.draft && pr.review === "none")
     return { key: "yourReview", tone: "thinking" };
   if (pr.draft) return { key: "draft", tone: "neutral" };
-  if (pr.review === "approved") return { key: "approved", tone: "working" };
+  if (pr.review === "approved") return { key: "approved", tone: "done" };
   if (pr.review === "changes-requested") return { key: "changesRequested", tone: "blocked" };
   return { key: "pending", tone: "idle" };
 }
@@ -171,15 +193,34 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       {approval ? <ApprovalNeed approval={approval} /> : null}
       <StatCellGrid>
         <StatCell
+          icon={statIcon(REVIEW_ICON[review.key])}
           label={t("bridge.sheet.pr.review")}
           tone={review.tone}
           value={t(`bridge.sheet.pr.reviewValue.${review.key}`)}
         />
-        <StatCell label={t("bridge.sheet.pr.checks")} tone={CI_TONE[pr.ci]} value={ciValue} />
+        <StatCell
+          icon={statIcon(CI_ICON[pr.ci])}
+          label={t("bridge.sheet.pr.checks")}
+          tone={CI_TONE[pr.ci]}
+          value={ciValue}
+        />
         <StatCell
           label={t("bridge.sheet.pr.changes")}
           tone="faint"
-          value={diff ? `+${added} −${removed}` : dash}
+          value={
+            diff ? (
+              <>
+                <Typography as="span" tone="ok" type="title">
+                  +{added}
+                </Typography>{" "}
+                <Typography as="span" tone="bad" type="title">
+                  −{removed}
+                </Typography>
+              </>
+            ) : (
+              dash
+            )
+          }
         />
       </StatCellGrid>
       {path.length > 1 ? (

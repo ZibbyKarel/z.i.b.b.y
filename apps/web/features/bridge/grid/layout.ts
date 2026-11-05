@@ -107,8 +107,17 @@ export function dragResize(
   });
 }
 
+/** Smallest free id for a new widget of `type`: the type itself, else `${type}-2`, `-3`, … */
+export function nextWidgetId(layout: readonly BridgeWidget[], type: WidgetType): string {
+  const taken = new Set(layout.map((w) => w.id));
+  if (!taken.has(type)) return type;
+  let n = 2;
+  while (taken.has(`${type}-${n}`)) n++;
+  return `${type}-${n}`;
+}
+
 export function addWidget(layout: readonly BridgeWidget[], type: WidgetType): BridgeWidget[] {
-  return compact([...layout, { id: type, type, x: 0, y: 999, w: 4, h: 6 }]);
+  return compact([...layout, { id: nextWidgetId(layout, type), type, x: 0, y: 999, w: 4, h: 6 }]);
 }
 
 export function removeWidget(layout: readonly BridgeWidget[], id: string): BridgeWidget[] {

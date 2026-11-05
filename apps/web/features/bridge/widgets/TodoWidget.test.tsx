@@ -43,14 +43,13 @@ vi.mock("../../skills", () => ({ useSkillsQuery: () => ({ data: [] }) }));
 const widget: BridgeWidget = { id: "w-todo", type: "todo", x: 0, y: 0, w: 4, h: 8 };
 const props = (over: Partial<BridgeWidgetProps> = {}): BridgeWidgetProps => ({
   widget,
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
   ...over,
 });
 
@@ -65,7 +64,7 @@ afterEach(() => {
 describe("TodoWidget", () => {
   it("renders the rows (oldest first) above the composer, with no project select", () => {
     d.items = [item("todo_1", "First"), item("todo_2", "Second")];
-    renderWithProviders(<TodoWidget {...props()} />);
+    renderWithProviders(<TodoWidget {...props({ adding: true })} />);
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows[0]).toHaveTextContent("First");
     expect(rows[1]).toHaveTextContent("Second");
@@ -77,7 +76,7 @@ describe("TodoWidget", () => {
 
   it("adds a note with its mention tokens, and never submits blank text", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<TodoWidget {...props()} />);
+    renderWithProviders(<TodoWidget {...props({ adding: true })} />);
     await user.click(screen.getByTestId(TodoWidgetTestId.Add));
     await user.type(screen.getByTestId(CommandLineTestId.Input), "   ");
     await user.click(screen.getByTestId(TodoWidgetTestId.Add));
@@ -95,7 +94,7 @@ describe("TodoWidget", () => {
 
   it("keeps the typed note when the POST fails and clears it on success", async () => {
     const user = userEvent.setup();
-    renderWithProviders(<TodoWidget {...props()} />);
+    renderWithProviders(<TodoWidget {...props({ adding: true })} />);
     const input = screen.getByTestId(CommandLineTestId.Input);
     await user.type(input, "keep me");
     await user.click(screen.getByTestId(TodoWidgetTestId.Add));
@@ -140,20 +139,22 @@ describe("TodoWidget", () => {
     expect(p.onOpen).not.toHaveBeenCalled();
   });
 
-  it("counts the items and is never reported empty", () => {
+  it("counts the items and reports non-empty", () => {
     d.items = [item("todo_1", "A"), item("todo_2", "B")];
     const p = props();
     renderWithProviders(<TodoWidget {...p} />);
     expect(p.onCountChange).toHaveBeenLastCalledWith({ count: 2, you: 0, loading: false });
-    expect(p.onEmptyChange).toHaveBeenCalledWith(false);
-    expect(p.onEmptyChange).not.toHaveBeenCalledWith(true);
+    expect(p.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
-  it("with no items the count is 0 and the composer is still there", () => {
+  it("with no items reports empty; the composer shows only while adding", () => {
     const p = props();
-    renderWithProviders(<TodoWidget {...p} />);
+    const { unmount } = renderWithProviders(<TodoWidget {...p} />);
     expect(p.onCountChange).toHaveBeenLastCalledWith({ count: 0, you: 0, loading: false });
-    expect(p.onEmptyChange).not.toHaveBeenCalledWith(true);
+    expect(p.onEmptyChange).toHaveBeenLastCalledWith(true);
+    expect(screen.queryByTestId(CommandLineTestId.Input)).toBeNull();
+    unmount();
+    renderWithProviders(<TodoWidget {...props({ adding: true })} />);
     expect(screen.getByTestId(CommandLineTestId.Input)).toBeInTheDocument();
   });
 });

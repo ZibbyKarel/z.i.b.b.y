@@ -31,6 +31,21 @@ describe("BoardRow", () => {
     expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass("opacity-50");
   });
 
+  it("draws the left status bar unless bar is false", () => {
+    const { rerender } = render(<BoardRow tone="blocked">x</BoardRow>);
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass(
+      "border-l-[color:var(--color-state-block)]",
+    );
+    rerender(
+      <BoardRow bar={false} tone="blocked">
+        x
+      </BoardRow>,
+    );
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    expect(row).not.toHaveClass("border-l-[color:var(--color-state-block)]");
+    expect(row).not.toHaveClass("border-l-[length:var(--bridge-bar)]");
+  });
+
   it("marks selected and needsYou", () => {
     const { rerender } = render(
       <BoardRow needsYou tone="blocked">

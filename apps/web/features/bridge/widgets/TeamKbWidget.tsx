@@ -12,14 +12,15 @@ import {
   Stack,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { ResolveQuestionDialog } from "../../teams/components/ResolveQuestionDialog";
 import { isNoKbError, useTeamKbDigestQuery, useTeamsQuery } from "../../teams/queries";
-import type { BridgeSelection, BridgeWidgetProps } from "./registry";
+import type { BridgeSelection, BridgeWidgetProps, WidgetSettingsProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
 export enum TeamKbWidgetTestId {
+  /** The team picker in the widget's settings dialog section. */
   TeamSelect = "team-kb-widget-team-select",
   Pick = "team-kb-widget-pick",
   NoKb = "team-kb-widget-no-kb",
@@ -43,26 +44,21 @@ export const parseNoteSelectionId = (id: string) => {
 /**
  * Team knowledge: the open questions and agreements lifted from a team's KB meeting notes. A row
  * opens its source note in the detail sheet.
- * Scoped to a team (`widget.scope.teamId`), chosen via the header configure toggle. Empty (collapsed)
+ * Scoped to a team (`widget.scope.teamId`), chosen in the widget's settings dialog. Empty (collapsed)
  * until a team is chosen.
  */
 export function TeamKbWidget({
   widget,
-  editing,
   onEmptyChange,
   onCountChange,
-  onScopeChange,
   selection,
   onOpen,
   sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.teamKb");
   const teamId = widget.scope?.teamId;
-  const teamsQuery = useTeamsQuery();
   const digestQuery = useTeamKbDigestQuery(teamId);
-  const teams = useMemo(() => teamsQuery.data ?? [], [teamsQuery.data]);
   const [resolving, setResolving] = useState<TeamKbDigestItem | null>(null);
-  const teamName = teams.find((x) => x.id === teamId)?.name;
 
   const digest = digestQuery.data;
   const noKb = isNoKbError(digestQuery.error);
@@ -74,26 +70,14 @@ export function TeamKbWidget({
       : digest
         ? digest.questions.length + digest.decisions.length
         : 0;
-  // Header aside: the team name (the frame shows ALL CLEAR itself when empty).
+  // The pick / no-KB notes must stay visible, so those states never report as empty.
   useWidgetReport(
-    { loading, count, you: 0, aside: teamName, failed },
+    { loading, count, you: 0, failed: failed || noKb || teamId === undefined },
     { onEmptyChange, onCountChange },
   );
 
   return (
     <>
-      {editing ? (
-        <Container padding={["100", "150"]}>
-          <Stack data-testid={TeamKbWidgetTestId.TeamSelect}>
-            <SelectField
-              label={t("team")}
-              onValueChange={(id) => onScopeChange({ teamId: id })}
-              options={teams.map((x) => ({ value: x.id, label: x.name }))}
-              value={teamId ?? ""}
-            />
-          </Stack>
-        </Container>
-      ) : null}
       {teamId === undefined ? (
         <Note testId={TeamKbWidgetTestId.Pick}>{t("pick")}</Note>
       ) : noKb ? (
@@ -103,7 +87,6 @@ export function TeamKbWidget({
       ) : digest ? (
         <>
           <Group
-            editing={editing}
             group="questions"
             items={digest.questions}
             onOpen={onOpen}
@@ -116,7 +99,6 @@ export function TeamKbWidget({
             widgetId={widget.id}
           />
           <Group
-            editing={editing}
             group="decisions"
             items={digest.decisions}
             onOpen={onOpen}
@@ -141,6 +123,23 @@ export function TeamKbWidget({
   );
 }
 
+/** Settings-dialog section: the team the widget shows (`draft.scope.teamId`). */
+export function TeamKbWidgetSettings({ draft, onChange }: WidgetSettingsProps) {
+  const t = useTranslations("bridge.widgets.teamKb");
+  const teamsQuery = useTeamsQuery();
+  const teams = teamsQuery.data ?? [];
+  return (
+    <Stack data-testid={TeamKbWidgetTestId.TeamSelect}>
+      <SelectField
+        label={t("team")}
+        onValueChange={(teamId) => onChange({ ...draft, scope: { teamId } })}
+        options={teams.map((x) => ({ value: x.id, label: x.name }))}
+        value={draft.scope?.teamId ?? ""}
+      />
+    </Stack>
+  );
+}
+
 function Note({ testId, children }: { testId: string; children: string }) {
   return (
     <BoardRow tone="neutral">
@@ -161,7 +160,6 @@ interface GroupProps {
   testId: string;
   widgetId: string;
   selection: BridgeSelection | null;
-  editing: boolean;
   onOpen: (selection: BridgeSelection) => void;
   onResolve: (item: TeamKbDigestItem) => void;
   sheetSide: BridgeWidgetProps["sheetSide"];
@@ -175,7 +173,6 @@ function Group({
   testId,
   widgetId,
   selection,
-  editing,
   onOpen,
   onResolve,
   sheetSide,
@@ -193,7 +190,7 @@ function Group({
         return (
           <BoardRow
             action={
-              group === "questions" && !editing ? (
+              group === "questions" ? (
                 <Button
                   aria-label={t("resolveLabel", { text: item.text })}
                   data-testid={TeamKbWidgetTestId.Resolve}

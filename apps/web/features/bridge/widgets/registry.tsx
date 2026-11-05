@@ -1,7 +1,6 @@
 import type { IconName } from "@zibby/design-system";
 import type { ReactNode } from "react";
-import type { WidgetType } from "../grid/layout";
-import type { BridgeWidget } from "../grid/layout";
+import type { BridgeWidget, WidgetType } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { BudgetsWidget } from "./BudgetsWidget";
 import { IssuesWidget } from "./IssuesWidget";
@@ -12,7 +11,8 @@ import { ProposalsWidget } from "./ProposalsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
-import { TeamKbWidget } from "./TeamKbWidget";
+import { PrsWidgetSettings } from "./PrsWidgetSettings";
+import { TeamKbWidget, TeamKbWidgetSettings } from "./TeamKbWidget";
 import { TodoWidget } from "./TodoWidget";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
@@ -57,8 +57,8 @@ export interface BridgeWidgetInfo {
  */
 export interface BridgeWidgetProps {
   widget: BridgeWidget;
-  /** This widget is being configured (its header gear toggle is on): show its settings UI. */
-  editing: boolean;
+  /** The header `+` toggle is on (only for `addable` widgets): show the add UI. */
+  adding: boolean;
   onEmptyChange: (empty: boolean) => void;
   onCountChange?: (info: BridgeWidgetInfo) => void;
   selection: BridgeSelection | null;
@@ -68,8 +68,12 @@ export interface BridgeWidgetProps {
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;
-  /** Set this widget's scope (configure mode) — saved with the layout. */
-  onScopeChange: (scope: BridgeWidget["scope"]) => void;
+}
+
+/** Props of a widget type's own section in the settings dialog — edits a local draft. */
+export interface WidgetSettingsProps {
+  draft: BridgeWidget;
+  onChange: (next: BridgeWidget) => void;
 }
 
 export interface WidgetDefinition {
@@ -79,8 +83,10 @@ export interface WidgetDefinition {
   /** Glyph of the widget type — shown in its empty state. */
   icon: IconName;
   Component: (props: BridgeWidgetProps) => ReactNode;
-  /** Has a settings UI behind the header gear toggle (`BridgeWidgetProps.editing`). */
-  configurable?: true;
+  /** Has a header `+` toggle that drives `BridgeWidgetProps.adding`. */
+  addable?: true;
+  /** Type-specific section of the settings dialog, below the common name / remove part. */
+  Settings?: (props: WidgetSettingsProps) => ReactNode;
 }
 
 export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
@@ -107,6 +113,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.prs.desc",
     icon: "branch",
     Component: PrsWidget,
+    Settings: PrsWidgetSettings,
   },
   runs: {
     labelKey: "bridge.widget.runs.label",
@@ -125,20 +132,21 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.todo.desc",
     icon: "pen",
     Component: TodoWidget,
+    addable: true,
   },
   quickActions: {
     labelKey: "bridge.widget.quickActions.label",
     descKey: "bridge.widget.quickActions.desc",
     icon: "bolt",
     Component: QuickActionsWidget,
-    configurable: true,
+    addable: true,
   },
   teamKb: {
     labelKey: "bridge.widget.teamKb.label",
     descKey: "bridge.widget.teamKb.desc",
     icon: "book",
     Component: TeamKbWidget,
-    configurable: true,
+    Settings: TeamKbWidgetSettings,
   },
   proposals: {
     labelKey: "bridge.widget.proposals.label",

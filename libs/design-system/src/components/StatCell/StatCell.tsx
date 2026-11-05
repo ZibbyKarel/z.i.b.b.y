@@ -8,6 +8,7 @@ export enum StatCellTestId {
   Label = "stat-cell-label",
   Title = "stat-cell-title",
   Value = "stat-cell-value",
+  Icon = "stat-cell-icon",
   Meta = "stat-cell-meta",
   Status = "stat-cell-status",
 }
@@ -44,8 +45,10 @@ export interface StatCellProps {
   label?: string;
   /** 13/500 name. */
   title?: string;
-  /** 16/500 tabular value. */
-  value?: string;
+  /** 16/500 tabular value (a node for composed values, e.g. coloured +/− parts). */
+  value?: ReactNode;
+  /** Status glyph rendered before the value; decorative (`aria-hidden`), the value carries the meaning. */
+  icon?: ReactNode;
   /** Mono 10 secondary line. */
   meta?: string;
   /** Mono 10 / 600 state. */
@@ -59,6 +62,7 @@ export function StatCell({
   label,
   title,
   value,
+  icon,
   meta,
   status,
 }: StatCellProps) {
@@ -84,10 +88,22 @@ export function StatCell({
           {title}
         </span>
       ) : null}
-      {value ? (
-        <span className="text-[16px] font-medium tabular-nums" data-testid={StatCellTestId.Value}>
-          {value}
-        </span>
+      {value || icon ? (
+        <div className="flex items-center gap-[6px]">
+          {icon ? (
+            <span aria-hidden="true" className="flex shrink-0" data-testid={StatCellTestId.Icon}>
+              {icon}
+            </span>
+          ) : null}
+          {value ? (
+            <span
+              className="text-[16px] font-medium tabular-nums"
+              data-testid={StatCellTestId.Value}
+            >
+              {value}
+            </span>
+          ) : null}
+        </div>
       ) : null}
       {meta ? (
         <span

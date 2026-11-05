@@ -3,6 +3,7 @@ import type {
   InboxEpic,
   InboxPr,
   InboxRoadmapItem,
+  PrWidgetFilters,
   RoadmapSourceKind,
 } from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
@@ -24,12 +25,15 @@ import { type RunView, runTitle } from "../../runs/run";
 import { buildPhaseNodes } from "../../runs/stagePhases";
 import { runStateTone } from "../../runs/run";
 import {
-  PR_CI_STATES,
-  PR_REVIEW_STATES,
+  PR_CI_FILTERS,
+  PR_REVIEW_FILTERS,
+  type PrCiFilter,
   type PrCiState,
+  type PrReviewFilter,
   type PrReviewState,
   prApprovalStale,
   prCiState,
+  prReviewFilter,
   prReviewState,
 } from "./prStatus";
 
@@ -194,10 +198,17 @@ export interface PrNodeVm {
   kids: PrNodeVm[];
 }
 
-export interface PrFilterPick {
-  review?: PrReviewState;
-  ci?: PrCiState;
+/** The operator's pick; same shape as a widget's saved defaults. An empty group doesn't filter. */
+export type PrFilterPick = PrWidgetFilters;
+
+/** Distinct review-team slugs (`org/team`) of `prs` plus `extra` (saved defaults), sorted. */
+export function prTeams(prs: InboxPr[], extra: readonly string[] = []): string[] {
+  const all = [...prs.map((p) => p.reviewTeam), ...extra].filter((t): t is string => !!t);
+  return [...new Set(all)].sort();
 }
+
+/** `org/team` -> `team`. */
+export const prTeamLabel = (slug: string) => slug.split("/").pop() ?? slug;
 
 function prReviewHint(pr: InboxPr, review: PrReviewState): PrReviewHint {
   const mine = pr.bucket === "mine";
@@ -255,7 +266,7 @@ const countBy = <K extends string>(keys: readonly K[], list: InboxPr[], of: (p: 
 
 /**
  * The Pull requests screen's set (stored filters) as one flat list of stack trees, newest first.
- * `pick` narrows it to a review / CI state; a picked PR keeps its listed ancestors as muted
+ * `pick` narrows it by review / CI state, mine and review team; a picked PR keeps its listed ancestors as muted
  * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR.
  */
 export function prTree(
@@ -270,17 +281,25 @@ export function prTree(
   total: number;
   /** Others' PRs waiting on my review. */
   you: number;
-  counts: { review: Record<PrReviewState, number>; ci: Record<PrCiState, number> };
+  counts: { review: Record<PrReviewFilter, number>; ci: Record<PrCiFilter, number> };
 } {
   const visible = all.filter((p) => passesFilters(filters, p));
   const shown = new Set(visible.map((p) => p.url));
+  // AND across groups, OR within one; an empty group doesn't filter.
   const hit = visible.filter(
     (p) =>
-      (!pick.review || prReviewState(p) === pick.review) && (!pick.ci || prCiState(p) === pick.ci),
+      (!pick.review?.length || pick.review.includes(prReviewFilter(prReviewState(p)))) &&
+      (!pick.ci?.length || (pick.ci as string[]).includes(prCiState(p))) &&
+      (!pick.mine || p.bucket === "mine") &&
+      (!pick.teams?.length || (!!p.reviewTeam && pick.teams.includes(p.reviewTeam))),
   );
   const hitUrls = new Set(hit.map((p) => p.url));
   const kept = new Set(hitUrls);
   for (const p of hit) for (const a of prAncestors(p, all)) if (shown.has(a.url)) kept.add(a.url);
+  // "Mine only" also keeps what is stacked on my PRs (others' descendants), greyed out.
+  if (pick.mine)
+    for (const p of visible)
+      if (prAncestors(p, all).some((a) => hitUrls.has(a.url))) kept.add(p.url);
 
   // Each kept PR hangs under its nearest kept ancestor; none = a root.
   const kids = new Map<string, InboxPr[]>();
@@ -308,8 +327,8 @@ export function prTree(
     total: visible.length,
     you: visible.filter((p) => p.bucket !== "mine" && prReviewState(p) === "review").length,
     counts: {
-      review: countBy(PR_REVIEW_STATES, visible, prReviewState),
-      ci: countBy(PR_CI_STATES, visible, prCiState),
+      review: countBy(PR_REVIEW_FILTERS, visible, (p) => prReviewFilter(prReviewState(p))),
+      ci: countBy(PR_CI_FILTERS, visible, (p) => prCiState(p) as PrCiFilter),
     },
   };
 }

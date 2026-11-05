@@ -38,14 +38,13 @@ const DAY = 86_400_000;
 const widget: BridgeWidget = { id: "w-p", type: "proposals", x: 0, y: 0, w: 4, h: 8 };
 const setup = (over: Partial<BridgeWidgetProps> = {}): BridgeWidgetProps => ({
   widget,
-  editing: false,
+  adding: false,
   onEmptyChange: vi.fn(),
   onCountChange: vi.fn(),
   selection: null,
   onOpen: vi.fn(),
   epicClosed: {},
   onEpicToggle: vi.fn(),
-  onScopeChange: vi.fn(),
   ...over,
 });
 const proposal = (id: string, over: Partial<Proposal> = {}): Proposal => ({

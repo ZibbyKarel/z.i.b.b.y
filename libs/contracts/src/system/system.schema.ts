@@ -6,6 +6,17 @@ import { TeamIdSchema } from "../teams/team.schema";
 export const DensitySchema = z.enum(["compact", "comfort", "airy", "open"]);
 export type Density = z.infer<typeof DensitySchema>;
 
+/** Default filters of a `prs` widget; an empty/absent list leaves that group unfiltered. */
+export const PrWidgetFiltersSchema = z
+  .object({
+    review: z.array(z.enum(["waiting", "changes", "approved"])).optional(),
+    ci: z.array(z.enum(["conflict", "failing", "passing"])).optional(),
+    mine: z.boolean().optional(),
+    teams: z.array(z.string().min(1)).optional(),
+  })
+  .strict();
+export type PrWidgetFilters = z.infer<typeof PrWidgetFiltersSchema>;
+
 /**
  * One widget placed on the Bridge's 12-column board. `x`/`w` are column units (the
  * widget must fit the grid), `y`/`h` are row units (unbounded downwards).
@@ -33,6 +44,10 @@ export const BridgeWidgetSchema = z.object({
   h: z.number().int().min(1),
   /** Optional scope; only the `teamKb` widget reads it (`teamId` = the team it shows). */
   scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional(),
+  /** Operator-given widget name; absent = the widget type's default label. */
+  title: z.string().trim().min(1).max(60).optional(),
+  /** Default filters of a `prs` widget; an empty/absent list leaves that group unfiltered. */
+  prFilters: PrWidgetFiltersSchema.optional(),
 });
 export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;
 

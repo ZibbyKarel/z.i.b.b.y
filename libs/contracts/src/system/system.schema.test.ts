@@ -32,3 +32,33 @@ describe("BridgeWidgetSchema scope", () => {
     ).toBe(false);
   });
 });
+
+describe("BridgeWidgetSchema title and prFilters", () => {
+  it("accepts a trimmed title and pr filters", () => {
+    const w = BridgeWidgetSchema.parse({
+      ...base,
+      type: "prs",
+      title: "  Mine  ",
+      prFilters: { review: ["waiting"], ci: [], mine: true, teams: ["devrel"] },
+    });
+    expect(w.title).toBe("Mine");
+    expect(w.prFilters?.review).toEqual(["waiting"]);
+  });
+
+  it("rejects an empty or over-long title", () => {
+    expect(BridgeWidgetSchema.safeParse({ ...base, type: "prs", title: "  " }).success).toBe(false);
+    expect(
+      BridgeWidgetSchema.safeParse({ ...base, type: "prs", title: "x".repeat(61) }).success,
+    ).toBe(false);
+  });
+
+  it("rejects an unknown filter value or key", () => {
+    expect(
+      BridgeWidgetSchema.safeParse({ ...base, type: "prs", prFilters: { review: ["nope"] } })
+        .success,
+    ).toBe(false);
+    expect(
+      BridgeWidgetSchema.safeParse({ ...base, type: "prs", prFilters: { extra: 1 } }).success,
+    ).toBe(false);
+  });
+});

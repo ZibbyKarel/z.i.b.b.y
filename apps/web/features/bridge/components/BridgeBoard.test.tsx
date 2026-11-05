@@ -1,4 +1,4 @@
-import { WidgetFrameTestId } from "@zibby/design-system";
+import { ConfirmDeleteButtonTestId, WidgetFrameTestId } from "@zibby/design-system";
 import { act, fireEvent } from "@testing-library/react";
 import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -6,6 +6,7 @@ import { renderWithProviders, screen } from "../../../test/render";
 import type { BridgeState } from "../state/useBridgeState";
 import type { BridgeWidgetProps } from "../widgets/registry";
 import { BridgeBoard } from "./BridgeBoard";
+import { WidgetSettingsDialogTestId } from "./WidgetSettingsDialog";
 
 const h = vi.hoisted(() => ({ setLoading: null as unknown as (loading: boolean) => void }));
 
@@ -30,14 +31,14 @@ vi.mock("../widgets/registry", () => ({
   WIDGETS: {
     prs: {
       labelKey: "bridge.widget.prs.label",
-      configurable: true,
-      Component: ({ onEmptyChange, onCountChange, editing }: BridgeWidgetProps) => {
+      addable: true,
+      Component: ({ onEmptyChange, onCountChange, adding }: BridgeWidgetProps) => {
         const [loading, setLoading] = useState(true);
         h.setLoading = setLoading;
         useEffect(() => onEmptyChange(false), [onEmptyChange]);
         // Same count/you/aside every time; only `loading` differs.
         useEffect(() => onCountChange?.({ count: 1, you: 0, loading }), [loading, onCountChange]);
-        return <span data-testid="cfg">{String(editing)}</span>;
+        return <span data-testid="cfg">{String(adding)}</span>;
       },
     },
   },
@@ -111,11 +112,41 @@ describe("BridgeBoard", () => {
     );
   });
 
-  it("the configure toggle passes editing=true to a configurable widget", () => {
+  it("the header + toggle passes adding=true to an addable widget", () => {
     renderWithProviders(<BridgeBoard density="comfort" state={state} />);
     expect(screen.getByTestId("cfg")).toHaveTextContent("false");
-    fireEvent.click(screen.getByTestId(WidgetFrameTestId.Configure));
+    fireEvent.click(screen.getByTestId(WidgetFrameTestId.Add));
     expect(screen.getByTestId("cfg")).toHaveTextContent("true");
+  });
+
+  it("the header shows the widget's own title instead of the type label", () => {
+    const titled = {
+      ...state,
+      layout: [{ id: "prs", type: "prs", x: 0, y: 0, w: 6, h: 4, title: "Mine" }],
+    } as unknown as BridgeState;
+    renderWithProviders(<BridgeBoard density="comfort" state={titled} />);
+    expect(screen.getByTestId(WidgetFrameTestId.Label)).toHaveTextContent("Mine");
+  });
+
+  it("the gear opens the settings dialog; Save writes the widget, Remove removes it", () => {
+    const updateWidget = vi.fn();
+    const remove = vi.fn();
+    const s = { ...state, updateWidget, remove } as unknown as BridgeState;
+    renderWithProviders(<BridgeBoard density="comfort" state={s} />);
+    expect(screen.queryByTestId(WidgetSettingsDialogTestId.Save)).toBeNull();
+    fireEvent.click(screen.getByTestId(WidgetFrameTestId.Settings));
+    fireEvent.change(screen.getByTestId(WidgetSettingsDialogTestId.Name), {
+      target: { value: "My PRs" },
+    });
+    fireEvent.click(screen.getByTestId(WidgetSettingsDialogTestId.Save));
+    expect(updateWidget).toHaveBeenCalledWith("prs", expect.objectContaining({ title: "My PRs" }));
+    expect(screen.queryByTestId(WidgetSettingsDialogTestId.Save)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(WidgetFrameTestId.Settings));
+    fireEvent.click(screen.getByTestId(ConfirmDeleteButtonTestId.Root));
+    fireEvent.click(screen.getByTestId(ConfirmDeleteButtonTestId.Root));
+    expect(remove).toHaveBeenCalledWith("prs");
+    expect(screen.queryByTestId(WidgetSettingsDialogTestId.Save)).toBeNull();
   });
 
   it("a header click without movement starts no drag", () => {

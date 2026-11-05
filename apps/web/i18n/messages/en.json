@@ -3205,7 +3205,14 @@
       "open": "Open"
     },
     "addWidget": "Add widget",
-    "configure": "Configure",
+    "add": "Add",
+    "settings": {
+      "open": "Settings",
+      "title": "Widget settings",
+      "name": "Name",
+      "remove": "Remove from dashboard",
+      "removeConfirm": "Confirm remove"
+    },
     "editLayout": "Edit layout",
     "catalog": {
       "title": "Widget catalog",
@@ -3214,7 +3221,6 @@
       "empty": "Every widget is already on the board."
     },
     "collapse": "Collapse",
-    "remove": "Remove widget",
     "resize": "Resize",
     "resizeNw": "top left",
     "resizeNe": "top right",
@@ -3238,10 +3244,10 @@
         "filter": {
           "review": "Filter by review state",
           "ci": "Filter by CI",
-          "all": "All"
+          "mine": "Only mine",
+          "teams": "Teams"
         },
         "review": {
-          "review": "Awaiting review",
           "changes": "Changes requested",
           "approved": "Approved",
           "waiting": "Waiting"
@@ -3315,13 +3321,12 @@
         "textPlaceholder": "What should be done…",
         "target": "Target",
         "add": "Add",
-        "new": "New action",
         "cancel": "Cancel",
         "targetMissing": "Target no longer exists"
       },
       "teamKb": {
         "team": "Team",
-        "pick": "Pick a team in edit mode.",
+        "pick": "Pick a team in the widget settings.",
         "noKb": "This team has no knowledge base.",
         "questions": "Open questions",
         "decisions": "Agreements",

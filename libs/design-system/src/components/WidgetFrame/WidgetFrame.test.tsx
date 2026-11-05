@@ -53,9 +53,8 @@ describe("WidgetFrame", () => {
     expect(screen.getByTestId(WidgetFrameTestId.Empty)).toBeVisible();
     expect(screen.getByText("rows")).toBeInTheDocument();
     expect(screen.getByText("rows")).not.toBeVisible();
-    expect(screen.queryByTestId(WidgetFrameTestId.Collapse)).toBeNull();
     rerender(
-      <WidgetFrame configuring empty label="X">
+      <WidgetFrame adding empty label="X">
         <p>rows</p>
       </WidgetFrame>,
     );
@@ -63,15 +62,13 @@ describe("WidgetFrame", () => {
     expect(screen.getByText("rows")).toBeVisible();
   });
 
-  it("always renders the corner handles and the remove button; size label only while dragging", async () => {
+  it("always renders the corner handles; size label only while dragging", async () => {
     const onMove = vi.fn();
     const onResize = vi.fn();
-    const onRemove = vi.fn();
     const { rerender } = render(
       <WidgetFrame
         label="X"
         onMovePointerDown={onMove}
-        onRemove={onRemove}
         onResizePointerDown={onResize}
         resizeLabel="Resize"
         sizeLabel="4 × 6"
@@ -91,41 +88,72 @@ describe("WidgetFrame", () => {
     expect(names.size).toBe(4);
     expect(screen.getByTestId(resizeId("nw"))).toHaveClass("opacity-0", "group-hover:opacity-100");
     expect(onMove).toHaveBeenCalledOnce();
-    await userEvent.click(screen.getByTestId(WidgetFrameTestId.Remove));
-    expect(onRemove).toHaveBeenCalledOnce();
-    // the × must not start a move drag
-    expect(onMove).toHaveBeenCalledOnce();
     rerender(<WidgetFrame dragging label="X" sizeLabel="4 × 6" />);
     expect(screen.getByTestId(WidgetFrameTestId.Size)).toHaveTextContent("4 × 6");
   });
 
-  it("renders a configure toggle reflecting `configuring`, forces the body open, and does not start a move", async () => {
-    const onConfigure = vi.fn();
+  it("renders an add toggle reflecting `adding`, forces the body open, and does not start a move", async () => {
+    const onAdd = vi.fn();
     const onMove = vi.fn();
     const { rerender } = render(
-      <WidgetFrame
-        empty
-        configureLabel="Configure"
-        label="X"
-        onConfigure={onConfigure}
-        onMovePointerDown={onMove}
-      >
+      <WidgetFrame empty addLabel="Add" label="X" onAdd={onAdd} onMovePointerDown={onMove}>
         <p>rows</p>
       </WidgetFrame>,
     );
-    const btn = screen.getByTestId(WidgetFrameTestId.Configure);
+    const btn = screen.getByTestId(WidgetFrameTestId.Add);
     expect(btn).toHaveAttribute("aria-pressed", "false");
-    expect(btn).toHaveAccessibleName("Configure");
+    expect(btn).toHaveAccessibleName("Add");
     await userEvent.click(btn);
-    expect(onConfigure).toHaveBeenCalledOnce();
+    expect(onAdd).toHaveBeenCalledOnce();
     expect(onMove).not.toHaveBeenCalled();
     rerender(
-      <WidgetFrame configuring empty label="X" onConfigure={onConfigure}>
+      <WidgetFrame adding empty label="X" onAdd={onAdd}>
         <p>rows</p>
       </WidgetFrame>,
     );
-    expect(screen.getByTestId(WidgetFrameTestId.Configure)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(WidgetFrameTestId.Add)).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId(WidgetFrameTestId.Body)).toBeVisible();
+  });
+
+  it("renders a plain settings button that does not start a move", async () => {
+    const onSettings = vi.fn();
+    const onMove = vi.fn();
+    render(
+      <WidgetFrame
+        label="X"
+        onMovePointerDown={onMove}
+        onSettings={onSettings}
+        settingsLabel="Settings"
+      />,
+    );
+    const btn = screen.getByTestId(WidgetFrameTestId.Settings);
+    expect(btn).toHaveAccessibleName("Settings");
+    expect(btn).not.toHaveAttribute("aria-pressed");
+    await userEvent.click(btn);
+    expect(onSettings).toHaveBeenCalledOnce();
+    expect(onMove).not.toHaveBeenCalled();
+  });
+
+  it("keeps the collapse caret last, even when empty", () => {
+    render(
+      <WidgetFrame
+        empty
+        label="X"
+        onAdd={() => {}}
+        onRefresh={() => {}}
+        onSettings={() => {}}
+        onToggleCollapse={() => {}}
+      />,
+    );
+    const ids = Array.from(
+      screen.getByTestId(WidgetFrameTestId.Header).querySelectorAll("button"),
+    ).map((b) => b.getAttribute("data-testid"));
+    expect(ids).toEqual([
+      WidgetFrameTestId.Refresh,
+      WidgetFrameTestId.Add,
+      WidgetFrameTestId.Settings,
+      WidgetFrameTestId.Collapse,
+    ]);
   });
 
   it("renders a sync button only with a handler; disabled while refreshing; no move drag", async () => {

@@ -41,6 +41,8 @@ const BAR: Record<BoardRowTone, string> = {
 export interface BoardRowProps {
   /** Left status bar colour. */
   tone: BoardRowTone;
+  /** Draw the left status bar. Default `true`; `false` leaves the row without it. */
+  bar?: boolean;
   /** `pr` = the taller PR-card padding. */
   padding?: "row" | "pr";
   /** Grid template; omit for a stacked (flex column) row. */
@@ -91,6 +93,7 @@ const ACTION_PADDING = {
  */
 export function BoardRow({
   tone,
+  bar = true,
   padding = "row",
   columns,
   selected = false,
@@ -114,8 +117,8 @@ export function BoardRow({
     "relative box-border w-full border-solid bg-panel text-left text-ink",
     interactive && "hover:bg-panel-2",
     muted && "opacity-50",
-    "border-l-[length:var(--bridge-bar)] [border-bottom:var(--bridge-row-border)]",
-    BAR[tone],
+    "[border-bottom:var(--bridge-row-border)]",
+    bar && cn("border-l-[length:var(--bridge-bar)]", BAR[tone]),
     selected
       ? cn(
           "z-[31] shadow-[inset_0_1px_0_var(--color-ink),inset_0_-1px_0_var(--color-ink)]",
