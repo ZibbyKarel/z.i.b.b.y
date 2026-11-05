@@ -157,20 +157,21 @@ export function PrsWidget({
           </IconTile>
         }
       >
+        <BoardLine baseline gap="8">
+          <BoardText kind="prNum">{r.number}</BoardText>
+          <BoardText truncate kind="prTitle" title={r.title}>
+            {r.title}
+          </BoardText>
+        </BoardLine>
+        {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
         <BoardLine
-          baseline
           end={
             <BoardText kind="meta" tone="ink3">
               {r.age}
             </BoardText>
           }
-          gap="8"
+          gap="6"
         >
-          <BoardText kind="prNum">{r.number}</BoardText>
-          <BoardText kind="prTitle">{r.title}</BoardText>
-        </BoardLine>
-        {/* Not wrapped: when the line runs out of room the project clips first, then the name. */}
-        <BoardLine gap="6">
           <BoardText kind="prMeta">{r.author}</BoardText>
           <BoardText kind="prMeta" tone="ink3">
             · {r.project}

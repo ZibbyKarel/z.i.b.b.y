@@ -299,6 +299,15 @@ describe("PrsWidget", () => {
     expect(theirs).toHaveTextContent("orders");
     expect(within(theirs).getByTestId(PrsWidgetTestId.Avatar)).toHaveAccessibleName("Jana Nová");
     expect(within(theirs).getByTestId(PrsWidgetTestId.Avatar)).toHaveStyle({ width: "34px" });
+    // Title owns the whole first line (one line, ellipsis); the age sits on the meta line.
+    const [titleLine, metaLine] = within(theirs).getAllByTestId(BoardRowTestId.Line);
+    const title = within(titleLine as HTMLElement).getByText("PR 3");
+    expect(title.className).toContain("truncate");
+    expect(title).toHaveAttribute("title", "PR 3");
+    expect(metaLine).toHaveTextContent("Jana Nová");
+    const age = metaLine?.lastElementChild?.textContent ?? "";
+    expect(age).toMatch(/2/); // createdAt is 2 h ago
+    expect(titleLine?.textContent).not.toContain(age);
     for (const row of rows) {
       expect(row.className).toContain("border-l-[length:var(--bridge-bar)]");
       expect(row.className).not.toContain("inset_0_0_0_1px");
