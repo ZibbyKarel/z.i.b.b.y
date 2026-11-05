@@ -74,6 +74,8 @@ export interface IssueRowVm {
   /** Source chip text (`JIRA`, `GITHUB`, `MANUAL`). */
   source: string;
   sourceKind: RoadmapSourceKind;
+  /** Source (Jira) status name; shown instead of the ZIBBY tag for new/running. */
+  sourceStatus: string | null;
   project: string;
   /** `#n` of the linked PR, else null. */
   pr: string | null;
@@ -119,6 +121,7 @@ export function issueRow(
     needsYou: status === "waiting" ? age : null,
     source: SOURCE_NAME[item.source.kind],
     sourceKind: item.source.kind,
+    sourceStatus: item.sourceStatus?.name ?? null,
     project: item.project.name,
     pr: pr ? `#${pr.number}` : null,
     age,

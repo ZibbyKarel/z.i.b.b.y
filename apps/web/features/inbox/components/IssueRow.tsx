@@ -22,6 +22,7 @@ import type { MouseEvent } from "react";
 import {
   type IssueChain,
   differsFromSource,
+  isSourceStatusShown,
   itemKey,
   latestTaskId,
   linkedPrOf,
@@ -226,10 +227,12 @@ export function IssueRow({
                   </Typography>
                 </Row>
               )}
-              <Row gap="50">
-                <Typography type="label">{t("row.zibby")}</Typography>
-                <ZibbyStatusLabel status={status} />
-              </Row>
+              {!isSourceStatusShown(status) && (
+                <Row gap="50">
+                  <Typography type="label">{t("row.zibby")}</Typography>
+                  <ZibbyStatusLabel status={status} />
+                </Row>
+              )}
               {differsFromSource(item) && (
                 <Tag
                   uppercase

@@ -114,6 +114,32 @@ describe("InboxItemScreen meta panel", () => {
   });
 });
 
+describe("InboxItemScreen source status", () => {
+  it("shows no ZIBBY status tag for a new item", () => {
+    setData([item({ sourceStatus: { name: "To Do", done: false } })]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.getByTestId(InboxItemScreenTestId.Status)).toHaveTextContent("To Do");
+    expect(screen.queryByTestId("inbox-zibby-status-new")).toBeNull();
+  });
+
+  it("shows no ZIBBY status tag for a running item", () => {
+    setData([
+      item({
+        lifecycle: "running",
+        sourceStatus: { name: "In Progress", done: false },
+      }),
+    ]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.queryByTestId("inbox-zibby-status-running")).toBeNull();
+  });
+
+  it("keeps the ZIBBY tag for a done item", () => {
+    setData([item({ lifecycle: "done" })]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.getByTestId("inbox-zibby-status-done")).toBeInTheDocument();
+  });
+});
+
 describe("InboxItemScreen title", () => {
   it("links to the source in a new tab when it has a url", () => {
     setData([item({ source: { ...item({}).source, url: "https://jira.test/API-1" } })]);

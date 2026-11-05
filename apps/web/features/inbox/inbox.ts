@@ -28,6 +28,11 @@ export const ZIBBY_STATUS_RANK: Record<ZibbyStatus, number> = {
  * running: it is in flight and ZIBBY will not dispatch it. `archived` never
  * reaches the list ({@link isListable}); it maps to done for completeness.
  */
+/** `new` / `running` are not shown as ZIBBY tags — the issue's source status is shown instead. */
+export function isSourceStatusShown(status: ZibbyStatus): boolean {
+  return status === "new" || status === "running";
+}
+
 export function zibbyStatus(item: Pick<InboxRoadmapItem, "lifecycle">): ZibbyStatus {
   switch (item.lifecycle) {
     case "todo":

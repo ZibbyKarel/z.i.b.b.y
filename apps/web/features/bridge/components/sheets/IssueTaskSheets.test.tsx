@@ -73,6 +73,28 @@ describe("IssueSheet", () => {
     expect(process).toHaveBeenCalledOnce();
   });
 
+  it("shows the source status instead of the ZIBBY state for new/running", () => {
+    hooks.items = [{ ...item("todo"), sourceStatus: { name: "To Do", done: false } }];
+    const { unmount } = renderWithProviders(
+      <IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />,
+    );
+    expect(screen.getAllByText(/To Do/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Nové ve zdroji/)).toBeNull();
+    expect(screen.queryByText(/ZIBBY ·/)).toBeNull();
+    unmount();
+    hooks.items = [{ ...item("running"), sourceStatus: { name: "In Progress", done: false } }];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.getAllByText(/In Progress/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Běží/)).toBeNull();
+  });
+
+  it("new item without source status shows no state tag", () => {
+    hooks.items = [item("todo")];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByText(/Nové ve zdroji/)).toBeNull();
+    expect(screen.queryByText(/ZIBBY ·/)).toBeNull();
+  });
+
   it("plain title without a source url", () => {
     hooks.items = [{ ...item("todo"), source: { kind: "jira", externalKey: "ZB-1" } }];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
