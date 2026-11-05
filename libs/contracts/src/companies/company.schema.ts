@@ -27,7 +27,8 @@ export const CompanySchema = z.object({
   people: z.array(ProjectPersonSchema).optional(),
   /** Default per-engagement budget; a linked project overrides it field-by-field. */
   budget: ProjectBudgetSchema.optional(),
-  /** Phase 128 (D8): roadmap automation defaults a linked project inherits unless it overrides. */
+  /** @deprecated Superseded by the autopilot automation tree; stored value is no longer read.
+   *  Phase 128 (D8): roadmap automation defaults a linked project inherits unless it overrides. */
   roadmapDefaults: RoadmapDefaultsSchema.optional(),
 });
 export type Company = z.infer<typeof CompanySchema>;
