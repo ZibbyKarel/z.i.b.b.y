@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import type { SelfStatus } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "../../../test/render";
+import { renderWithProviders, screen, waitFor } from "../../../test/render";
 import { SelfUpgrade, SelfUpgradeTestId } from "./SelfUpgrade";
 
 const { statusRef } = vi.hoisted(() => ({
@@ -79,5 +79,35 @@ describe("SelfUpgrade", () => {
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
     expect(open).toHaveBeenCalledWith(UPDATE.latestAppReleaseUrl, "_blank", "noopener,noreferrer");
+    expect(screen.getByTestId(SelfUpgradeTestId.Button)).not.toHaveAttribute("aria-busy");
+  });
+
+  it("stays loading while the desktop updater runs and ignores repeat clicks", async () => {
+    statusRef.value = UPDATE;
+    let finish: () => void = () => {};
+    const checkForUpdates = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    window.zibbyDesktop = { checkForUpdates };
+    renderWithProviders(<SelfUpgrade />);
+    const button = screen.getByTestId(SelfUpgradeTestId.Button);
+    await userEvent.click(button);
+    expect(button).toHaveAttribute("aria-busy", "true");
+    await userEvent.click(button);
+    expect(checkForUpdates).toHaveBeenCalledTimes(1);
+    finish();
+    await waitFor(() => expect(button).not.toHaveAttribute("aria-busy"));
+  });
+
+  it("leaves the loading state when the updater call fails", async () => {
+    statusRef.value = UPDATE;
+    window.zibbyDesktop = { checkForUpdates: vi.fn().mockRejectedValue(new Error("ipc")) };
+    renderWithProviders(<SelfUpgrade />);
+    const button = screen.getByTestId(SelfUpgradeTestId.Button);
+    await userEvent.click(button);
+    await waitFor(() => expect(button).not.toHaveAttribute("aria-busy"));
   });
 });
