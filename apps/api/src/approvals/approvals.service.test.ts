@@ -380,6 +380,30 @@ describe("ApprovalsService", () => {
       const refs = activity.record.mock.calls[0]?.[0]?.refs as Record<string, unknown>;
       expect("department" in refs).toBe(false);
     });
+
+    it("announces approval-requested only once the approval is persisted", async () => {
+      const activity = makeActivity();
+      const svc = new ApprovalsService(storage, undefined, activity as never);
+      const order: string[] = [];
+      const create = storage.create.bind(storage);
+      vi.spyOn(storage, "create").mockImplementation(async (a) => {
+        const saved = await create(a);
+        order.push("persisted");
+        return saved;
+      });
+      activity.record.mockImplementation(async () => {
+        order.push("announced");
+      });
+      await svc.requestApproval({
+        runId: "task-1",
+        kind: "pr-review",
+        skill: "code-reviewer",
+        action: "github.pr.review",
+        detail: "post review",
+        risk: "medium",
+      });
+      expect(order).toEqual(["persisted", "announced"]);
+    });
   });
 
   describe("sourceUrl tagging (Phase 127)", () => {

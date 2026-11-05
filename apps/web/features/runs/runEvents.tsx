@@ -16,6 +16,7 @@ import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
+import { getTaskDetailRootKey } from "../tasks/queries/useTaskQuery";
 import { API_URL } from "../../state/api";
 import { taskRunsRootKey } from "./queries/keys";
 
@@ -173,6 +174,11 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // pending queue off it so the gate surfaces without waiting for a poll.
         if (parsed.kind?.startsWith("approval-")) {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+          // A finished run reads awaiting-approval only once its task's approval exists,
+          // which is after the run's own `done` event — refetch the run feed + tasks now.
+          void qc.invalidateQueries({ queryKey: taskRunsRootKey });
+          void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
+          void qc.invalidateQueries({ queryKey: getTaskDetailRootKey() });
         }
         // Bridge "Návrhy": a decided proposal, or an agent-factory candidate's approval
         // being requested / decided, changes the open-proposals list.

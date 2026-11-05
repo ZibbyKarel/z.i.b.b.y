@@ -8,6 +8,9 @@ import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
 import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
+import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
+import { getTaskDetailRootKey } from "../tasks/queries/useTaskQuery";
+import { taskRunsRootKey } from "./queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
@@ -43,6 +46,18 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
       mock.last().emit({ scope: "activity", kind: "approval-requested", at: "2026-07-01" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+  });
+
+  it("an approval-requested activity event invalidates the run feed and tasks", () => {
+    // The run's `done` event lands before the task parks; the awaiting-approval
+    // overlay exists only once the approval does, so this is the refetch that shows it.
+    act(() => {
+      mock.last().emit({ scope: "activity", kind: "approval-requested", at: "2026-11-05" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: taskRunsRootKey });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getScheduledTasksQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getTaskDetailRootKey() });
   });
 
   it("a non-approval activity event leaves the approvals queue alone", () => {
