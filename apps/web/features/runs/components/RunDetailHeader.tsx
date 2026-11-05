@@ -3,6 +3,7 @@
 import {
   AgentBadge,
   Container,
+  CopyableText,
   Dropdown,
   MetricStrip,
   Pressable,
@@ -96,6 +97,7 @@ export function RunDetailHeader({
   afterMetrics,
 }: RunDetailHeaderProps) {
   const t = useTranslations("runs");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const departments = useDepartmentLookup();
   const symbolOf = useAgentSymbol();
@@ -121,7 +123,7 @@ export function RunDetailHeader({
                   /
                 </Typography>
                 <Typography as="span" type="code">
-                  {run.runId}
+                  <CopyableText copyLabel={tCommon("copyId")} text={run.runId} />
                 </Typography>
                 <Sep />
                 <Typography as="span" type="labelSm">

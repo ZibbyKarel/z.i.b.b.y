@@ -181,6 +181,7 @@
   },
   "common": {
     "stop": "Stop",
+    "copyId": "Copy ID",
     "edit": "Edit",
     "duplicate": "Duplicate",
     "configure": "Configure",

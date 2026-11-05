@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen, within } from "../../../test/render";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { MetricStripTestId, StatePillTestId } from "@zibby/design-system";
+import { CopyableTextTestId, MetricStripTestId, StatePillTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import type { RunMetric } from "../runDetailModel";
 import { RunDetailHeader, RunDetailHeaderTestId } from "./RunDetailHeader";
@@ -51,6 +51,8 @@ function renderHeader(over: Partial<RunView> = {}, compact = false) {
 }
 
 describe("RunDetailHeader", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
   beforeEach(() => {
     push.mockClear();
     projectsRef.current = [];
@@ -65,6 +67,15 @@ describe("RunDetailHeader", () => {
     expect(screen.getByTestId("actions-slot")).toBeInTheDocument();
     const strip = screen.getByTestId(RunDetailHeaderTestId.Metrics);
     expect(within(strip).getAllByTestId(new RegExp(`^${MetricStripTestId.Item}-`))).toHaveLength(6);
+  });
+
+  it("shows the run id with a copy button", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { ...navigator, clipboard: { writeText } });
+    renderHeader();
+    expect(screen.getByTestId(CopyableTextTestId.Text)).toHaveTextContent("delivery_42");
+    await userEvent.click(screen.getByTestId(CopyableTextTestId.Copy));
+    expect(writeText).toHaveBeenCalledWith("delivery_42");
   });
 
   it("back, task and agent links navigate", async () => {
