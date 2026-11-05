@@ -1903,16 +1903,6 @@
       "add": "Add integration",
       "hint": "Shared by every project of this company. Each project routes the items it owns with its own routing rules, and can override an integration with one of its own.",
       "empty": "No company integrations yet — add Jira, GitHub or Slack once and share it across the company's projects."
-    },
-    "roadmapDefaults": {
-      "title": "Roadmap defaults",
-      "hint": "Inherited by every project of this company unless the project sets its own Inherit / On / Off.",
-      "autoPlay": "Auto-implement",
-      "autoPlayHint": "Unblocked items of inheriting projects start on their own. ZIBBY opens a PR and stops — the merge stays yours.",
-      "autoReview": "Automatic PR review",
-      "autoReviewHint": "Incoming PRs to review run a workflow chosen from their content. Comments are posted only after your approval.",
-      "autoAddressComments": "Automatic comment handling",
-      "autoAddressCommentsHint": "Fixes review comments on your PRs with changes requested. The push waits for your approval."
     }
   },
   "teams": {
@@ -2394,27 +2384,6 @@
     "hint": "Pick an epic to see its tasks on the right.",
     "emptyEpicsTitle": "No epics yet",
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
-    "automation": {
-      "title": "Roadmap automation",
-      "hint": "What ZIBBY may do on its own for this project. Inherit takes the company default, then the global default (off).",
-      "autoPlay": "Auto-implement",
-      "autoPlayHint": "Unblocked items start on their own, and a childless epic decomposes itself. ZIBBY opens a PR and stops — the merge stays yours. How many run at once is set in Settings → Runtime.",
-      "autoReview": "Automatic PR review",
-      "autoReviewHint": "Incoming PRs to review run a workflow chosen from their content. Comments are posted only after your approval.",
-      "autoAddressComments": "Automatic comment handling",
-      "autoAddressCommentsHint": "Fixes review comments on your PRs with changes requested. The push waits for your approval.",
-      "state": {
-        "inherit": "Inherit",
-        "on": "On",
-        "off": "Off"
-      },
-      "effective": "Currently {state} — {source}",
-      "source": {
-        "company": "inherited from company {name}",
-        "global": "global default",
-        "project": "set on this project"
-      }
-    },
     "epic": {
       "unphased": "unphased",
       "progress": "{done}/{total} tasks",
@@ -3649,7 +3618,7 @@
     "status": "Autopilot on · {pending} pending",
     "confirm": "Turn on",
     "dialogTitle": "Turn autopilot on?",
-    "dialogBody": "While it is on, ZIBBY does the actions selected below without asking and reports each one. It only pushes to its own branches and to the branches of your PRs. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you. ZIBBY sends Slack notifications only while autopilot is on.",
+    "dialogBody": "While it is on, ZIBBY does the actions selected below without asking and reports each one. It only pushes to its own branches and to the branches of your PRs. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you. Slack notifications are only sent while Autopilot is on.",
     "scopeReviews": "Automatic code review",
     "scopeReviewsHint": "Posts finished code reviews on the PR as a comment.",
     "scopeComments": "Automatic comment handling",
@@ -3658,6 +3627,18 @@
     "scopeCommunicationHint": "Answers questions on GitHub, GitLab, Jira and Slack when it has a concrete answer.",
     "dialogPending": "Approvals already waiting stay waiting: {pending}.",
     "operatorTokenMissing": "Turning autopilot on needs the operator token. Set it in Settings first.",
-    "failed": "Could not switch autopilot."
+    "failed": "Could not switch autopilot.",
+    "automationTitle": "Roadmap automation",
+    "automationHint": "Choose what ZIBBY may do on its own while autopilot is on. A company or team can override the global default; Inherit follows the level above.",
+    "global": "Global",
+    "autoImplement": "Implement roadmap items",
+    "autoReview": "Review PRs",
+    "autoAddressComments": "Address review comments",
+    "stateInherit": "Inherit",
+    "stateOn": "On",
+    "stateOff": "Off",
+    "inherits": "inherits: {state}",
+    "expand": "Expand",
+    "collapse": "Collapse"
   }
 }

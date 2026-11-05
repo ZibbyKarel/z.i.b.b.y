@@ -46,11 +46,6 @@ const { hooks } = vi.hoisted(() => ({
       isError: false,
       refetch: vi.fn(),
     },
-    config: {
-      data: undefined as { autoPlay: boolean } | undefined,
-      isPending: false,
-    },
-    setConfig: { mutate: vi.fn(), isPending: false },
     create: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
     update: { mutate: vi.fn(), isPending: false, isError: false, error: null as unknown },
     play: { mutate: vi.fn(), isPending: false },
@@ -59,7 +54,6 @@ const { hooks } = vi.hoisted(() => ({
 
 vi.mock("../queries", () => ({
   useRoadmapItemsQuery: () => hooks.items,
-  useRoadmapConfigQuery: () => hooks.config,
 }));
 
 // The whole `../mutations` barrel is replaced, so every hook the panel's SUBTREE
@@ -68,7 +62,6 @@ vi.mock("../queries", () => ({
 // this panel, so omitting theirs fails at render with "No <hook> export is defined
 // on the mock" rather than anything that points at the real cause.
 vi.mock("../mutations", () => ({
-  useSetRoadmapConfigMutation: () => hooks.setConfig,
   useCreateRoadmapItemMutation: () => hooks.create,
   useUpdateRoadmapItemMutation: () => hooks.update,
   usePlayRoadmapItemMutation: () => hooks.play,
@@ -78,8 +71,6 @@ describe("RoadmapPanel", () => {
   beforeEach(() => {
     search.current = "";
     hooks.items = { data: undefined, isPending: false, isError: false, refetch: vi.fn() };
-    hooks.config = { data: { autoPlay: false }, isPending: false };
-    hooks.setConfig = { mutate: vi.fn(), isPending: false };
     hooks.create = { mutate: vi.fn(), isPending: false, isError: false, error: null };
     hooks.update = { mutate: vi.fn(), isPending: false, isError: false, error: null };
     hooks.play = { mutate: vi.fn(), isPending: false };

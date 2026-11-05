@@ -6,9 +6,8 @@ a task is safe to dispatch. This doc covers **125a** (the data model, the
 per-project item store and the CRUD endpoints), **125e** (play, the dependency gate,
 merge signals, lifecycle completion, Tier-3 override, restart/resume),
 **125g** (epic decomposition: the artifact contract, the dedicated agent, the
-deterministic ingest) and **125h** (the gate-poll tick and — layered on top — auto-pickup: the `autoPlay`
-toggle and the "Automatizace roadmapy" panel on the project's Integrations
-tab). See
+deterministic ingest) and **125h** (the gate-poll tick and — layered on top — auto-pickup, originally a per-project `autoPlay`
+toggle, now the Autopilot `autoImplement` toggle in the Autopilot dialog's automation tree). See
 `docs/plans/phase-125-project-roadmap.md` for the full master plan (the UI in
 125d/f).
 
@@ -529,8 +528,10 @@ gitignored; only the `_`-prefixed settings file `_config.json` is versioned. Eac
 per project with a roadmap:
 
 1. drives `reconcileRunning` + `reconcileAwaitingMerge`;
-2. runs `RoadmapGateService.autoPickup` for every project whose effective `autoPlay`
-   is true (a company default `autoPlay: true` enables it for inheriting projects).
+2. runs `RoadmapGateService.autoPickup` for every project whose effective Autopilot
+   `autoImplement` is true (team > company > global, `docs/api/autopilot.md`; always false while
+   Autopilot is off). The legacy `_config.json` `autoPlay` / `Company.roadmapDefaults` are
+   deprecated and no longer read.
 
 Step 1 is the **poll half** of the two release signals. It is what catches a PR
 **merged directly on GitHub**, where the eager `recordMerge` hook never fires at all —
@@ -565,7 +566,7 @@ auto-started):
   can never disagree about what "empty epic" means. One epic's failure is logged and
   the pass continues.
 
-**Autonomy contract.** `autoPlay` is standing per-project consent, and what it
+**Autonomy contract.** The Autopilot `autoImplement` toggle (formerly per-project `autoPlay`) is standing consent, and what it
 licenses is Tier-1/Tier-2 work only: the dispatched task runs on its own branch and
 may open a PR (Tier-2, act-then-report). The merge gate is untouched — nothing here
 merges, pushes to a shared branch, or deploys, and the operator still reviews every
@@ -588,12 +589,10 @@ The two surfaces are split by what they _are_, not by what they touch:
 - **Roadmap tab** — `RoadmapPanel.tsx` renders a small header above the epic
   list/board holding the "Nový task" action. There is no Sync button: Jira/GitHub
   issues are listed live in the Inbox.
-- **Integrations tab** — `RoadmapAutomationPanel.tsx` ("Automatizace roadmapy"), a
-  `HudPanel` holding the standing-consent toggles (`autoPlay`, `autoReview`,
-  `autoAddressComments`), backed by `useRoadmapConfigQuery`/`useSetRoadmapConfigMutation`.
-  These are _settings about what ZIBBY may do unattended_, so they belong next to the
-  sources themselves. Each toggle sends a one-key patch body — which is precisely why
-  the PUT had to become a merge (see "Data model").
+- **Autopilot dialog** — the standing-consent toggles (`autoImplement`, `autoReview`,
+  `autoAddressComments`) now live in the Global → Company → Team tree in the Autopilot
+  dialog (`AutomationTree.tsx`, `docs/api/autopilot.md`). The old Integrations-tab
+  `RoadmapAutomationPanel` and its config hooks were removed.
 
 The board header's epic name is a `Pressable` that opens that epic's detail dialog —
 selecting an epic in the list only re-points the board, so without this there was no
@@ -868,8 +867,9 @@ Per-project (`/api/projects/:projectId/roadmap/...`):
 - `DELETE /projects/:projectId/roadmap/items/:itemId` — delete (404 if
   missing).
 - `GET|PUT /projects/:projectId/roadmap/config` — the per-project
-  `{ autoPlay, autoReview, autoAddressComments }` automation toggles. The PUT is a **patch** (omitted
-  toggle = leave it alone), not a replace.
+  `{ autoPlay, autoReview, autoAddressComments }` automation toggles. **Deprecated**: no longer
+  read; the toggles are owned by the Autopilot tree (`docs/api/autopilot.md`). The PUT is a
+  **patch** (omitted toggle = leave it alone), not a replace.
 - `POST /projects/:projectId/roadmap/items/:itemId/play` (125e) — enqueue a
   `todo` item; the gate releases it immediately if unblocked. 404 unknown
   item; 409 if the item isn't `todo` ("already in flight").

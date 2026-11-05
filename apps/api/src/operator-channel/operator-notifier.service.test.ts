@@ -101,7 +101,6 @@ const MAPPED: [string, ActivityEntry][] = [
   ["ci-red", entry("monitor-alert", { itemId: "ci-1", integrationId: "gh" })],
   ["briefing", entry("briefing-generated", { noteId: "brief-1" })],
   ["autopilot-action", entry("autopilot-action", { approvalId: "ap-auto", decision: "approved" })],
-  ["autopilot-action", entry("autopilot-changed", { status: "full", decision: "operator" })],
 ];
 
 interface Harness {
@@ -179,6 +178,13 @@ describe("OperatorNotifier — mapping", () => {
     expect(h.service.fake.sent[0]?.notification.kind).toBe(kind);
     const [logged] = await h.store.recentDeliveries();
     expect(logged).toMatchObject({ kind, status: "sent" });
+  });
+
+  it("an autopilot on/off switch is not pushed to the channel", async () => {
+    const h = await harness();
+    await feed(h, entry("autopilot-changed", { status: "full", decision: "operator" }));
+    await feed(h, entry("autopilot-changed", { status: "off", decision: "chat" }));
+    expect(h.service.fake.sent).toHaveLength(0);
   });
 
   it("a PR notification carries Open PR + Open in ZIBBY link buttons and the run summary", async () => {

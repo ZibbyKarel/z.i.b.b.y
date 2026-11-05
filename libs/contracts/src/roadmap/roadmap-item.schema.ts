@@ -322,6 +322,9 @@ export const UpdateRoadmapItemSchema = z.object({
 export type UpdateRoadmapItemInput = z.infer<typeof UpdateRoadmapItemSchema>;
 
 /**
+ * @deprecated Automation toggles now live in the autopilot tree
+ * (`AutopilotAutomationSchema`); stored values stay parseable but are no longer read.
+ *
  * Per-project roadmap config (`<projectId>/_config.json`): the automation
  * toggles surfaced on the project's Integrations tab ("Automatizace
  * roadmapy"). Independent of each other. A legacy `autoSync` key in an old
@@ -397,6 +400,8 @@ export const GLOBAL_ROADMAP_DEFAULTS = {
 } as const;
 
 /**
+ * @deprecated Use `resolveAutopilotAutomation`; kept for stored legacy config.
+ *
  * Pure inheritance resolver: project explicit value (non-null) wins, then the
  * company default, then the global default (`false`).
  */

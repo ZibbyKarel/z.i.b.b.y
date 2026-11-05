@@ -35,6 +35,36 @@ export const FULL_AUTOPILOT_SCOPE: AutopilotScope = {
   communication: true,
 };
 
+/**
+ * Roadmap automation toggles, owned by autopilot as a Global -> Company -> Team override
+ * tree. Precedence team > company > global; while autopilot is `off` all are false.
+ */
+export const AutomationTogglesSchema = z
+  .object({ autoImplement: z.boolean(), autoReview: z.boolean(), autoAddressComments: z.boolean() })
+  .strict();
+export type AutomationToggles = z.infer<typeof AutomationTogglesSchema>;
+export type AutomationKey = keyof AutomationToggles;
+
+export const NO_AUTOMATION: AutomationToggles = {
+  autoImplement: false,
+  autoReview: false,
+  autoAddressComments: false,
+};
+
+/** A node's explicit choices; an absent key inherits from the level above. */
+export const AutomationOverrideSchema = AutomationTogglesSchema.partial();
+export type AutomationOverride = z.infer<typeof AutomationOverrideSchema>;
+
+/** `companies` / `teams` are keyed by company id / team id. */
+export const AutopilotAutomationSchema = z
+  .object({
+    global: AutomationTogglesSchema,
+    companies: z.record(z.string(), AutomationOverrideSchema).default({}),
+    teams: z.record(z.string(), AutomationOverrideSchema).default({}),
+  })
+  .strict();
+export type AutopilotAutomation = z.infer<typeof AutopilotAutomationSchema>;
+
 /** `autopilot.json` — the on-disk state. Absent / garbage reads as `{ level: "off" }`. */
 export const AutopilotStateSchema = z
   .object({
@@ -42,9 +72,30 @@ export const AutopilotStateSchema = z
     since: IsoDateTimeSchema.optional(),
     by: AutopilotActorSchema.optional(),
     scope: AutopilotScopeSchema.optional(),
+    automation: AutopilotAutomationSchema.optional(),
   })
   .strict();
 export type AutopilotState = z.infer<typeof AutopilotStateSchema>;
+
+/** Effective toggles at a company/team: `off` or no tree = all false, else global <- company <- team. */
+export function resolveAutopilotAutomation(
+  state: Pick<AutopilotState, "level" | "automation">,
+  at: { companyId?: string; teamId?: string },
+): AutomationToggles {
+  if (state.level === "off" || !state.automation) return { ...NO_AUTOMATION };
+  const { global, companies, teams } = state.automation;
+  const company = at.companyId ? companies[at.companyId] : undefined;
+  const team = at.teamId ? teams[at.teamId] : undefined;
+  const out = { ...global };
+  for (const node of [company, team]) {
+    if (!node) continue;
+    for (const k of Object.keys(out) as AutomationKey[]) {
+      const v = node[k];
+      if (v !== undefined) out[k] = v;
+    }
+  }
+  return out;
+}
 
 /** `GET/PUT /api/autopilot` — the state plus how many approvals are still pending (never auto-decided). */
 export const AutopilotStatusSchema = AutopilotStateSchema.extend({
@@ -54,6 +105,11 @@ export type AutopilotStatus = z.infer<typeof AutopilotStatusSchema>;
 
 /** `scope` only means something with `full`; omitted there = everything on. */
 export const SetAutopilotInputSchema = z
-  .object({ level: AutopilotLevelSchema, scope: AutopilotScopeSchema.optional() })
+  .object({
+    level: AutopilotLevelSchema,
+    scope: AutopilotScopeSchema.optional(),
+    /** Omitted = keep the stored tree. */
+    automation: AutopilotAutomationSchema.optional(),
+  })
   .strict();
 export type SetAutopilotInput = z.infer<typeof SetAutopilotInputSchema>;

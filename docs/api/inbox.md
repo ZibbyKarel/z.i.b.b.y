@@ -329,9 +329,9 @@ The HTTP route never starts an auto run: the body schema is strict, so `{ …, a
 ## Automatic review & comment handling (todo-16)
 
 `PrAutomationService` (`apps/api/src/inbox/pr-automation.service.ts`) is a heartbeat that starts
-the two actions above on its own, per the project's roadmap automation toggles `autoReview` and
-`autoAddressComments` (`../api/roadmap.md` — tri-state, own value → the company's
-`roadmapDefaults` → global `false`, via `resolveRoadmapConfig`). It shares the roadmap heartbeat
+the two actions above on its own, per the Autopilot automation toggles `autoReview` and
+`autoAddressComments` (`./autopilot.md` — team > company > global override tree via
+`AutopilotService.automationFor`; all `false` while Autopilot is off). It shares the roadmap heartbeat
 knob `systemConfig.roadmapTickMs` (read live, `0` disables; no separate knob) and reports on
 `/api/health` as watcher `pr-automation`.
 
