@@ -4,9 +4,11 @@ import { render } from "../../utils/testRender";
 import { Wordmark, WordmarkTestId } from "./Wordmark";
 
 describe("Wordmark", () => {
-  it("renders the default brand text", () => {
+  it("renders the default brand text, not CSS-uppercased", () => {
     render(<Wordmark />);
-    expect(screen.getByTestId(WordmarkTestId.Root)).toHaveTextContent("ZIBBYOS");
+    const name = screen.getByTestId(WordmarkTestId.Name);
+    expect(name).toHaveTextContent("ZibbyOS");
+    expect(name.className).not.toContain("uppercase");
   });
 
   it("renders an overridden text", () => {
@@ -18,6 +20,17 @@ describe("Wordmark", () => {
     render(<Wordmark />);
     const el = screen.getByTestId(WordmarkTestId.Root);
     expect(el.tagName).toBe("SPAN");
-    expect(el).toHaveAccessibleName("ZIBBYOS");
+    expect(el).toHaveAccessibleName("ZibbyOS");
+  });
+
+  it("renders no version line by default", () => {
+    render(<Wordmark />);
+    expect(screen.queryByTestId(WordmarkTestId.Version)).toBeNull();
+  });
+
+  it("renders the version as a small second line", () => {
+    render(<Wordmark version="v0.2.1" />);
+    expect(screen.getByTestId(WordmarkTestId.Version)).toHaveTextContent("v0.2.1");
+    expect(screen.getByTestId(WordmarkTestId.Root)).toHaveAccessibleName("ZibbyOS v0.2.1");
   });
 });

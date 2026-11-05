@@ -2521,14 +2521,7 @@
     "pagePinAria": "Připnout stránku",
     "pageUnpinAria": "Odepnout stránku",
     "selfUpgrade": {
-      "label": "Upgrade",
-      "labelBehind": "Upgrade ↓{count}",
-      "aria": "Upgrade — aktualizovat ZIBBY (větev {branch}, {behind} za origin)",
-      "ariaDirty": "Upgrade — neuložené změny, aktualizace zablokována",
-      "dirty": "Neuložené změny — aktualizace zablokována",
-      "updated": "Aktualizováno",
-      "upToDate": "Aktuální",
-      "failed": "Aktualizace se nepovedla"
+      "aria": "Aktualizovat ZibbyOS na {version}"
     }
   },
   "activityLog": {

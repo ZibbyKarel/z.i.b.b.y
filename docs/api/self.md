@@ -54,7 +54,8 @@ Every sub-step is defensive — the endpoint never 500s on a normal machine.
 ## `updateSelf` — the one sanctioned self-update
 
 `git pull --ff-only origin <default>` in `installRoot()`. Operator-triggered
-only (the "Aktualizovat" button), never called autonomously, and NEVER falls
+only, never called autonomously (no UI calls it since the top-bar button moved to
+the desktop updater — kept as an API surface), and NEVER falls
 back to `--force`/`reset --hard`:
 
 - Dirty tree → 409 (`SelfDirtyError`) — never touches uncommitted work.
@@ -105,20 +106,21 @@ or in an error message.
 ## Frontend
 
 `apps/web/features/self/` — `useSelfStatusQuery` polls `getSelfStatus` (~2m,
-`select: selectApiResponseBody`). `useSelfUpdateMutation` (`updateSelf`) and
-`useEnsureSelfProjectMutation` (`ensureSelfProject`) both invalidate the status
-key in `onSettled` (any outcome, so a refusal refreshes `dirty`/`projectId` at
-once) and set `meta: { inlineError: true }`: ts-rest throws on any non-2xx, so a
-409 lands in `onError`, the call site shows the body's `message` inline
+`select: selectApiResponseBody`). `useEnsureSelfProjectMutation`
+(`ensureSelfProject`) invalidates the status key in `onSettled` and sets
+`meta: { inlineError: true }`: ts-rest throws on any non-2xx, so a 409 lands in
+`onError`, the call site shows the body's `message` inline
 (`updateErrorMessage`), and `providers.tsx`'s `MutationCache.onError` skips the
 generic toast for such mutations (`isInlineErrorMutation`, `toastBus.ts`).
 
-`apps/web/components/layout/SelfUpgrade/SelfUpgrade.tsx` — the header
-"Upgrade ↓N" button next to the limits (hidden for a non-git install, disabled on
-a dirty tree). Its accessible name starts with the visible word ("Upgrade —
-update ZIBBY (branch …, N behind origin)", WCAG 2.5.3). The result ("Updated" /
-"Up to date", 5 s) and any 409 message render beside it in an always-mounted
-`role="status"` / `aria-live="polite"` region.
+`apps/web/components/layout/SelfUpgrade/SelfUpgrade.tsx` — the header Upgrade
+icon button (DS `Button intent="primary" icon="upgrade"`, no text) next to the
+limits, rendered only when `appUpdateAvailable` is true. Its `aria-label`/`title`
+name the newer version. In ZibbyOS.app it calls `window.zibbyDesktop.checkForUpdates()`
+(the preload bridge, `apps/desktop/src/preload.ts` → IPC `zibby:check-for-updates`
+→ the same updater as the menu's "Check for Updates…"); in a plain browser it opens
+`latestAppReleaseUrl` in a new tab. `AppShell` passes `v<appVersion>` to
+`AppHeader`'s `version`, shown small under the `ZibbyOS` wordmark.
 
 `apps/web/features/settings/components/SelfDevelopmentPanel.tsx` — Settings
 panel: branch, ↓/↑ vs origin, dirty, open PRs (DS `TextLink`,

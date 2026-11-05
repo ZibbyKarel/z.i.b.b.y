@@ -27,6 +27,7 @@ import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSh
 import { counterSuffix } from "../../../features/inbox/inbox";
 import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
 import { useLimitsQuery } from "../../../features/limits";
+import { useSelfStatusQuery } from "../../../features/self";
 import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, formatCountdown } from "../../../utils/time";
@@ -282,11 +283,13 @@ function PhoneMenu({ pathname }: { pathname: string }) {
 function useHeaderTrailing() {
   const t = useTranslations("shell");
   const { data: limits } = useLimitsQuery();
+  const { data: status } = useSelfStatusQuery();
   const now = useNow(MINUTE_MS);
   const resetsIn = (resetsAt: number | null | undefined) =>
     resetsAt == null ? undefined : formatCountdown(resetsAt - now);
 
   return {
+    version: status?.appVersion ? `v${status.appVersion}` : undefined,
     limits: (
       <Stack align="center" direction="row" gap="100">
         <SelfUpgrade />
@@ -377,6 +380,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                 notifications={<NotificationBell />}
                 onSearchClick={() => setPaletteOpen(true)}
                 themeToggle={<ThemeToggle />}
+                version={trailing.version}
               />
             )
           }

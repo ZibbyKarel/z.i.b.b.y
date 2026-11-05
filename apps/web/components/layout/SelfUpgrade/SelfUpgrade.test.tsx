@@ -1,21 +1,15 @@
-import { act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { SelfStatus } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import { SelfUpgrade, SelfUpgradeTestId } from "./SelfUpgrade";
 
-const { statusRef, mutateMock } = vi.hoisted(() => ({
+const { statusRef } = vi.hoisted(() => ({
   statusRef: { value: undefined as SelfStatus | undefined },
-  mutateMock: vi.fn(),
 }));
 
-vi.mock("../../../features/self", async () => ({
-  ...(await vi.importActual<typeof import("../../../features/self/updateErrorMessage")>(
-    "../../../features/self/updateErrorMessage",
-  )),
+vi.mock("../../../features/self", () => ({
   useSelfStatusQuery: () => ({ data: statusRef.value }),
-  useSelfUpdateMutation: () => ({ mutate: mutateMock, isPending: false }),
 }));
 
 const BASE: SelfStatus = {
@@ -28,93 +22,62 @@ const BASE: SelfStatus = {
   openPrCount: 0,
   prs: [],
   ghAvailable: true,
+  appVersion: "0.2.1",
   appUpdateAvailable: false,
 };
 
-type Options = { onSuccess?: (r: unknown) => void; onError?: (e: unknown) => void };
+const UPDATE: SelfStatus = {
+  ...BASE,
+  latestAppVersion: "0.3.0",
+  latestAppReleaseUrl: "https://github.com/ZibbyKarel/z.i.b.b.y/releases/tag/desktop-v0.3.0",
+  appUpdateAvailable: true,
+};
 
 describe("SelfUpgrade", () => {
   beforeEach(() => {
-    mutateMock.mockReset();
     statusRef.value = BASE;
   });
-  afterEach(() => vi.useRealTimers());
+  afterEach(() => {
+    delete window.zibbyDesktop;
+    vi.restoreAllMocks();
+  });
 
-  it("is hidden when not a git install", () => {
-    statusRef.value = { ...BASE, currentBranch: "" };
+  it("is hidden when no newer release exists", () => {
     renderWithProviders(<SelfUpgrade />);
     expect(screen.queryByTestId(SelfUpgradeTestId.Button)).not.toBeInTheDocument();
   });
 
-  it("shows the behind count", () => {
-    statusRef.value = { ...BASE, behind: 3, upToDate: false };
+  it("is hidden while the status is unknown", () => {
+    statusRef.value = undefined;
     renderWithProviders(<SelfUpgrade />);
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveTextContent("↓3");
+    expect(screen.queryByTestId(SelfUpgradeTestId.Button)).not.toBeInTheDocument();
   });
 
-  it("accessible name starts with the visible word and describes branch + behind", () => {
-    statusRef.value = { ...BASE, behind: 3, upToDate: false };
-    renderWithProviders(<SelfUpgrade />);
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(
-      "Upgrade — aktualizovat ZIBBY (větev main, 3 za origin)",
-    );
-  });
-
-  it("dirty accessible name still starts with the visible word", () => {
-    statusRef.value = { ...BASE, dirty: true };
-    renderWithProviders(<SelfUpgrade />);
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(/^Upgrade — /);
-  });
-
-  it("has an always-mounted polite live region", () => {
-    renderWithProviders(<SelfUpgrade />);
-    const region = screen.getByTestId(SelfUpgradeTestId.Status);
-    expect(region).toHaveRole("status");
-    expect(region).toHaveAttribute("aria-live", "polite");
-    expect(region).toBeEmptyDOMElement();
-  });
-
-  it("is disabled with a dirty title when the tree is dirty", () => {
-    statusRef.value = { ...BASE, dirty: true };
+  it("renders an icon-only button named after the newer version", () => {
+    statusRef.value = UPDATE;
     renderWithProviders(<SelfUpgrade />);
     const button = screen.getByTestId(SelfUpgradeTestId.Button);
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("title", "Neuložené změny — aktualizace zablokována");
+    expect(button).toHaveTextContent("");
+    expect(button).toHaveAccessibleName("Aktualizovat ZibbyOS na v0.3.0");
+    expect(button).toHaveAttribute("title", "Aktualizovat ZibbyOS na v0.3.0");
   });
 
-  it("updates on click and announces Updated / Up to date in the live region", async () => {
+  it("runs the desktop updater when the preload bridge is present", async () => {
+    statusRef.value = UPDATE;
+    const checkForUpdates = vi.fn().mockResolvedValue(undefined);
+    window.zibbyDesktop = { checkForUpdates };
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
-    expect(mutateMock).toHaveBeenCalledWith({ body: {} }, expect.any(Object));
-    const options = mutateMock.mock.calls[0]?.[1] as Options;
-    act(() => options.onSuccess?.({ status: 200, body: { updated: true, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktualizováno");
-    expect(screen.getByTestId(SelfUpgradeTestId.Button)).toHaveAccessibleName(/^Upgrade/);
-    act(() => options.onSuccess?.({ status: 200, body: { updated: false, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktuální");
+    expect(checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(open).not.toHaveBeenCalled();
   });
 
-  it("clears the Updated announcement after 5 s", async () => {
+  it("opens the release page in a new tab in a plain browser", async () => {
+    statusRef.value = UPDATE;
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
-    const options = mutateMock.mock.calls[0]?.[1] as Options;
-    vi.useFakeTimers();
-    act(() => options.onSuccess?.({ status: 200, body: { updated: true, behind: 0 } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toHaveTextContent("Aktualizováno");
-    act(() => {
-      vi.advanceTimersByTime(5000);
-    });
-    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toBeEmptyDOMElement();
-  });
-
-  it("shows the 409 server message inline", async () => {
-    renderWithProviders(<SelfUpgrade />);
-    await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
-    const options = mutateMock.mock.calls[0]?.[1] as Options;
-    act(() => options.onError?.({ status: 409, body: { message: "dirty" } }));
-    expect(screen.getByTestId(SelfUpgradeTestId.Error)).toHaveTextContent("dirty");
-    expect(screen.getByTestId(SelfUpgradeTestId.Status)).toContainElement(
-      screen.getByTestId(SelfUpgradeTestId.Error),
-    );
+    expect(open).toHaveBeenCalledWith(UPDATE.latestAppReleaseUrl, "_blank", "noopener,noreferrer");
   });
 });

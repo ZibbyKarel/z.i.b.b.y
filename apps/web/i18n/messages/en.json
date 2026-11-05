@@ -2521,14 +2521,7 @@
     "pagePinAria": "Pin page",
     "pageUnpinAria": "Unpin page",
     "selfUpgrade": {
-      "label": "Upgrade",
-      "labelBehind": "Upgrade ↓{count}",
-      "aria": "Upgrade — update ZIBBY (branch {branch}, {behind} behind origin)",
-      "ariaDirty": "Upgrade — uncommitted changes, update blocked",
-      "dirty": "Uncommitted changes — update blocked",
-      "updated": "Updated",
-      "upToDate": "Up to date",
-      "failed": "Update failed"
+      "aria": "Update ZibbyOS to {version}"
     }
   },
   "activityLog": {
