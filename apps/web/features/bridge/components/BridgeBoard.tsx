@@ -59,6 +59,8 @@ function BridgeWidgetHost({
   const def = WIDGETS[widget.type];
   const onEmptyChange = useCallback((e: boolean) => onEmpty(id, e), [onEmpty, id]);
   const onCountChange = useCallback((i: BridgeWidgetInfo) => onInfo(id, i), [onInfo, id]);
+  // Per-widget, in-memory only: closed on every load.
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   return (
     <WidgetFrame
@@ -71,6 +73,9 @@ function BridgeWidgetHost({
       dragging={state.draggingId === id}
       empty={empty}
       emptyIcon={def.icon}
+      filtersActive={info?.filtersActive}
+      filtersLabel={t("bridge.filters")}
+      filtersOpen={filtersOpen}
       label={widget.title ?? t(def.labelKey)}
       loading={info?.loading}
       loadingLabel={t("bridge.loading")}
@@ -80,6 +85,7 @@ function BridgeWidgetHost({
       onResizePointerDown={onDragStart && ((e, corner) => onDragStart(id, corner, e))}
       onSettings={() => onSettings(id)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
+      onToggleFilters={def.filterable ? () => setFiltersOpen((o) => !o) : undefined}
       refreshLabel={t("bridge.refresh")}
       refreshing={info?.refreshing}
       resizeCornerLabels={{
@@ -97,6 +103,7 @@ function BridgeWidgetHost({
       <def.Component
         adding={adding}
         epicClosed={state.epicClosed}
+        filtersOpen={filtersOpen}
         onCountChange={onCountChange}
         onEmptyChange={onEmptyChange}
         onEpicToggle={state.setEpicClosed}
@@ -161,6 +168,7 @@ export function BridgeBoard({
           prev.aside === i.aside &&
           prev.onRefresh === i.onRefresh &&
           prev.refreshing === i.refreshing &&
+          prev.filtersActive === i.filtersActive &&
           prev.loading === i.loading
           ? p
           : { ...p, [id]: i };

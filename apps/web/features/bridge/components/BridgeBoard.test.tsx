@@ -1,5 +1,6 @@
 import { ConfirmDeleteButtonTestId, WidgetFrameTestId } from "@zibby/design-system";
 import { act, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
@@ -32,13 +33,26 @@ vi.mock("../widgets/registry", () => ({
     prs: {
       labelKey: "bridge.widget.prs.label",
       addable: true,
-      Component: ({ onEmptyChange, onCountChange, adding }: BridgeWidgetProps) => {
+      filterable: true,
+      Component: ({ onEmptyChange, onCountChange, adding, filtersOpen }: BridgeWidgetProps) => {
         const [loading, setLoading] = useState(true);
         h.setLoading = setLoading;
         useEffect(() => onEmptyChange(false), [onEmptyChange]);
         // Same count/you/aside every time; only `loading` differs.
         useEffect(() => onCountChange?.({ count: 1, you: 0, loading }), [loading, onCountChange]);
-        return <span data-testid="cfg">{String(adding)}</span>;
+        return (
+          <span data-testid="cfg">
+            {String(adding)}
+            {filtersOpen ? "-filters" : ""}
+          </span>
+        );
+      },
+    },
+    issues: {
+      labelKey: "bridge.widget.issues.label",
+      Component: ({ onEmptyChange }: BridgeWidgetProps) => {
+        useEffect(() => onEmptyChange(false), [onEmptyChange]);
+        return null;
       },
     },
   },
@@ -62,6 +76,23 @@ describe("BridgeBoard", () => {
     expect(screen.getByTestId(WidgetFrameTestId.Loading)).toBeInTheDocument();
     act(() => h.setLoading(false));
     expect(screen.queryByTestId(WidgetFrameTestId.Loading)).toBeNull();
+  });
+
+  it("shows the filters toggle only for filterable widgets and flips filtersOpen locally", async () => {
+    const both = {
+      ...state,
+      layout: [
+        { id: "prs", type: "prs", x: 0, y: 0, w: 6, h: 4 },
+        { id: "iss", type: "issues", x: 6, y: 0, w: 6, h: 4 },
+      ],
+    } as unknown as BridgeState;
+    renderWithProviders(<BridgeBoard density="comfort" state={both} />);
+    const buttons = screen.getAllByTestId(WidgetFrameTestId.Filters);
+    expect(buttons).toHaveLength(1);
+    expect(screen.getByTestId("cfg")).toHaveTextContent("false");
+    await userEvent.click(buttons[0] as HTMLElement);
+    expect(screen.getByTestId("cfg")).toHaveTextContent("false-filters");
+    expect(buttons[0]).toHaveAttribute("aria-pressed", "true");
   });
 
   it("starts a resize from the pressed corner with no edit step", () => {

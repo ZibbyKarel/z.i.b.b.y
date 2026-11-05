@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  ButtonGroup,
-  Dropdown,
-  Icon,
-  type IconName,
-  type IconTone,
-  ToggleChip,
-} from "@zibby/design-system";
+import { ButtonGroup, Dropdown, Icon, type IconName, type IconTone } from "@zibby/design-system";
 import { teamSlugMatches } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import {
@@ -18,11 +11,7 @@ import {
   type PrReviewFilter,
   type PrReviewState,
 } from "../state/prStatus";
-import type { PrFilterPick, PrTeamOption } from "../state/rows";
-
-export enum PrFilterControlsTestId {
-  Mine = "pr-filter-mine",
-}
+import { type PrFilterPick, type PrTeamOption, prOwner } from "../state/rows";
 
 export const CI_ICON: Record<PrCiState, { name: IconName; tone: IconTone }> = {
   conflict: { name: "branch", tone: "bad" },
@@ -46,12 +35,13 @@ const REVIEW_FILTER_ICON: Record<PrReviewFilter, { name: IconName; tone: IconTon
   approved: REVIEW_ICON.approved,
 };
 
-/** Empty groups and `mine: false` are dropped: an absent group doesn't filter. */
+/** Empty groups are dropped: an absent group doesn't filter. The legacy `mine` flag becomes `owner`. */
 function compact(pick: PrFilterPick): PrFilterPick {
   const next: PrFilterPick = {};
   if (pick.review?.length) next.review = pick.review;
   if (pick.ci?.length) next.ci = pick.ci;
-  if (pick.mine) next.mine = true;
+  const owner = prOwner(pick);
+  if (owner) next.owner = owner;
   if (pick.teams?.length) next.teams = pick.teams;
   return next;
 }
@@ -68,7 +58,10 @@ export interface PrFilterControlsProps {
 /** The PR widget's filters (review, CI, mine, teams), shared by the widget and its settings. */
 export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterControlsProps) {
   const t = useTranslations("bridge.widgets.prs");
-  const set = (patch: PrFilterPick) => onChange(compact({ ...pick, ...patch }));
+  // `mine` is dropped from the base so an explicit owner patch (or its removal) wins over it.
+  const set = (patch: PrFilterPick) => {
+    onChange(compact({ ...pick, mine: undefined, owner: prOwner(pick), ...patch }));
+  };
   const option = <K extends string>(
     id: K,
     label: string,
@@ -106,13 +99,16 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
         options={PR_CI_FILTERS.map((s) => option(s, t(`ci.${s}`), CI_ICON[s], counts?.ci[s]))}
         value={pick.ci ?? []}
       />
-      <ToggleChip
-        data-testid={PrFilterControlsTestId.Mine}
-        onClick={() => set({ mine: !pick.mine })}
-        pressed={!!pick.mine}
-      >
-        {t("filter.mine")}
-      </ToggleChip>
+      <ButtonGroup
+        deselectable
+        ariaLabel={t("filter.owner")}
+        onChange={(v) => set({ owner: v === "mine" || v === "others" ? v : undefined })}
+        options={[
+          { id: "mine", label: t("filter.ownerMine") },
+          { id: "others", label: t("filter.ownerOthers") },
+        ]}
+        value={prOwner(pick) ?? ""}
+      />
       {teams.length > 0 ? (
         <Dropdown
           compact
@@ -121,6 +117,7 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
           onChange={(v) => set({ teams: v })}
           options={teams}
           placeholder={t("filter.teams")}
+          size="sm"
           value={pickedTeams}
         />
       ) : null}

@@ -42,6 +42,8 @@ export interface BridgeWidgetInfo {
   onRefresh?: () => void;
   /** The sync is running — the button is disabled and spins. */
   refreshing?: boolean;
+  /** A filter pick is applied — marks the header filters button. */
+  filtersActive?: boolean;
 }
 
 /**
@@ -68,6 +70,8 @@ export interface BridgeWidgetProps {
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;
+  /** The header filters toggle is on (only for `filterable` widgets): show the filter bar. */
+  filtersOpen?: boolean;
 }
 
 /** Props of a widget type's own section in the settings dialog — edits a local draft. */
@@ -85,6 +89,8 @@ export interface WidgetDefinition {
   Component: (props: BridgeWidgetProps) => ReactNode;
   /** Has a header `+` toggle that drives `BridgeWidgetProps.adding`. */
   addable?: true;
+  /** Has a header filters toggle that drives `BridgeWidgetProps.filtersOpen`. */
+  filterable?: true;
   /** Type-specific section of the settings dialog, below the common name / remove part. */
   Settings?: (props: WidgetSettingsProps) => ReactNode;
 }
@@ -113,6 +119,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.prs.desc",
     icon: "branch",
     Component: PrsWidget,
+    filterable: true,
     Settings: PrsWidgetSettings,
   },
   runs: {

@@ -17,17 +17,19 @@ interface Report {
   refreshing?: boolean;
   /** The fetch failed — an error state is shown, so the widget must not collapse as empty. */
   failed?: boolean;
+  /** A filter pick is applied — the header filters button shows its marker. */
+  filtersActive?: boolean;
 }
 
 /** Feeds the frame: emptiness (never while loading) and the count / YOU / aside header info. */
 export function useWidgetReport(
-  { loading, count, you, aside, onRefresh, refreshing, failed }: Report,
+  { loading, count, you, aside, onRefresh, refreshing, failed, filtersActive }: Report,
   { onEmptyChange, onCountChange }: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">,
 ) {
   const empty = !loading && !count && !failed;
   useEffect(() => onEmptyChange(empty), [empty, onEmptyChange]);
   useEffect(
-    () => onCountChange?.({ count, you, loading, aside, onRefresh, refreshing }),
-    [count, you, loading, aside, onRefresh, refreshing, onCountChange],
+    () => onCountChange?.({ count, you, loading, aside, onRefresh, refreshing, filtersActive }),
+    [count, you, loading, aside, onRefresh, refreshing, filtersActive, onCountChange],
   );
 }

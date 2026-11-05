@@ -15,7 +15,6 @@ import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
-import { PrFilterControlsTestId } from "./PrFilterControls";
 import { PrsWidget, PrsWidgetTestId } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
@@ -338,7 +337,7 @@ describe("PrsWidget", () => {
       pr(2, { headRef: "b", baseRef: "a", mergeable: false }),
       pr(3),
     ];
-    const props = setup({ widget: widget("w", "prs") });
+    const props = setup({ widget: widget("w", "prs"), filtersOpen: true });
     renderWithProviders(<PrsWidget {...props} />);
     const conflict = screen.getByTestId(`${ButtonGroupTestId.Option}-conflict`);
     expect(conflict).toHaveTextContent("Konflikt1");
@@ -365,19 +364,23 @@ describe("PrsWidget", () => {
 
   it("starts from widget.prFilters and resets to them when they change", async () => {
     d.prs = [pr(1), pr(2, { bucket: "to-review", author: "jana" })];
-    const props = setup({ widget: { ...widget("w", "prs"), prFilters: { mine: true } } });
+    const props = setup({
+      widget: { ...widget("w", "prs"), prFilters: { owner: "mine" } },
+      filtersOpen: true,
+    });
     const { rerender } = renderWithProviders(<PrsWidget {...props} />);
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(1);
-    expect(screen.getByTestId(PrFilterControlsTestId.Mine)).toHaveAttribute("aria-pressed", "true");
+    const mineBtn = () => screen.getByTestId(`${ButtonGroupTestId.Option}-mine`);
+    expect(mineBtn()).toHaveAttribute("aria-pressed", "true");
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filtersActive: true }),
+    );
 
-    await userEvent.click(screen.getByTestId(PrFilterControlsTestId.Mine));
+    await userEvent.click(mineBtn());
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2);
 
     rerender(<PrsWidget {...props} widget={{ ...props.widget, prFilters: { ci: ["failing"] } }} />);
-    expect(screen.getByTestId(PrFilterControlsTestId.Mine)).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+    expect(mineBtn()).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`)).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -386,13 +389,25 @@ describe("PrsWidget", () => {
 
   it("hides the team control without teams and offers them from the PRs", () => {
     d.prs = [pr(1)];
-    const props = setup({ widget: widget("w", "prs") });
+    const props = setup({ widget: widget("w", "prs"), filtersOpen: true });
     const first = renderWithProviders(<PrsWidget {...props} />);
     expect(screen.queryByLabelText("Týmy")).not.toBeInTheDocument();
     first.unmount();
     d.prs = [pr(1, { reviewTeam: "o/blue" })];
     renderWithProviders(<PrsWidget {...props} />);
     expect(screen.getByLabelText("Týmy")).toBeInTheDocument();
+  });
+
+  it("renders no filter bar until filtersOpen", () => {
+    d.prs = [pr(1)];
+    const props = setup({ widget: widget("w", "prs") });
+    const { rerender } = renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.queryByTestId(`${ButtonGroupTestId.Option}-failing`)).not.toBeInTheDocument();
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filtersActive: false }),
+    );
+    rerender(<PrsWidget {...props} filtersOpen />);
+    expect(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`)).toBeInTheDocument();
   });
 
   it("is empty with no PRs", () => {

@@ -3231,6 +3231,7 @@
     "resizeSe": "bottom right",
     "refresh": "Sync",
     "allClear": "All clear",
+    "filters": "Filters",
     "loading": "Loading…",
     "widgets": {
       "issues": {
@@ -3247,7 +3248,9 @@
         "filter": {
           "review": "Filter by review state",
           "ci": "Filter by CI",
-          "mine": "Only mine",
+          "owner": "Author",
+          "ownerMine": "Mine",
+          "ownerOthers": "Others'",
           "teams": "Teams"
         },
         "review": {

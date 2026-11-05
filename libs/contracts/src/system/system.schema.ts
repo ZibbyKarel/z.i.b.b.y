@@ -11,7 +11,9 @@ export const PrWidgetFiltersSchema = z
   .object({
     review: z.array(z.enum(["waiting", "changes", "approved"])).optional(),
     ci: z.array(z.enum(["conflict", "failing", "passing"])).optional(),
+    /** @deprecated Legacy "only mine" flag, read only; superseded by `owner: "mine"`. */
     mine: z.boolean().optional(),
+    owner: z.enum(["mine", "others"]).optional(),
     teams: z.array(z.string().min(1)).optional(),
   })
   .strict();

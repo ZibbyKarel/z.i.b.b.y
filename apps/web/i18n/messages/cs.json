@@ -3231,6 +3231,7 @@
     "resizeSe": "vpravo dole",
     "refresh": "Synchronizovat",
     "allClear": "Vše v pořádku",
+    "filters": "Filtry",
     "loading": "Načítání…",
     "widgets": {
       "issues": {
@@ -3247,7 +3248,9 @@
         "filter": {
           "review": "Filtrovat podle stavu review",
           "ci": "Filtrovat podle CI",
-          "mine": "Jen moje",
+          "owner": "Autor",
+          "ownerMine": "Moje",
+          "ownerOthers": "Cizí",
           "teams": "Týmy"
         },
         "review": {

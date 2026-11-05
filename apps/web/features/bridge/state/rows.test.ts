@@ -7,6 +7,7 @@ import {
   compareIssues,
   formatUsd,
   issueGroups,
+  prOwner,
   prTeamLabel,
   prTeams,
   prTree,
@@ -245,6 +246,22 @@ describe("pull requests", () => {
     expect(nodes[0]?.row.muted).toBe(true);
     expect(nodes[0]?.kids[0]?.row.muted).toBe(false);
     expect(nodes[0]?.kids[0]?.kids[0]?.row.muted).toBe(true);
+  });
+
+  it("prOwner reads owner, falling back to the legacy mine flag", () => {
+    expect(prOwner({ mine: true })).toBe("mine");
+    expect(prOwner({ owner: "others", mine: true })).toBe("others");
+    expect(prOwner({})).toBeUndefined();
+  });
+
+  it("owner others keeps only others' PRs; owner mine equals the old mine pick", () => {
+    const other = { bucket: "to-review", author: "jana" } as const;
+    const all = [pr({ number: 1 }), pr({ number: 2, ...other })];
+    const nums = (pick: Parameters<typeof prTree>[3]) =>
+      prTree("p", all, none, pick, ago).nodes.map((n) => n.row.number);
+    expect(nums({ owner: "others" })).toEqual(["#2"]);
+    expect(nums({ owner: "mine" })).toEqual(nums({ mine: true }));
+    expect(nums({ owner: "mine" })).toEqual(["#1"]);
   });
 
   it("teams match on reviewTeam; prTeams lists distinct slugs plus extras, sorted", () => {

@@ -56,7 +56,7 @@ function StateIcon({
 /**
  * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters) as
  * one flat list, newest first, each stack kept together (base -> head, indented behind a rail).
- * The filter row above narrows by review / CI state, mine and team and doubles as the legend of the card icons.
+ * The filter row above narrows by review / CI state, owner and team and doubles as the legend of the card icons.
  * No action buttons here; they live in the detail sheet.
  */
 export function PrsWidget({
@@ -66,6 +66,7 @@ export function PrsWidget({
   selection,
   onOpen,
   sheetSide,
+  filtersOpen,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.prs");
   const now = useNow(60_000);
@@ -105,6 +106,7 @@ export function PrsWidget({
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : total,
       you,
+      filtersActive: Object.keys(pick).length > 0,
     },
     { onEmptyChange, onCountChange },
   );
@@ -190,11 +192,13 @@ export function PrsWidget({
 
   return (
     <>
-      <Container padding={["100", "150"]}>
-        <FilterBar>
-          <PrFilterControls counts={counts} onChange={setPick} pick={pick} teams={teams} />
-        </FilterBar>
-      </Container>
+      {filtersOpen ? (
+        <Container padding={["100", "150"]}>
+          <FilterBar>
+            <PrFilterControls counts={counts} onChange={setPick} pick={pick} teams={teams} />
+          </FilterBar>
+        </Container>
+      ) : null}
       {nodes.map((n) => tree(n, 0))}
     </>
   );

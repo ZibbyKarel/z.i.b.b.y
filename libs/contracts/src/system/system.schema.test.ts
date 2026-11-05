@@ -52,6 +52,15 @@ describe("BridgeWidgetSchema title and prFilters", () => {
     ).toBe(false);
   });
 
+  it("parses the legacy mine flag and the owner enum, rejects other owners", () => {
+    const parse = (prFilters: unknown) =>
+      BridgeWidgetSchema.safeParse({ ...base, type: "prs", prFilters }).success;
+    expect(parse({ mine: true })).toBe(true);
+    expect(parse({ owner: "others" })).toBe(true);
+    expect(parse({ owner: "mine" })).toBe(true);
+    expect(parse({ owner: "x" })).toBe(false);
+  });
+
   it("rejects an unknown filter value or key", () => {
     expect(
       BridgeWidgetSchema.safeParse({ ...base, type: "prs", prFilters: { review: ["nope"] } })

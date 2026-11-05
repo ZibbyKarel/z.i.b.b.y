@@ -3,7 +3,6 @@ import { ButtonGroupTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
-import { PrFilterControlsTestId } from "./PrFilterControls";
 import { PrsWidgetSettings } from "./PrsWidgetSettings";
 
 vi.mock("../../inbox/queries", () => ({
@@ -25,9 +24,9 @@ describe("PrsWidgetSettings", () => {
     expect(onChange).toHaveBeenLastCalledWith(
       expect.objectContaining({ prFilters: { ci: ["failing"] } }),
     );
-    await userEvent.click(screen.getByTestId(PrFilterControlsTestId.Mine));
+    await userEvent.click(screen.getByTestId(`${ButtonGroupTestId.Option}-mine`));
     expect(onChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ prFilters: { mine: true } }),
+      expect.objectContaining({ prFilters: { owner: "mine" } }),
     );
 
     // deselecting the last pick removes prFilters entirely
