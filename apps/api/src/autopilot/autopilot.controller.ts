@@ -22,7 +22,7 @@ export class AutopilotController {
     return tsRestHandler(autopilotContract, {
       getAutopilot: async () => ({ status: 200, body: await this.autopilot.status() }),
 
-      setAutopilot: async ({ body: { level, scope, automation }, headers }) => {
+      setAutopilot: async ({ body: { level, automation }, headers }) => {
         if (level === "full" && !hasOperatorToken(this.tokens, headers)) {
           return {
             status: 401,
@@ -33,7 +33,7 @@ export class AutopilotController {
         const tree = level === "full" ? automation : undefined;
         return {
           status: 200,
-          body: await this.autopilot.set(level, "operator", scope, tree),
+          body: await this.autopilot.set(level, "operator", tree),
         };
       },
     });

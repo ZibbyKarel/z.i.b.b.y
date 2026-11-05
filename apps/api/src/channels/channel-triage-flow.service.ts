@@ -15,7 +15,7 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { ApprovalsService, type ResumableRunner } from "../approvals/approvals.service";
-import { AutopilotService } from "../autopilot/autopilot.service";
+import { type AutopilotLocation, AutopilotService } from "../autopilot/autopilot.service";
 import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GateRulesStorageService } from "../gate-rules/gate-rules.storage.service";
 import { CommsService } from "../comms/comms.service";
@@ -599,6 +599,19 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return this.forcesTier3(project, item.vip === true);
   }
 
+  /** Where a reply acts for autopilot: the item's project (its company and team), else the integration's company. */
+  private async autopilotLocation(
+    item: ChannelItem,
+    integrationCompanyId: string | undefined,
+  ): Promise<AutopilotLocation> {
+    const project = item.projectId
+      ? await this.projects.get(item.projectId).catch(() => null)
+      : null;
+    if (!project) return { companyId: integrationCompanyId };
+    const company = await this.resolved.resolveCompany(project).catch(() => undefined);
+    return { companyId: company?.id, teamId: project.teamId };
+  }
+
   // ---- Tier 3 / fallback: park a kind-"channel" approval ----------------------
 
   /** Park a Tier-3 `channel` approval carrying the researched draft. */
@@ -645,7 +658,15 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     // Phase 4 — autopilot removes the click on a concrete draft (a parked approval always
     // carries one) that parked only for its tier; approving routes through resume() like
     // the operator's approve.
-    if (autopilotEligible && this.autopilot?.coversApproval(approval)) {
+    if (
+      autopilotEligible &&
+      this.autopilot?.coversApproval(
+        approval,
+        undefined,
+        undefined,
+        await this.autopilotLocation(item, integration?.companyId),
+      )
+    ) {
       try {
         await this.approvals.approve(approval.id, { decidedBy: "autopilot" });
         return (await this.store.get(item.integrationId, item.id)) ?? parked;

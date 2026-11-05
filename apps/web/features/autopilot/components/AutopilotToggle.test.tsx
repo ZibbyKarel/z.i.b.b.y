@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import type { AutopilotStatus } from "@zibby/contracts";
+import { type AutopilotStatus, NO_AUTOMATION } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { AutomationTreeTestId } from "./AutomationTree";
@@ -16,6 +16,15 @@ vi.mock("../mutations", () => ({
   useSetAutopilotMutation: () => ({ mutate, reset: vi.fn(), isPending: false, error }),
 }));
 
+const globalToggle = (key: string) =>
+  within(
+    screen
+      .getAllByTestId(AutomationTreeTestId.Node)
+      .find((el) => el.getAttribute("data-node") === "global") as HTMLElement,
+  )
+    .getAllByTestId(AutomationTreeTestId.Toggle)
+    .find((el) => el.getAttribute("data-key") === key) as HTMLElement;
+
 beforeEach(() => {
   mutate.mockReset();
   status = { level: "off", pendingApprovals: 3 };
@@ -31,14 +40,14 @@ describe("AutopilotToggle", () => {
     await userEvent.click(on);
     expect(mutate).not.toHaveBeenCalled();
     expect(screen.getByText(/3/)).toBeInTheDocument();
+    await userEvent.click(within(globalToggle("autoCommunicate")).getByRole("switch"));
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
     expect(mutate).toHaveBeenCalledWith(
       {
         body: {
           level: "full",
-          scope: { reviews: true, comments: true, communication: true },
           automation: {
-            global: { autoImplement: false, autoReview: false, autoAddressComments: false },
+            global: { ...NO_AUTOMATION, autoCommunicate: true },
             companies: {},
             teams: {},
           },
@@ -48,46 +57,9 @@ describe("AutopilotToggle", () => {
     );
   });
 
-  it("the dialog shows three scope switches, all on by default", async () => {
+  it("nothing switched on disables confirm", async () => {
     render(<AutopilotToggle />);
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
-    for (const id of [
-      AutopilotToggleTestId.ScopeReviews,
-      AutopilotToggleTestId.ScopeComments,
-      AutopilotToggleTestId.ScopeCommunication,
-    ]) {
-      expect(screen.getByTestId(id)).toHaveRole("switch");
-      expect(screen.getByTestId(id)).toBeChecked();
-    }
-  });
-
-  it("switching one off sends that scope", async () => {
-    render(<AutopilotToggle />);
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
-    expect(mutate).toHaveBeenCalledWith(
-      {
-        body: {
-          level: "full",
-          scope: { reviews: true, comments: false, communication: true },
-          automation: {
-            global: { autoImplement: false, autoReview: false, autoAddressComments: false },
-            companies: {},
-            teams: {},
-          },
-        },
-      },
-      expect.anything(),
-    );
-  });
-
-  it("all switches off disables confirm", async () => {
-    render(<AutopilotToggle />);
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeReviews));
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeComments));
-    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.ScopeCommunication));
     expect(screen.getByTestId(AutopilotToggleTestId.Confirm)).toBeDisabled();
   });
 
@@ -96,26 +68,20 @@ describe("AutopilotToggle", () => {
       level: "off",
       pendingApprovals: 0,
       automation: {
-        global: { autoImplement: false, autoReview: true, autoAddressComments: false },
+        global: { ...NO_AUTOMATION, autoReview: true },
         companies: {},
         teams: {},
       },
     };
     render(<AutopilotToggle />);
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Toggle));
-    const global = screen
-      .getAllByTestId(AutomationTreeTestId.Node)
-      .find((el) => el.getAttribute("data-node") === "global") as HTMLElement;
-    const review = within(global)
-      .getAllByTestId(AutomationTreeTestId.Toggle)
-      .find((el) => el.getAttribute("data-key") === "autoReview") as HTMLElement;
-    expect(within(review).getByRole("switch")).toBeChecked();
+    expect(within(globalToggle("autoReview")).getByRole("switch")).toBeChecked();
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
     expect(mutate).toHaveBeenCalledWith(
       expect.objectContaining({
         body: expect.objectContaining({
           automation: expect.objectContaining({
-            global: { autoImplement: false, autoReview: true, autoAddressComments: false },
+            global: { ...NO_AUTOMATION, autoReview: true },
           }),
         }),
       }),

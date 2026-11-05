@@ -8,17 +8,9 @@ import type {
   Company,
   Team,
 } from "@zibby/contracts";
-import {
-  Button,
-  IndentRail,
-  Row,
-  SegmentedControl,
-  Stack,
-  ToggleField,
-  Typography,
-} from "@zibby/design-system";
+import { Button, IndentRail, Row, Stack, ToggleField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 export enum AutomationTreeTestId {
   Root = "automation-tree",
@@ -34,164 +26,171 @@ export interface AutomationTreeProps {
   teams: Team[];
 }
 
-const KEYS: readonly AutomationKey[] = ["autoImplement", "autoReview", "autoAddressComments"];
+export const AUTOMATION_KEYS: readonly AutomationKey[] = [
+  "autoReview",
+  "autoAddressComments",
+  "autoImplement",
+  "autoCommunicate",
+];
 
 type Level = "companies" | "teams";
 
 /** Merge `inherited` <- `override` (an absent key inherits). */
 const apply = (inherited: AutomationToggles, override: AutomationOverride | undefined) => {
   const out = { ...inherited };
-  for (const k of KEYS) out[k] = override?.[k] ?? out[k];
+  for (const k of AUTOMATION_KEYS) out[k] = override?.[k] ?? out[k];
   return out;
 };
 
-interface OverrideRowProps {
+const hasOverride = (override: AutomationOverride | undefined) =>
+  !!override && Object.keys(override).length > 0;
+
+interface NodeProps {
   node: string;
   label: string;
   override: AutomationOverride | undefined;
   inherited: AutomationToggles;
   onSet: (key: AutomationKey, next: boolean | undefined) => void;
-  expand?: { open: boolean; onToggle: () => void } | undefined;
+  open: boolean;
+  onToggleOpen: () => void;
+  children?: ReactNode;
 }
 
-function OverrideRow({ node, label, override, inherited, onSet, expand }: OverrideRowProps) {
+/** A company/team: collapsed to its name; open, its small toggles and its children. */
+function OverrideNode({
+  node,
+  label,
+  override,
+  inherited,
+  onSet,
+  open,
+  onToggleOpen,
+  children,
+}: NodeProps) {
   const t = useTranslations("autopilot");
   return (
-    <Stack data-node={node} data-testid={AutomationTreeTestId.Node} gap="75">
-      <Row gap="100">
-        {expand ? (
-          <Button
-            aria-expanded={expand.open}
-            aria-label={`${expand.open ? t("collapse") : t("expand")}: ${label}`}
-            data-testid={AutomationTreeTestId.Expand}
-            icon="chevron"
-            intent="ghost"
-            onClick={expand.onToggle}
-            size="sm"
-          />
-        ) : null}
+    <Stack data-node={node} data-testid={AutomationTreeTestId.Node} gap="50">
+      <Row gap="50">
+        <Button
+          aria-expanded={open}
+          aria-label={`${open ? t("collapse") : t("expand")}: ${label}`}
+          data-testid={AutomationTreeTestId.Expand}
+          icon="chevron"
+          intent="ghost"
+          onClick={onToggleOpen}
+          size="sm"
+        />
         <Typography type="label">{label}</Typography>
       </Row>
-      {KEYS.map((key) => {
-        const own = override?.[key];
-        const effective = inherited[key];
-        return (
-          <Stack
-            data-effective={String(own ?? effective)}
-            data-key={key}
-            data-testid={AutomationTreeTestId.Toggle}
-            gap="50"
-            key={key}
-          >
-            <SegmentedControl
-              ariaLabel={`${label}: ${t(key)}`}
-              items={[
-                { value: "inherit", label: t("stateInherit") },
-                { value: "on", label: t("stateOn") },
-                { value: "off", label: t("stateOff") },
-              ]}
-              onChange={(next) => onSet(key, next === "inherit" ? undefined : next === "on")}
-              size="sm"
-              value={own === undefined ? "inherit" : own ? "on" : "off"}
-            />
-            <Typography size="xs" type="note" variant="tertiary">
-              {t(key)}
-              {own === undefined
-                ? ` — ${t("inherits", { state: effective ? t("stateOn") : t("stateOff") })}`
-                : ""}
-            </Typography>
+      {open ? (
+        <IndentRail>
+          <Stack gap="50">
+            {AUTOMATION_KEYS.map((key) => {
+              const own = override?.[key];
+              const effective = own ?? inherited[key];
+              return (
+                <Stack
+                  data-effective={String(effective)}
+                  data-key={key}
+                  data-overridden={String(own !== undefined)}
+                  data-testid={AutomationTreeTestId.Toggle}
+                  key={key}
+                >
+                  <ToggleField
+                    checked={effective}
+                    label={t(key)}
+                    // Same as the parent = inherit (no override); different = an override.
+                    onChange={(next) => onSet(key, next === inherited[key] ? undefined : next)}
+                    size="sm"
+                  />
+                </Stack>
+              );
+            })}
+            {children}
           </Stack>
-        );
-      })}
+        </IndentRail>
+      ) : null}
     </Stack>
   );
 }
 
 /**
- * Global -> Company -> Team override tree for the three roadmap automation toggles.
- * Precedence team > company > global; "Inherit" removes the key (and an empty override).
+ * Global -> Company -> Team tree of the four autopilot toggles. Precedence
+ * team > company > global; a node only stores the toggles that differ from its parent.
+ * A node holding an override (or containing one) starts expanded.
  */
 export function AutomationTree({ value, onChange, companies, teams }: AutomationTreeProps) {
   const t = useTranslations("autopilot");
-  // Companies holding a team override start expanded so hidden overrides stay visible.
-  const [open, setOpen] = useState<Set<string>>(
-    () =>
-      new Set(
-        teams
-          .filter((tm) => tm.companyId && value.teams[tm.id])
-          .map((tm) => tm.companyId as string),
-      ),
-  );
+  // The operator's own expand/collapse clicks; unset nodes follow "has an override inside".
+  const [opened, setOpened] = useState<Record<string, boolean>>({});
 
   const setOverride = (level: Level, id: string, key: AutomationKey, next: boolean | undefined) => {
     const { [id]: current, ...rest } = value[level];
     const merged: AutomationOverride = { ...current, [key]: next };
     if (next === undefined) delete merged[key];
-    onChange({ ...value, [level]: Object.keys(merged).length ? { ...rest, [id]: merged } : rest });
+    onChange({ ...value, [level]: hasOverride(merged) ? { ...rest, [id]: merged } : rest });
   };
 
-  const companyIds = new Set(companies.map((c) => c.id));
-  // The web nests teams by `team.companyId`; the backend resolves `project.companyId ?? team.companyId`.
-  const teamRow = (team: Team, inherited: AutomationToggles) => (
-    <OverrideRow
+  const nodeProps = (node: string, overridden: boolean) => ({
+    node,
+    open: opened[node] ?? overridden,
+    onToggleOpen: () => setOpened((prev) => ({ ...prev, [node]: !(prev[node] ?? overridden) })),
+  });
+
+  const teamNode = (team: Team, inherited: AutomationToggles) => (
+    <OverrideNode
+      {...nodeProps(`team:${team.id}`, hasOverride(value.teams[team.id]))}
       inherited={inherited}
       key={team.id}
       label={team.name}
-      node={`team:${team.id}`}
       onSet={(key, next) => setOverride("teams", team.id, key, next)}
       override={value.teams[team.id]}
     />
   );
 
+  const companyIds = new Set(companies.map((c) => c.id));
+  // The web nests teams by `team.companyId`; the backend resolves `project.companyId ?? team.companyId`.
   return (
-    <Stack data-testid={AutomationTreeTestId.Root} gap="150">
-      <Typography type="label">{t("automationTitle")}</Typography>
-      <Typography size="xs" type="note" variant="tertiary">
-        {t("automationHint")}
-      </Typography>
-      <Stack data-node="global" data-testid={AutomationTreeTestId.Node} gap="50">
-        <Typography type="label">{t("global")}</Typography>
-        {KEYS.map((key) => (
+    <Stack data-testid={AutomationTreeTestId.Root} gap="100">
+      <Stack data-node="global" data-testid={AutomationTreeTestId.Node} gap="100">
+        {AUTOMATION_KEYS.map((key) => (
           <Stack data-key={key} data-testid={AutomationTreeTestId.Toggle} key={key}>
             <ToggleField
               checked={value.global[key]}
+              hint={t(`${key}Hint`)}
               label={t(key)}
               onChange={(next) => onChange({ ...value, global: { ...value.global, [key]: next } })}
             />
           </Stack>
         ))}
       </Stack>
+      {companies.length > 0 || teams.length > 0 ? (
+        <Typography size="xs" type="note" variant="tertiary">
+          {t("overridesHint")}
+        </Typography>
+      ) : null}
       {companies.map((company) => {
         const inherited = apply(value.global, value.companies[company.id]);
-        const isOpen = open.has(company.id);
         const companyTeams = teams.filter((tm) => tm.companyId === company.id);
+        const overridden =
+          hasOverride(value.companies[company.id]) ||
+          companyTeams.some((tm) => hasOverride(value.teams[tm.id]));
         return (
-          <Stack gap="100" key={company.id}>
-            <OverrideRow
-              expand={{
-                open: isOpen,
-                onToggle: () =>
-                  setOpen((prev) => {
-                    const next = new Set(prev);
-                    if (!next.delete(company.id)) next.add(company.id);
-                    return next;
-                  }),
-              }}
-              inherited={value.global}
-              label={company.name}
-              node={`company:${company.id}`}
-              onSet={(key, next) => setOverride("companies", company.id, key, next)}
-              override={value.companies[company.id]}
-            />
-            {isOpen && companyTeams.length > 0 ? (
-              <IndentRail>{companyTeams.map((tm) => teamRow(tm, inherited))}</IndentRail>
-            ) : null}
-          </Stack>
+          <OverrideNode
+            {...nodeProps(`company:${company.id}`, overridden)}
+            inherited={value.global}
+            key={company.id}
+            label={company.name}
+            onSet={(key, next) => setOverride("companies", company.id, key, next)}
+            override={value.companies[company.id]}
+          >
+            {companyTeams.map((tm) => teamNode(tm, inherited))}
+          </OverrideNode>
         );
       })}
       {teams
         .filter((tm) => !tm.companyId || !companyIds.has(tm.companyId))
-        .map((tm) => teamRow(tm, value.global))}
+        .map((tm) => teamNode(tm, value.global))}
     </Stack>
   );
 }

@@ -4,7 +4,6 @@ import * as path from "node:path";
 import type { Approval } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ApprovalsService } from "../approvals/approvals.service";
-import { FULL_AUTOPILOT_SCOPE } from "@zibby/contracts";
 import { AutopilotService, autopilotCoversApproval } from "./autopilot.service";
 
 type Covered = Pick<Approval, "kind" | "action" | "suggestedReviewEvent">;
@@ -82,10 +81,22 @@ describe("AutopilotService", () => {
     expect(approve.calls).toBe(0);
   });
 
-  it("honours the scope toggles; a push of fix-ci is never toggled off", async () => {
+  const toggles = (over: Partial<Record<string, boolean>> = {}) => ({
+    autoReview: false,
+    autoAddressComments: false,
+    autoImplement: false,
+    autoCommunicate: false,
+    ...over,
+  });
+
+  it("the tree's toggles drive the overlay; a push of fix-ci is never toggled off", async () => {
     const svc = new AutopilotService(dir);
     await svc.onModuleInit();
-    await svc.set("full", "operator", { reviews: false, comments: true, communication: false });
+    await svc.set("full", "operator", {
+      global: toggles({ autoAddressComments: true }),
+      companies: {},
+      teams: {},
+    });
     expect(svc.coversApproval({ kind: "pr-review", action: "github.pr.review" })).toBe(false);
     expect(svc.coversApproval({ kind: "channel", action: "channel-reply" })).toBe(false);
     expect(svc.coversApproval({ kind: "pr-address-comments", action: "github.pr.comment" })).toBe(
@@ -96,6 +107,38 @@ describe("AutopilotService", () => {
     const reloaded = new AutopilotService(dir);
     await reloaded.onModuleInit();
     expect(reloaded.scope()).toEqual({ reviews: false, comments: true, communication: false });
+  });
+
+  it("resolves the overlay where the approval acts (team > company > global)", async () => {
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    await svc.set("full", "operator", {
+      global: toggles(),
+      companies: { co: { autoCommunicate: true } },
+      teams: { quiet: { autoCommunicate: false } },
+    });
+    const reply = { kind: "channel", action: "channel-reply" } as const;
+    expect(svc.coversApproval(reply)).toBe(false);
+    expect(svc.coversApproval(reply, undefined, undefined, { companyId: "co" })).toBe(true);
+    expect(
+      svc.coversApproval(reply, undefined, undefined, { companyId: "co", teamId: "quiet" }),
+    ).toBe(false);
+  });
+
+  it("a tree from before autoCommunicate takes communication from the legacy scope", async () => {
+    await fs.writeFile(
+      path.join(dir, "autopilot.json"),
+      JSON.stringify({
+        level: "full",
+        scope: { reviews: true, comments: true, communication: true },
+        automation: {
+          global: { autoImplement: false, autoReview: true, autoAddressComments: false },
+        },
+      }),
+    );
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    expect(svc.scope()).toEqual({ reviews: true, comments: false, communication: true });
   });
 
   it("a legacy full state without scope covers everything", async () => {
@@ -113,7 +156,7 @@ describe("AutopilotService", () => {
   });
 
   const tree = {
-    global: { autoImplement: true, autoReview: false, autoAddressComments: false },
+    global: toggles({ autoImplement: true }),
     companies: {},
     teams: {},
   };
@@ -121,18 +164,14 @@ describe("AutopilotService", () => {
   it("stores the automation tree, keeps it across off, and resolves it only while on", async () => {
     const svc = new AutopilotService(dir);
     await svc.onModuleInit();
-    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, tree);
+    await svc.set("full", "operator", tree);
     expect(svc.automationFor({}).autoImplement).toBe(true);
     expect(
       JSON.parse(await fs.readFile(path.join(dir, "autopilot.json"), "utf8")).automation,
     ).toEqual(tree);
 
     await svc.set("off", "chat");
-    expect(svc.automationFor({})).toEqual({
-      autoImplement: false,
-      autoReview: false,
-      autoAddressComments: false,
-    });
+    expect(svc.automationFor({})).toEqual(toggles());
     expect((await svc.status()).automation).toEqual(tree);
 
     await svc.set("full", "operator");
@@ -146,9 +185,9 @@ describe("AutopilotService", () => {
   it("a changed tree alone counts as a change", async () => {
     const svc = new AutopilotService(dir);
     await svc.onModuleInit();
-    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, tree);
+    await svc.set("full", "operator", tree);
     const next = { ...tree, global: { ...tree.global, autoReview: true } };
-    await svc.set("full", "operator", FULL_AUTOPILOT_SCOPE, next);
+    await svc.set("full", "operator", next);
     expect(svc.automationFor({}).autoReview).toBe(true);
   });
 

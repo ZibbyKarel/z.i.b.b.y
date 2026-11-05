@@ -15,9 +15,11 @@ export const AutopilotActorSchema = z.enum(["operator", "chat"]);
 export type AutopilotActor = z.infer<typeof AutopilotActorSchema>;
 
 /**
- * Which covered classes autopilot decides, picked by the operator when switching it on.
- * Pushes onto ZIBBY's or the operator's own PR branches are not a toggle: they ride along
- * with whichever class produced them (a `pr-fix-ci` push is always covered while on).
+ * Which covered classes the gate overlay decides. Derived from the automation tree
+ * ({@link AUTOPILOT_SCOPE_TOGGLE}); stored on its own only by states written before the
+ * tree carried every class. Pushes onto ZIBBY's or the operator's own PR branches are not
+ * a toggle: they ride along with whichever class produced them (a `pr-fix-ci` push is
+ * always covered while on).
  * - `reviews` — post ZIBBY's finished PR code reviews;
  * - `comments` — address review comments: push the fixes, post the thread replies;
  * - `communication` — concrete replies in channels (GitHub/GitLab/Jira questions, Slack).
@@ -28,7 +30,7 @@ export const AutopilotScopeSchema = z
 export type AutopilotScope = z.infer<typeof AutopilotScopeSchema>;
 export type AutopilotScopeKey = keyof AutopilotScope;
 
-/** A `full` state without `scope` (written before the toggles existed) covers everything. */
+/** A legacy `full` state without `scope` or tree (written before the toggles existed) covers everything. */
 export const FULL_AUTOPILOT_SCOPE: AutopilotScope = {
   reviews: true,
   comments: true,
@@ -36,19 +38,35 @@ export const FULL_AUTOPILOT_SCOPE: AutopilotScope = {
 };
 
 /**
- * Roadmap automation toggles, owned by autopilot as a Global -> Company -> Team override
- * tree. Precedence team > company > global; while autopilot is `off` all are false.
+ * The autopilot toggles, one Global -> Company -> Team override tree. Precedence
+ * team > company > global; while autopilot is `off` all are false. Each key both starts
+ * the work (`autoReview` / `autoAddressComments` / `autoImplement`) and lets the gate
+ * overlay act on its outcome ({@link AUTOPILOT_SCOPE_TOGGLE}).
  */
 export const AutomationTogglesSchema = z
-  .object({ autoImplement: z.boolean(), autoReview: z.boolean(), autoAddressComments: z.boolean() })
+  .object({
+    autoReview: z.boolean(),
+    autoAddressComments: z.boolean(),
+    autoImplement: z.boolean(),
+    // Default: trees written before communication joined the tree.
+    autoCommunicate: z.boolean().default(false),
+  })
   .strict();
 export type AutomationToggles = z.infer<typeof AutomationTogglesSchema>;
 export type AutomationKey = keyof AutomationToggles;
 
 export const NO_AUTOMATION: AutomationToggles = {
-  autoImplement: false,
   autoReview: false,
   autoAddressComments: false,
+  autoImplement: false,
+  autoCommunicate: false,
+};
+
+/** The tree key each gate-overlay class follows. */
+export const AUTOPILOT_SCOPE_TOGGLE: Readonly<Record<AutopilotScopeKey, AutomationKey>> = {
+  reviews: "autoReview",
+  comments: "autoAddressComments",
+  communication: "autoCommunicate",
 };
 
 /** A node's explicit choices; an absent key inherits from the level above. */
@@ -103,11 +121,9 @@ export const AutopilotStatusSchema = AutopilotStateSchema.extend({
 });
 export type AutopilotStatus = z.infer<typeof AutopilotStatusSchema>;
 
-/** `scope` only means something with `full`; omitted there = everything on. */
 export const SetAutopilotInputSchema = z
   .object({
     level: AutopilotLevelSchema,
-    scope: AutopilotScopeSchema.optional(),
     /** Omitted = keep the stored tree. */
     automation: AutopilotAutomationSchema.optional(),
   })

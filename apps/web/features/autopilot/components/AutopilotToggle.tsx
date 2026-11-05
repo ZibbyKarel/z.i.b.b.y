@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  type AutopilotAutomation,
-  type AutopilotScope,
-  FULL_AUTOPILOT_SCOPE,
-  NO_AUTOMATION,
-} from "@zibby/contracts";
-import { Button, Container, Dialog, Stack, ToggleField, Typography } from "@zibby/design-system";
+import { type AutopilotAutomation, NO_AUTOMATION } from "@zibby/contracts";
+import { Button, Container, Dialog, Stack, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { isOperatorTokenError } from "../../../state/operatorToken";
@@ -22,36 +17,7 @@ export enum AutopilotToggleTestId {
   Confirm = "autopilot-toggle-confirm",
   Cancel = "autopilot-toggle-cancel",
   Error = "autopilot-toggle-error",
-  ScopeReviews = "autopilot-toggle-scope-reviews",
-  ScopeComments = "autopilot-toggle-scope-comments",
-  ScopeCommunication = "autopilot-toggle-scope-communication",
 }
-
-const SCOPE_FIELDS = [
-  {
-    key: "reviews",
-    label: "scopeReviews",
-    hint: "scopeReviewsHint",
-    testId: AutopilotToggleTestId.ScopeReviews,
-  },
-  {
-    key: "comments",
-    label: "scopeComments",
-    hint: "scopeCommentsHint",
-    testId: AutopilotToggleTestId.ScopeComments,
-  },
-  {
-    key: "communication",
-    label: "scopeCommunication",
-    hint: "scopeCommunicationHint",
-    testId: AutopilotToggleTestId.ScopeCommunication,
-  },
-] as const satisfies readonly {
-  key: keyof AutopilotScope;
-  label: string;
-  hint: string;
-  testId: AutopilotToggleTestId;
-}[];
 
 const EMPTY_AUTOMATION: AutopilotAutomation = {
   global: { ...NO_AUTOMATION },
@@ -62,6 +28,7 @@ const EMPTY_AUTOMATION: AutopilotAutomation = {
 /**
  * Phase 4 — the top-bar Autopilot switch, an icon toggle (`aria-pressed`). OFF → opens a
  * confirm dialog (ON needs the operator token); ON → filled, one click turns it off.
+ * The dialog pre-fills from the stored tree, which the API keeps across `off`.
  */
 export function AutopilotToggle() {
   const t = useTranslations("autopilot");
@@ -71,9 +38,12 @@ export function AutopilotToggle() {
   const { data: companies = [] } = useCompaniesQuery();
   const { data: teams = [] } = useTeamsQuery();
   const [confirming, setConfirming] = useState(false);
-  const [scope, setScope] = useState<AutopilotScope>(FULL_AUTOPILOT_SCOPE);
   const [automation, setAutomation] = useState<AutopilotAutomation>(EMPTY_AUTOMATION);
-  const anyScope = scope.reviews || scope.comments || scope.communication;
+  const anyOn = [
+    automation.global,
+    ...Object.values(automation.companies),
+    ...Object.values(automation.teams),
+  ].some((node) => Object.values(node).includes(true));
 
   const on = data?.level === "full";
   const pending = data?.pendingApprovals ?? 0;
@@ -86,7 +56,7 @@ export function AutopilotToggle() {
 
   const turnOn = () =>
     setAutopilot.mutate(
-      { body: { level: "full", scope, automation } },
+      { body: { level: "full", automation } },
       { onSuccess: () => setConfirming(false) },
     );
   const close = () => {
@@ -105,7 +75,6 @@ export function AutopilotToggle() {
         loading={on && setAutopilot.isPending}
         onClick={() => {
           if (on) return setAutopilot.mutate({ body: { level: "off" } });
-          setScope(FULL_AUTOPILOT_SCOPE);
           setAutomation(data?.automation ?? EMPTY_AUTOMATION);
           setConfirming(true);
         }}
@@ -120,7 +89,7 @@ export function AutopilotToggle() {
             </Button>
             <Button
               data-testid={AutopilotToggleTestId.Confirm}
-              disabled={!anyScope}
+              disabled={!anyOn}
               icon="bolt"
               intent="primary"
               loading={setAutopilot.isPending}
@@ -139,16 +108,6 @@ export function AutopilotToggle() {
         width="md"
       >
         <Stack gap="100">
-          {SCOPE_FIELDS.map(({ key, label, hint, testId }) => (
-            <ToggleField
-              checked={scope[key]}
-              data-testid={testId}
-              hint={t(hint)}
-              key={key}
-              label={t(label)}
-              onChange={(next) => setScope((prev) => ({ ...prev, [key]: next }))}
-            />
-          ))}
           <AutomationTree
             companies={companies}
             onChange={setAutomation}

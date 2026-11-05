@@ -17,63 +17,59 @@ Web: the Autopilot icon toggle in the top bar, on every page.
   "level": "full",
   "since": "2026-10-29T12:00:00.000Z",
   "by": "operator",
-  "scope": { "reviews": true, "comments": true, "communication": false }
+  "automation": {
+    "global": {
+      "autoReview": true,
+      "autoAddressComments": true,
+      "autoImplement": false,
+      "autoCommunicate": false
+    },
+    "companies": { "acme": { "autoCommunicate": true } },
+    "teams": { "frontend": { "autoReview": false } }
+  }
 }
 ```
 
 `level` is `off` or `full`, and `by` is `operator` or `chat`. A missing or malformed file
 counts as `off`.
 
-`scope` is what the operator picked in the switch-on dialog (all three start on):
+## The four toggles
 
-| Toggle          | Covers                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------- |
-| `reviews`       | `pr-review` and the pr-review `workflow-gate` sign-off (ZIBBY's code reviews)           |
-| `comments`      | `pr-address-comments` (the fix push and the thread replies), and a hook `gh.pr_comment` |
-| `communication` | `channel` replies (GitHub, GitLab, Jira, Slack, …)                                      |
+`automation` is one Global -> Company -> Team tree of four toggles. Each toggle both starts
+the work and lets the gate overlay act on its outcome:
 
-Pushes are not a toggle: a `pr-fix-ci` push and a hook `git.push` onto `zibby/*` are covered
-whenever autopilot is on. A `full` state without `scope` (written before the toggles) covers
-everything. The file is read once at boot and cached, because the gate evaluator is
-synchronous. Use the API to switch the level: a hand edit only takes effect after a restart.
-
-## Automation tree
-
-`automation` (optional) holds the roadmap automation toggles `autoImplement`, `autoReview` and
-`autoAddressComments` as a Global -> Company -> Team override tree:
-
-```json
-{
-  "automation": {
-    "global": { "autoImplement": true, "autoReview": false, "autoAddressComments": false },
-    "companies": { "acme": { "autoReview": true } },
-    "teams": { "frontend": { "autoImplement": false } }
-  }
-}
-```
+| Toggle                | Starts                                             | Gate class (`scope`) it lifts                                                            |
+| --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `autoReview`          | PR-inbox code reviews (`PrAutomationService`)      | `reviews`: `pr-review` and the pr-review `workflow-gate` sign-off                        |
+| `autoAddressComments` | addressing review comments (`PrAutomationService`) | `comments`: `pr-address-comments` (fix push, thread replies), and a hook `gh.pr_comment` |
+| `autoImplement`       | roadmap pickup (roadmap tick)                      | none                                                                                     |
+| `autoCommunicate`     | none (channel items arrive on their own)           | `communication`: `channel` replies (GitHub, GitLab, Jira, Slack, …)                      |
 
 `companies` / `teams` are keyed by id and hold only the toggles the node overrides. Precedence is
-team > company > global (`resolveAutopilotAutomation`; `AutopilotService.automationFor`). While
-autopilot is `off` every effective toggle is `false`, but the stored tree is kept so the next
-switch-on pre-fills it. A state without `automation` means all three global toggles `false`.
-`PUT` with `automation` omitted keeps the stored tree. Autopilot may stay on indefinitely.
+team > company > global (`resolveAutopilotAutomation`; `AutopilotService.automationFor`). The
+gate class follows the same tree (`AUTOPILOT_SCOPE_TOGGLE`, `AutopilotService.scope(at)`): a
+`channel` reply resolves at the item's project (its company and team), or the integration's
+company. Approvals from tasks and workflow gates resolve at global. While autopilot is `off`
+every effective toggle is `false`, but the stored tree is kept so the next switch-on pre-fills it.
+Autopilot may stay on indefinitely.
+
+Pushes are not a toggle: a `pr-fix-ci` push and a hook `git.push` onto `zibby/*` are covered
+whenever autopilot is on. Legacy states: a `scope` stored without a tree still decides the gate
+(none at all = everything); a tree written before `autoCommunicate` takes it from the stored
+`scope.communication`. The file is read once at boot and cached, because the gate evaluator is
+synchronous. Use the API to switch the level: a hand edit only takes effect after a restart.
 
 ## Endpoints
 
-| Route                | Auth                      | Notes                                                                                                                                      |
-| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                                                                  |
-| `PUT /api/autopilot` | operator token for `full` | `{ level, scope?, automation? }`. `full` without the token returns `401`; `off` is always allowed (any `automation` it carries is ignored) |
+| Route                | Auth                      | Notes                                                                                                                              |
+| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                                                          |
+| `PUT /api/autopilot` | operator token for `full` | `{ level, automation? }`. `full` without the token returns `401`; `off` is always allowed (any `automation` it carries is ignored) |
 
-`scope` only counts with `full`; omitted means all on. Setting the same level, scope and
-automation tree again is a no-op (the file isn't written). Slack notifications are only sent while Autopilot is on; switching
-on or off is never pushed to Slack.
-
-`automation` is the Global → Company → Team override tree of `autoImplement`, `autoReview` and
-`autoAddressComments` (team > company > global; all `false` while the level is `off`). The roadmap
-tick (`autoImplement`) and `PrAutomationService` (`autoReview`, `autoAddressComments`) read it via
-`AutopilotService.automationFor`; the per-project `_config.json` toggles and
-`Company.roadmapDefaults` are deprecated and no longer read.
+Setting the same level and automation tree again is a no-op (the file isn't written). `PUT`
+with `automation` omitted keeps the stored tree. Slack notifications are only sent while
+Autopilot is on; switching on or off is never pushed to Slack. The per-project `_config.json`
+toggles and `Company.roadmapDefaults` are deprecated and no longer read.
 
 The chat MCP tool `autopilot_off` calls the same service with `by: "chat"`. There is no tool
 that turns it on. The self-API also denies the `autopilot` router, so `api_call` can't reach

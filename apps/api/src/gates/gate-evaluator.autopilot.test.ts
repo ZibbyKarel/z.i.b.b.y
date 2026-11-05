@@ -288,9 +288,14 @@ describe("GateEvaluatorService — autopilot overlay", () => {
 
   it("a PR comment is lifted only when its scope is on", async () => {
     await autopilot.set("full", "operator", {
-      reviews: true,
-      comments: false,
-      communication: false,
+      global: {
+        autoReview: true,
+        autoAddressComments: false,
+        autoImplement: false,
+        autoCommunicate: false,
+      },
+      companies: {},
+      teams: {},
     });
     const comment = { action: "gh.pr_comment" };
     expect((await evalFloor(comment)).decision).toBe("ask");

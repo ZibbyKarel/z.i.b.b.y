@@ -37,43 +37,62 @@ describe("AutomationTree", () => {
     });
   });
 
-  it("company Off writes the override", async () => {
-    const onChange = setup();
-    await userEvent.click(
-      within(toggle("company:shoptet", "autoReview")).getByTestId("segmented-control-item-off"),
-    );
+  it("a company toggle different from global writes an override", async () => {
+    const onChange = setup({ ...empty, companies: { shoptet: { autoImplement: true } } });
+    await userEvent.click(within(toggle("company:shoptet", "autoReview")).getByRole("switch"));
     expect(onChange).toHaveBeenCalledWith({
       ...empty,
-      companies: { shoptet: { autoReview: false } },
+      companies: { shoptet: { autoImplement: true, autoReview: true } },
     });
   });
 
-  it("company Inherit removes the company key", async () => {
-    const onChange = setup({ ...empty, companies: { shoptet: { autoReview: false } } });
-    await userEvent.click(
-      within(toggle("company:shoptet", "autoReview")).getByTestId("segmented-control-item-inherit"),
-    );
+  it("setting a company toggle back to the parent value removes the override", async () => {
+    const onChange = setup({ ...empty, companies: { shoptet: { autoReview: true } } });
+    await userEvent.click(within(toggle("company:shoptet", "autoReview")).getByRole("switch"));
     expect(onChange).toHaveBeenCalledWith(empty);
   });
 
-  it("a company with a team override starts expanded", () => {
+  it("toggles are the four autopilot keys, small below global", () => {
+    setup({ ...empty, companies: { shoptet: { autoReview: true } } });
+    const keys = (node: string) =>
+      within(row(node) as HTMLElement)
+        .getAllByTestId(AutomationTreeTestId.Toggle)
+        .map((el) => el.getAttribute("data-key"));
+    const all = ["autoReview", "autoAddressComments", "autoImplement", "autoCommunicate"];
+    expect(keys("global")).toEqual(all);
+    expect(keys("company:shoptet")).toEqual(all);
+  });
+
+  it("an override deep in the tree expands every node down to it", () => {
     setup({ ...empty, teams: { devrel: { autoReview: true } } });
-    expect(row("team:devrel")).toBeDefined();
+    expect(toggle("company:shoptet", "autoReview")).toHaveAttribute("data-overridden", "false");
+    expect(toggle("team:devrel", "autoReview")).toHaveAttribute("data-overridden", "true");
+    expect(toggle("team:devrel", "autoReview")).toHaveAttribute("data-effective", "true");
   });
 
-  it("inherit shows the inherited effective value", () => {
-    setup({ ...empty, global: { ...NO_AUTOMATION, autoReview: true } });
+  it("a node shows the inherited effective value", () => {
+    setup({
+      ...empty,
+      global: { ...NO_AUTOMATION, autoReview: true },
+      companies: { shoptet: { autoImplement: true } },
+    });
     expect(toggle("company:shoptet", "autoReview")).toHaveAttribute("data-effective", "true");
-    expect(toggle("company:shoptet", "autoImplement")).toHaveAttribute("data-effective", "false");
+    expect(toggle("company:shoptet", "autoCommunicate")).toHaveAttribute("data-effective", "false");
   });
 
-  it("companies are collapsed; expanding shows their teams", async () => {
+  it("nodes without overrides are collapsed; expanding shows toggles and teams", async () => {
     setup();
     expect(row("team:devrel")).toBeUndefined();
+    expect(
+      within(row("company:shoptet") as HTMLElement).queryAllByTestId(AutomationTreeTestId.Toggle),
+    ).toHaveLength(0);
     await userEvent.click(
-      within(row("company:shoptet") as HTMLElement).getByTestId(AutomationTreeTestId.Expand),
+      within(row("company:shoptet") as HTMLElement).getAllByTestId(
+        AutomationTreeTestId.Expand,
+      )[0] as HTMLElement,
     );
     expect(row("team:devrel")).toBeDefined();
+    expect(toggle("company:shoptet", "autoReview")).toBeDefined();
   });
 
   it("teams without a (known) company are top-level", () => {

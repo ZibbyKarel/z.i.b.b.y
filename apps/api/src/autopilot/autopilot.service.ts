@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import {
+  AUTOPILOT_SCOPE_TOGGLE,
   type Agent,
   type Approval,
   type AutomationToggles,
@@ -156,6 +157,12 @@ export function autopilotContextFor(
   };
 }
 
+/** Where an action happens; empty = global. */
+export interface AutopilotLocation {
+  companyId?: string | undefined;
+  teamId?: string | undefined;
+}
+
 /** The gate rules of a run's acting unit: its agents' own rules and its department. */
 export interface AutopilotActors {
   agents: Pick<Agent, "gates" | "requires_approval">[];
@@ -217,19 +224,32 @@ export class AutopilotService implements OnModuleInit {
     const raw = await fs.readFile(path.join(this.dir, FILE), "utf8").catch(() => null);
     const parsed = AutopilotStateSchema.safeParse(raw === null ? null : safeJson(raw));
     this.state = parsed.success ? parsed.data : { level: "off" };
+    // A tree written before `autoCommunicate` existed: communication came from the stored scope.
+    const { scope, automation } = this.state;
+    if (scope && automation && !automation.global.autoCommunicate) {
+      automation.global.autoCommunicate = scope.communication;
+    }
   }
 
   isOn(): boolean {
     return this.state.level === "full";
   }
 
-  /** The classes the operator picked; a `full` state from before the toggles covers all. */
-  scope(): AutopilotScope {
-    return this.state.scope ?? FULL_AUTOPILOT_SCOPE;
+  /**
+   * The classes the overlay covers at a company/team (global when `at` is empty), read off
+   * the automation tree. A legacy state without a tree keeps its stored scope (none = all).
+   */
+  scope(at: AutopilotLocation = {}): AutopilotScope {
+    if (!this.state.automation) return this.state.scope ?? FULL_AUTOPILOT_SCOPE;
+    const toggles = resolveAutopilotAutomation(this.state, at);
+    const out = { ...FULL_AUTOPILOT_SCOPE };
+    for (const k of Object.keys(out) as AutopilotScopeKey[])
+      out[k] = toggles[AUTOPILOT_SCOPE_TOGGLE[k]];
+    return out;
   }
 
   /** Effective roadmap automation toggles at a company/team; all false while off. */
-  automationFor(at: { companyId?: string; teamId?: string }): AutomationToggles {
+  automationFor(at: AutopilotLocation): AutomationToggles {
     return resolveAutopilotAutomation(this.state, at);
   }
 
@@ -243,15 +263,16 @@ export class AutopilotService implements OnModuleInit {
     return AUTOPILOT_COVERED_RULES[ruleId]?.(action, context) ?? false;
   }
 
-  /** Whether autopilot approves this freshly requested approval right now. */
+  /** Whether autopilot approves this freshly requested approval right now (`at` = where it acts). */
   coversApproval(
     approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
     headBranch?: string,
     ownPr?: boolean,
+    at: AutopilotLocation = {},
   ): boolean {
     if (!this.isOn()) return false;
     const key = autopilotScopeFor(approval.kind);
-    if (key && !this.scope()[key]) return false;
+    if (key && !this.scope(at)[key]) return false;
     return autopilotCoversApproval(approval, headBranch, ownPr);
   }
 
@@ -262,22 +283,19 @@ export class AutopilotService implements OnModuleInit {
 
   /**
    * Switch the level. Authorization is the caller's: only the operator-token route may
-   * pass `full`. A no-op (no file write) only when level, scope and automation tree are all unchanged.
+   * pass `full`. A no-op (no file write) only when level and automation tree are unchanged.
    * On/off is never pushed to Slack.
    */
   async set(
     level: AutopilotLevel,
     by: AutopilotActor,
-    scope?: AutopilotScope,
     automation?: AutopilotAutomation,
   ): Promise<AutopilotStatus> {
-    const nextScope = level === "full" ? (scope ?? FULL_AUTOPILOT_SCOPE) : undefined;
     // Omitted keeps the stored tree (also across `off`, so the next switch-on pre-fills it).
     const nextAutomation = automation ?? this.state.automation;
     if (
       level === this.state.level &&
-      JSON.stringify(nextAutomation) === JSON.stringify(this.state.automation) &&
-      (level === "off" || JSON.stringify(nextScope) === JSON.stringify(this.scope()))
+      JSON.stringify(nextAutomation) === JSON.stringify(this.state.automation)
     ) {
       return this.status();
     }
@@ -285,8 +303,12 @@ export class AutopilotService implements OnModuleInit {
       level,
       since: new Date().toISOString(),
       by,
-      ...(nextScope ? { scope: nextScope } : {}),
-      ...(nextAutomation ? { automation: nextAutomation } : {}),
+      // A legacy scope only means something while there is no tree to read it from.
+      ...(nextAutomation
+        ? { automation: nextAutomation }
+        : this.state.scope
+          ? { scope: this.state.scope }
+          : {}),
     };
     await ensureDir(this.dir);
     await writeFileAtomic(path.join(this.dir, FILE), `${JSON.stringify(next, null, 2)}\n`);

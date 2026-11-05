@@ -9,14 +9,24 @@ import {
 } from "../index";
 
 const tree: AutopilotAutomation = {
-  global: { autoImplement: true, autoReview: false, autoAddressComments: false },
+  global: {
+    autoImplement: true,
+    autoReview: false,
+    autoAddressComments: false,
+    autoCommunicate: false,
+  },
   companies: { shoptet: { autoReview: true } },
   teams: { devrel: { autoReview: false, autoAddressComments: true } },
 };
 
 describe("resolveAutopilotAutomation", () => {
   it("is all false while off, whatever the tree says", () => {
-    const all = { autoImplement: true, autoReview: true, autoAddressComments: true };
+    const all = {
+      autoImplement: true,
+      autoReview: true,
+      autoAddressComments: true,
+      autoCommunicate: true,
+    };
     expect(
       resolveAutopilotAutomation({ level: "off", automation: { ...tree, global: all } }, {}),
     ).toEqual(NO_AUTOMATION);
@@ -32,11 +42,13 @@ describe("resolveAutopilotAutomation", () => {
       autoImplement: true,
       autoReview: false,
       autoAddressComments: true,
+      autoCommunicate: false,
     });
     expect(resolveAutopilotAutomation(s, { companyId: "shoptet", teamId: "frontend" })).toEqual({
       autoImplement: true,
       autoReview: true,
       autoAddressComments: false,
+      autoCommunicate: false,
     });
     expect(resolveAutopilotAutomation(s, { teamId: "gone" })).toEqual(tree.global);
   });
