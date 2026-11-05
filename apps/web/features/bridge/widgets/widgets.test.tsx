@@ -158,6 +158,19 @@ describe("IssuesWidget", () => {
     expect(screen.queryByText("Jira")).toBeNull();
   });
 
+  it("new/running rows show the source status instead of the ZIBBY tag", () => {
+    d.items = [
+      item("a", { sourceStatus: { name: "To Do", done: false } }),
+      item("b", { lifecycle: "running", sourceStatus: { name: "In Progress", done: false } }),
+      item("c"),
+    ];
+    renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);
+    expect(screen.getByText("To Do")).toBeInTheDocument();
+    expect(screen.getByText("In Progress")).toBeInTheDocument();
+    expect(screen.queryByText("Nové ve zdroji")).toBeNull();
+    expect(screen.queryByText("Běží")).toBeNull();
+  });
+
   it("the issue id sits on the title line", () => {
     d.items = [item("a")];
     renderWithProviders(<IssuesWidget {...setup({ widget: widget("w", "issues") })} />);

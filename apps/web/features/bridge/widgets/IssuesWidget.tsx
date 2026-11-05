@@ -17,7 +17,7 @@ import { compactAgo } from "../../../utils/time";
 import { visibleItems } from "../../inbox/inbox";
 import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../../inbox/queries";
-import { issueGroups } from "../state/rows";
+import { type IssueRowVm, issueGroups } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
@@ -42,6 +42,8 @@ export function IssuesWidget({
   onEpicToggle,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.issues");
+  const stateText = (r: IssueRowVm) =>
+    r.status === "new" || r.status === "running" ? r.sourceStatus : t(`state.${r.status}`);
   const now = useNow(60_000);
   const filters = useBridgeInboxFilters();
   const refresh = useRefreshInboxMutation();
@@ -150,11 +152,14 @@ export function IssuesWidget({
                       gap="6"
                       indent="icon"
                     >
-                      <BoardText kind="meta" tone="ink">
-                        {t(`state.${r.status}`)}
-                      </BoardText>
+                      {stateText(r) ? (
+                        <BoardText kind="meta" tone="ink">
+                          {stateText(r)}
+                        </BoardText>
+                      ) : null}
                       <BoardText kind="meta" tone="ink3">
-                        · {r.project}
+                        {stateText(r) ? "· " : ""}
+                        {r.project}
                       </BoardText>
                       {r.pr ? (
                         <BoardText underline kind="meta">

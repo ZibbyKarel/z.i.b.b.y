@@ -3230,9 +3230,7 @@
     "widgets": {
       "issues": {
         "state": {
-          "new": "Nové ve zdroji",
           "waiting": "Čeká na tebe",
-          "running": "Běží",
           "done": "Hotovo"
         },
         "noEpic": "Bez epicu",

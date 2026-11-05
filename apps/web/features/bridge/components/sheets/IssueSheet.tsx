@@ -20,7 +20,14 @@ import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { issueChatAbout } from "../../../chat/chatAbout";
 import { useInboxItemActions } from "../../../inbox/useInboxItemActions";
 import { useInboxItemsQuery } from "../../../inbox/queries";
-import { chainKey, itemKey, latestTaskId, linkedPrOf, zibbyStatus } from "../../../inbox/inbox";
+import {
+  chainKey,
+  isSourceStatusShown,
+  itemKey,
+  latestTaskId,
+  linkedPrOf,
+  zibbyStatus,
+} from "../../../inbox/inbox";
 import { issueHref } from "../../../inbox/components/IssueRow";
 import { compactAgo } from "../../../../utils/time";
 import { useTeamsQuery } from "../../../teams";
@@ -52,7 +59,8 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const taskId = latestTaskId(item);
   const source = t(`inboxPage.source.${item.source.kind}`);
   const none = t("bridge.sheet.none");
-  const stateLabel = t(`inboxPage.status.${status}`);
+  const sourceShown = isSourceStatusShown(status);
+  const stateLabel = sourceShown ? item.sourceStatus?.name : t(`inboxPage.status.${status}`);
   const updated = compactAgo(item.updatedAt, now);
 
   const rows: DetailTableRow[] = [
@@ -89,7 +97,7 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
       }
       chips={[
         item.sourceStatus ? `${source} · ${item.sourceStatus.name}` : source,
-        `ZIBBY · ${stateLabel}`,
+        ...(sourceShown ? [] : [`ZIBBY · ${stateLabel}`]),
         item.project.name,
         epic
           ? t("bridge.sheet.issue.epicChip", { key: epic.key ?? epic.title })

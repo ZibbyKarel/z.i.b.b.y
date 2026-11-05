@@ -3230,9 +3230,7 @@
     "widgets": {
       "issues": {
         "state": {
-          "new": "New in source",
           "waiting": "Waiting for you",
-          "running": "Running",
           "done": "Done"
         },
         "noEpic": "No epic",

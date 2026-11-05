@@ -34,6 +34,7 @@ import { PR_BLOCKER_TONE, ZibbyStatusLabel } from "../components/zibbyStatus";
 import {
   differsFromSource,
   findPr,
+  isSourceStatusShown,
   itemKey,
   latestTaskId,
   linkedPrOf,
@@ -297,10 +298,12 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
               </Typography>
               <Typography type="h3">{it.sourceStatus?.name ?? "—"}</Typography>
             </Stack>
-            <Stack gap="75">
-              <Typography type="label">{t("detail.execution")}</Typography>
-              <ZibbyStatusLabel status={status} />
-            </Stack>
+            {!isSourceStatusShown(status) && (
+              <Stack gap="75">
+                <Typography type="label">{t("detail.execution")}</Typography>
+                <ZibbyStatusLabel status={status} />
+              </Stack>
+            )}
             <Stack gap="75">
               <Typography type="label">{t("detail.lastChange")}</Typography>
               <Typography type="h3">{elapsedLabel(it.updatedAt, now)}</Typography>
