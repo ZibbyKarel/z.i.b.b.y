@@ -326,6 +326,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     );
     const teamsByToken = new Map<string, Promise<{ teams: string[]; note?: string }>>();
     const loginByToken = new Map<string, Promise<string | undefined>>();
+    const membersByTeam = new Map<string, Promise<Set<string>>>();
     const prs: InboxPr[] = [];
     const errors: InboxSourceError[] = [];
     for (const [repo, { project, token }] of repos) {
@@ -345,7 +346,22 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           .filter((t) => t.toLowerCase().startsWith(`${owner}/`))
           .filter((t) => !seen.has(t.toLowerCase()) && seen.add(t.toLowerCase()));
         const notes: string[] = [];
-        prs.push(...(await this.repoPrs(repo, project, token, ownerTeams, await login, notes)));
+        const repoPrs = await this.repoPrs(repo, project, token, ownerTeams, await login, notes);
+        // Configured teams the author belongs to, so a team filter also catches its members' PRs.
+        const members = await Promise.all(
+          configuredSlugs.map(async (s) => {
+            const team = qualifyTeamSlug(s, repoOwner);
+            const key = `${token}\n${team.toLowerCase()}`;
+            let logins = membersByTeam.get(key);
+            if (!logins) membersByTeam.set(key, (logins = this.teamMembers(token, team)));
+            return { team, logins: await logins };
+          }),
+        );
+        for (const pr of repoPrs) {
+          const teams = members.filter((m) => m.logins.has(pr.author.toLowerCase()));
+          if (teams.length) pr.authorTeams = teams.map((m) => m.team);
+        }
+        prs.push(...repoPrs);
         for (const message of notes) {
           if (!errors.some((e) => e.message === message))
             errors.push({ projectId: project.id, source: "github", message });
@@ -496,6 +512,20 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       this.names.set(login, name);
     }
     return name;
+  }
+
+  /** Lower-cased logins of an `org/team`'s members; any failure (unknown team, no read:org) → none. */
+  private async teamMembers(token: string, team: string): Promise<Set<string>> {
+    const [org, slug] = team.split("/");
+    if (!org || !slug) return new Set();
+    // ponytail: first 100 members only; paginate if a team ever outgrows that.
+    return this.gh<{ login?: string }[]>(
+      token,
+      `/orgs/${encodeURIComponent(org)}/teams/${encodeURIComponent(slug)}/members?per_page=100`,
+    ).then(
+      (list) => new Set(list.flatMap((m) => (m.login ? [m.login.toLowerCase()] : []))),
+      () => new Set<string>(),
+    );
   }
 
   /** Login of the token's user; any failure → undefined (reviewed PRs then read "commented"). */

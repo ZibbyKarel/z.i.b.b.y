@@ -221,6 +221,8 @@ describe("InboxService.listPrs", () => {
         return json({ login: "me" }, opts.userStatus ?? 200);
       }
       if (u.pathname === "/users/alice") return json({ name: "Alice Novak" });
+      if (u.pathname === "/orgs/Acme/teams/devrel-team/members")
+        return json([{ login: "Alice" }, { login: "carol" }]);
       if (u.pathname === "/search/issues") {
         if (q.includes("reviewed-by:@me") && opts.reviewedStatus)
           return json({}, opts.reviewedStatus);
@@ -371,6 +373,13 @@ describe("InboxService.listPrs", () => {
       expect(one).toMatchObject({ reviewReason: "direct" });
       expect(one?.reviewTeam).toBeUndefined();
       expect(one?.reviewTeams).toEqual(["acme/core", "Acme/devrel-team"]);
+    });
+
+    it("tags PRs authored by a configured team's member with authorTeams", async () => {
+      const { service } = build([], { teams: [{ slug: "devrel-team" }] });
+      const prs = (await service.listPrs()).prs;
+      expect(prs.find((p) => p.number === 1)?.authorTeams).toEqual(["Acme/devrel-team"]); // alice
+      expect(prs.find((p) => p.number === 3)?.authorTeams).toBeUndefined(); // me, not a member
     });
 
     it("searches a team once when it is both a membership and a configured slug", async () => {

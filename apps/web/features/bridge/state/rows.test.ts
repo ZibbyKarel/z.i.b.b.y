@@ -288,6 +288,12 @@ describe("pull requests", () => {
     expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
   });
 
+  it("a PR authored by a team member passes that team's pick", () => {
+    const all = [pr({ number: 1, authorTeams: ["shoptet/devrel-team"] }), pr({ number: 2 })];
+    const picked = prTree("p", all, none, { teams: ["shoptet/devrel-team"] }, ago);
+    expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
+  });
+
   it("offers only configured teams (by name) plus uncovered saved defaults", () => {
     const all = [
       pr({ number: 1, reviewTeam: "shoptet/devrel-team" }),

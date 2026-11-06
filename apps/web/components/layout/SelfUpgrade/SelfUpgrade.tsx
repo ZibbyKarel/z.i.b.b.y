@@ -8,7 +8,7 @@ import { useSelfStatusQuery } from "../../../features/self";
 declare global {
   interface Window {
     /** ZibbyOS.app's preload bridge (apps/desktop/src/preload.ts); absent in a plain browser. */
-    zibbyDesktop?: { checkForUpdates(): Promise<void> };
+    zibbyDesktop?: { checkForUpdates(): Promise<void>; installUpdate(): Promise<void> };
   }
 }
 

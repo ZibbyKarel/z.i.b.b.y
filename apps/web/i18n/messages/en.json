@@ -1167,6 +1167,17 @@
         "briefing": "Briefing"
       }
     },
+    "updates": {
+      "title": "Updates",
+      "current": "Current version",
+      "latest": "Latest version",
+      "available": "Update {version} is available",
+      "releaseNotes": "What's new (GitHub)",
+      "check": "Check for updates",
+      "install": "Download and install",
+      "upToDate": "You're on the latest version.",
+      "failed": "Couldn't check for updates."
+    },
     "selfDev": {
       "title": "ZIBBY development",
       "branch": "Branch",
@@ -3191,7 +3202,9 @@
     },
     "filterControls": {
       "companies": "Companies",
-      "teams": "Teams"
+      "teams": "Teams",
+      "selectAll": "Select all",
+      "deselectAll": "Clear all"
     },
     "editLayout": "Edit layout",
     "catalog": {

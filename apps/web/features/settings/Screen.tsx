@@ -25,6 +25,7 @@ import { MachineSection } from "./components/MachineSection";
 import { SystemSection } from "./components/SystemSection";
 import { InfoRow } from "./components/InfoRow";
 import { SelfDevelopmentPanel } from "./components/SelfDevelopmentPanel";
+import { UpdatesSection } from "./components/UpdatesSection";
 import { WatcherRows } from "./components/WatcherRows";
 import type { SettingsSection } from "./settingsSections";
 
@@ -82,7 +83,7 @@ export interface SettingsScreenProps {
 /**
  * `/system/settings/[section]` (ZB-11, ROUTE-MAP §3) — the settings sections
  * router; the sections are the shell sub-nav items (`SECTIONS.system`). `general`
- * stacks General, Appearance, Machine and chat persona. Each former `/settings?tab=` is now its own route; the "gates" and
+ * stacks General, Updates, Appearance, Machine and chat persona. Each former `/settings?tab=` is now its own route; the "gates" and
  * "mandate" tabs already moved to `/governance/gates` (ZB-08), "automations" to the top-level `/work/automations`
  * page, and "selfKnowledge" to
  * `/knowledge/distill` (ZB-09).
@@ -145,6 +146,7 @@ export function SettingsScreen({ section }: SettingsScreenProps) {
                   />
                 </Stack>
               </Panel>
+              <UpdatesSection />
               <AppearanceSection />
               <MachineSection />
               <ChatSection />

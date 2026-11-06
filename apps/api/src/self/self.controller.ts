@@ -23,6 +23,8 @@ export class SelfController {
     return tsRestHandler(selfContract, {
       getSelfStatus: async () => ({ status: 200, body: await this.self.status() }),
 
+      checkAppUpdate: async () => ({ status: 200, body: await this.self.checkAppUpdate() }),
+
       updateSelf: async () => {
         try {
           return { status: 200, body: await this.self.update() };

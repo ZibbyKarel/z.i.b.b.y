@@ -6,8 +6,9 @@ import { fetchBusyRunCount } from "./activeRuns";
 import { canReplace, installedBundlePath, launchSwap, prepareUpdate } from "./install";
 import { type AvailableUpdate, DEFAULT_RELEASES_URL, fetchReleases, pickUpdate } from "./release";
 
-const FIRST_CHECK_DELAY_MS = 60_000;
-const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+/** Lets the window finish loading before a dialog can pop over it. */
+const FIRST_CHECK_DELAY_MS = 5_000;
+const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const RUN_POLL_INTERVAL_MS = 30_000;
 
 type Phase = "idle" | "checking" | "downloading" | "waiting-for-runs" | "installing";
@@ -75,7 +76,7 @@ function trimNotes(notes: string): string {
   return text.length > 900 ? `${text.slice(0, 900)}…` : text;
 }
 
-/** Starts the background schedule: one check shortly after boot, then every 6 hours. */
+/** Starts the background schedule: one check at startup, then every 24 hours. */
 export function startUpdateChecks(opts: UpdaterOptions): void {
   options = opts;
   if (!app.isPackaged) return;
@@ -86,8 +87,16 @@ export function startUpdateChecks(opts: UpdaterOptions): void {
 /**
  * One check. `manual` (the menu item) reports "up to date" and errors in a dialog and
  * ignores a skipped version; the scheduled check stays silent unless there is news.
+ * `install` (Settings → Updates' "Download and install") skips the Update/Later/Skip
+ * question — the operator already chose.
  */
-export async function checkForUpdates({ manual }: { manual: boolean }): Promise<void> {
+export async function checkForUpdates({
+  manual,
+  install = false,
+}: {
+  manual: boolean;
+  install?: boolean;
+}): Promise<void> {
   if (phase !== "idle") {
     if (manual) await showBox({ type: "info", message: "An update is already in progress." });
     return;
@@ -127,19 +136,21 @@ export async function checkForUpdates({ manual }: { manual: boolean }): Promise<
     return;
   }
   log(`check: ${update.version} available`);
-  await offerUpdate(update);
+  await offerUpdate(update, install);
 }
 
-async function offerUpdate(update: AvailableUpdate): Promise<void> {
+async function offerUpdate(update: AvailableUpdate, confirmed: boolean): Promise<void> {
   const notes = trimNotes(update.notes);
-  const choice = await showBox({
-    type: "info",
-    buttons: ["Update", "Later", "Skip This Version"],
-    defaultId: 0,
-    cancelId: 1,
-    message: `ZibbyOS ${update.version} is available`,
-    detail: `You have ${app.getVersion()}.${notes ? `\n\n${notes}` : ""}`,
-  });
+  const choice = confirmed
+    ? 0
+    : await showBox({
+        type: "info",
+        buttons: ["Update", "Later", "Skip This Version"],
+        defaultId: 0,
+        cancelId: 1,
+        message: `ZibbyOS ${update.version} is available`,
+        detail: `You have ${app.getVersion()}.${notes ? `\n\n${notes}` : ""}`,
+      });
   if (choice === 2) {
     writeSkippedVersion(update.version);
     return;

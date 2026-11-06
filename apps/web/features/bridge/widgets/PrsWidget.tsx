@@ -75,7 +75,7 @@ export function PrsWidget({
   // A failed sync just re-enables the button; the previous data stays on screen.
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
-  const [pick, setPick] = useWidgetFilterPick(widget.filters);
+  const [pick, setPick, filtersChanged] = useWidgetFilterPick(widget.filters);
 
   const { nodes, counts, total, you } = useMemo(
     () => prTree(widget.id, prsQuery.data?.prs ?? [], filters, pick, (iso) => compactAgo(iso, now)),
@@ -91,7 +91,7 @@ export function PrsWidget({
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : total,
       you,
-      filtersActive: Object.keys(pick).length > 0,
+      filtersActive: filtersChanged,
     },
     { onEmptyChange, onCountChange },
   );

@@ -77,7 +77,7 @@ export function IssuesWidget({
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
-  const [pick, setPick] = useWidgetFilterPick(widget.filters);
+  const [pick, setPick, filtersChanged] = useWidgetFilterPick(widget.filters);
 
   const list = useMemo(
     () =>
@@ -115,7 +115,7 @@ export function IssuesWidget({
       loading: itemsQuery.isPending,
       count: itemsQuery.isPending ? undefined : list.length,
       you,
-      filtersActive: Object.keys(pick).length > 0,
+      filtersActive: filtersChanged,
     },
     { onEmptyChange, onCountChange },
   );

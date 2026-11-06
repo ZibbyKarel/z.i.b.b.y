@@ -19,11 +19,12 @@ export function compactPick(pick: WidgetFilters): WidgetFilters {
 /**
  * A widget's live filter pick, starting from its saved defaults (`widget.filters`). Saving new
  * defaults in the widget settings resets the pick to them. Keyed by content: the parent may
- * rebuild the object without the defaults having changed.
+ * rebuild the object without the defaults having changed. The third value is true while the pick
+ * differs from the defaults (the header shows the "filters applied" icon).
  */
 export function useWidgetFilterPick(
   defaults: WidgetFilters | undefined,
-): [WidgetFilters, (next: WidgetFilters) => void] {
+): [WidgetFilters, (next: WidgetFilters) => void, boolean] {
   const [pick, setPick] = useState<WidgetFilters>(defaults ?? {});
   const defaultsKey = JSON.stringify(defaults ?? {});
   const [seenKey, setSeenKey] = useState(defaultsKey);
@@ -31,7 +32,19 @@ export function useWidgetFilterPick(
     setSeenKey(defaultsKey);
     setPick(defaults ?? {});
   }
-  return [pick, setPick];
+  return [pick, setPick, !samePick(pick, defaults ?? {})];
+}
+
+/** Same filters regardless of key or list order; unset groups count as absent. */
+export function samePick(a: WidgetFilters, b: WidgetFilters): boolean {
+  // A legacy `mine: true` reads as `owner: "mine"`.
+  const norm = ({ mine, ...p }: WidgetFilters) =>
+    JSON.stringify(
+      Object.entries(compactPick({ ...p, owner: p.owner ?? (mine ? "mine" : undefined) }))
+        .map(([k, v]) => [k, Array.isArray(v) ? [...v].sort() : v])
+        .sort(([x], [y]) => String(x).localeCompare(String(y))),
+    );
+  return norm(a) === norm(b);
 }
 
 /** The filter row a widget shows under its header while the header filters toggle is on. */
@@ -75,10 +88,13 @@ export function OrgFilterControls({ pick, onChange, teams }: OrgFilterControlsPr
         <Dropdown
           compact
           multi
+          showSelectAll
           aria-label={t("companies")}
+          deselectAllLabel={t("deselectAll")}
           onChange={(v) => onChange({ companies: v })}
           options={companies.map((c) => ({ value: c.id, label: c.name }))}
           placeholder={t("companies")}
+          selectAllLabel={t("selectAll")}
           size="sm"
           value={pickedCompanies}
         />
@@ -87,10 +103,13 @@ export function OrgFilterControls({ pick, onChange, teams }: OrgFilterControlsPr
         <Dropdown
           compact
           multi
+          showSelectAll
           aria-label={t("teams")}
+          deselectAllLabel={t("deselectAll")}
           onChange={(v) => onChange({ teams: v })}
           options={teamOptions}
           placeholder={t("teams")}
+          selectAllLabel={t("selectAll")}
           size="sm"
           value={pickedTeams}
         />

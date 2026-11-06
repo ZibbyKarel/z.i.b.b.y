@@ -191,6 +191,11 @@ ipcMain.handle("zibby:check-for-updates", (event) => {
   return checkForUpdates({ manual: true });
 });
 
+ipcMain.handle("zibby:install-update", (event) => {
+  if (!event.senderFrame?.url.startsWith(`${WEB_ORIGIN}/`)) return;
+  return checkForUpdates({ manual: true, install: true });
+});
+
 // Standard macOS behaviour: closing the window keeps the app (and its
 // servers) running in the Dock. Cmd+Q quits.
 app.on("window-all-closed", () => {

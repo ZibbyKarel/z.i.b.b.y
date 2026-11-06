@@ -7,7 +7,8 @@ const RELEASE_TAG_PREFIX = "desktop-v";
 export const RELEASES_URL =
   "https://api.github.com/repos/ZibbyKarel/z.i.b.b.y/releases?per_page=30";
 
-const HOUR_MS = 60 * 60 * 1000;
+/** Matches the desktop updater's schedule: one lookup per day unless forced. */
+const SUCCESS_TTL_MS = 24 * 60 * 60 * 1000;
 /** A failed lookup is retried sooner than a successful one is refreshed. */
 const FAILURE_TTL_MS = 5 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10_000;
@@ -59,9 +60,9 @@ export function pickLatestDesktopVersion(releases: unknown): LatestDesktopReleas
 }
 
 /**
- * Fetches the latest desktop release from GitHub, cached in memory (1 h on
- * success). Never throws — offline, rate limit (403) or a garbage body all
- * resolve to `undefined`.
+ * Fetches the latest desktop release from GitHub, cached in memory (24 h on
+ * success, so the first status read after boot is the startup check). Never
+ * throws — offline, rate limit (403) or a garbage body all resolve to `undefined`.
  */
 export class LatestDesktopReleaseCache {
   private cached?: { value: LatestDesktopRelease | undefined; expiresAt: number };
@@ -71,10 +72,15 @@ export class LatestDesktopReleaseCache {
     private readonly now: () => number = Date.now,
   ) {}
 
+  /** Forces the next `get()` to hit GitHub (the operator's manual check). */
+  invalidate(): void {
+    this.cached = undefined;
+  }
+
   async get(): Promise<LatestDesktopRelease | undefined> {
     if (this.cached && this.cached.expiresAt > this.now()) return this.cached.value;
     const value = await this.fetchLatest().catch(() => undefined);
-    this.cached = { value, expiresAt: this.now() + (value ? HOUR_MS : FAILURE_TTL_MS) };
+    this.cached = { value, expiresAt: this.now() + (value ? SUCCESS_TTL_MS : FAILURE_TTL_MS) };
     return value;
   }
 

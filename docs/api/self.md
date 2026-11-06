@@ -44,12 +44,19 @@ Reads local git state in `installRoot()`:
   `latestAppVersion` / `latestAppReleaseUrl` are the highest non-draft,
   non-prerelease `desktop-v*` release from
   `api.github.com/repos/ZibbyKarel/z.i.b.b.y/releases?per_page=30`, cached in
-  memory 1 h (a failed lookup is retried after 5 min). `appUpdateAvailable` is
+  memory 24 h (a failed lookup is retried after 5 min). The first status read
+  after API boot is the startup check. `appUpdateAvailable` is
   `true` only when both are known and the latest is strictly newer (numeric
   `major.minor.patch`). Offline / 403 rate limit / garbage body → no
   `latestAppVersion`, `appUpdateAvailable: false`.
 
 Every sub-step is defensive — the endpoint never 500s on a normal machine.
+
+## `checkAppUpdate` — the operator's "Check for updates"
+
+`POST /api/self/app-update/check` (empty body) drops the cached release lookup
+and returns the full `SelfStatus` with a fresh one. Never 409s — a failed
+GitHub lookup is just a status without `latestAppVersion`.
 
 ## `updateSelf` — the one sanctioned self-update
 
@@ -121,6 +128,15 @@ name the newer version. In ZibbyOS.app it calls `window.zibbyDesktop.checkForUpd
 → the same updater as the menu's "Check for Updates…"); in a plain browser it opens
 `latestAppReleaseUrl` in a new tab. `AppShell` passes `v<appVersion>` to
 `AppHeader`'s `version`, shown small under the `ZibbyOS` wordmark.
+
+`apps/web/features/settings/components/UpdatesSection.tsx` — Settings → General →
+Updates: current and latest version, "Check for updates"
+(`useCheckAppUpdateMutation` → `checkAppUpdate`, writes the response into the
+self-status cache so the top-bar icon follows), and when an update is out a
+notice with the release link plus "Download and install". In ZibbyOS.app that
+calls `window.zibbyDesktop.installUpdate()` (IPC `zibby:install-update`: the same
+updater, minus the Update/Later/Skip question); in a plain browser it opens
+`latestAppReleaseUrl`.
 
 `apps/web/features/settings/components/SelfDevelopmentPanel.tsx` — Settings
 panel: branch, ↓/↑ vs origin, dirty, open PRs (DS `TextLink`,

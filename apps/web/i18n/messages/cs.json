@@ -1167,6 +1167,17 @@
         "briefing": "Briefing"
       }
     },
+    "updates": {
+      "title": "Aktualizace",
+      "current": "Aktuální verze",
+      "latest": "Nejnovější verze",
+      "available": "K dispozici je aktualizace {version}",
+      "releaseNotes": "Co je nového (GitHub)",
+      "check": "Zkontrolovat aktualizace",
+      "install": "Stáhnout a nainstalovat",
+      "upToDate": "Máš nejnovější verzi.",
+      "failed": "Kontrola aktualizací se nepovedla."
+    },
     "selfDev": {
       "title": "Vývoj ZIBBY",
       "branch": "Větev",
@@ -3191,7 +3202,9 @@
     },
     "filterControls": {
       "companies": "Firmy",
-      "teams": "Týmy"
+      "teams": "Týmy",
+      "selectAll": "Vybrat vše",
+      "deselectAll": "Zrušit vše"
     },
     "editLayout": "Upravit rozložení",
     "catalog": {

@@ -336,6 +336,13 @@ export class SelfService {
     return { ...repo, ...app };
   }
 
+  /** The operator's "Check for updates": drop the cached release lookup, then
+   * return the status with a fresh one. */
+  checkAppUpdate(): Promise<SelfStatus> {
+    this.latestRelease.invalidate();
+    return this.status();
+  }
+
   private async repoStatus(): Promise<Omit<SelfStatus, "appUpdateAvailable">> {
     const match = await this.selfProjectMatch();
     const projectField = match

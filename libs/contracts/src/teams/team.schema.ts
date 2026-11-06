@@ -69,7 +69,7 @@ export const TeamSchema = z.object({
   name: z.string().min(1),
   companyId: z.string().optional(),
   desc: z.string().optional(),
-  /** Team code owner id (GitHub `org/team` or GitLab `group/subgroup`) — filters the PRs widget to reviews requested of this team. */
+  /** Team code owner id (GitHub `org/team` or GitLab `group/subgroup`) — filters the PRs widget to PRs requesting this team's review or authored by its members. */
   slug: TeamSlugSchema.optional(),
   /** Key of the Jira project the team files its issues in (e.g. `CZ3TDR1`); only editable when its company has a Jira integration. */
   jiraProjectKey: z

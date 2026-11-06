@@ -27,6 +27,16 @@ export const selfContract = c.router(
       },
       summary: "The ZIBBY install repo's freshness vs. origin, plus its open PRs",
     },
+    checkAppUpdate: {
+      method: "POST",
+      path: "/self/app-update/check",
+      body: EmptyBodySchema,
+      responses: {
+        200: SelfStatusSchema,
+      },
+      summary:
+        "Re-read the desktop-v* GitHub releases now (bypassing the 24 h cache) and return the fresh status",
+    },
     updateSelf: {
       method: "POST",
       path: "/self/update",

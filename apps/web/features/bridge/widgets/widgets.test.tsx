@@ -282,8 +282,9 @@ describe("IssuesWidget", () => {
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(1);
     expect(screen.getByLabelText("Firmy")).toBeInTheDocument();
     expect(screen.getByLabelText("Týmy")).toBeInTheDocument();
+    // The saved defaults are not "applied" filters: the header keeps the plain icon.
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, filtersActive: true }),
+      expect.objectContaining({ count: 3, filtersActive: false }),
     );
   });
 });
@@ -410,11 +411,14 @@ describe("PrsWidget", () => {
     const mineBtn = () => screen.getByTestId(`${ButtonGroupTestId.Option}-mine`);
     expect(mineBtn()).toHaveAttribute("aria-pressed", "true");
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ filtersActive: true }),
+      expect.objectContaining({ filtersActive: false }),
     );
 
     await userEvent.click(mineBtn());
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2);
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filtersActive: true }),
+    );
 
     rerender(<PrsWidget {...props} widget={{ ...props.widget, filters: { ci: ["failing"] } }} />);
     expect(mineBtn()).toHaveAttribute("aria-pressed", "false");

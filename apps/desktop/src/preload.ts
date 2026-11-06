@@ -7,4 +7,6 @@ import { contextBridge, ipcRenderer } from "electron";
  */
 contextBridge.exposeInMainWorld("zibbyDesktop", {
   checkForUpdates: (): Promise<void> => ipcRenderer.invoke("zibby:check-for-updates"),
+  /** Settings → Updates: download and install straight away, no Update/Later question. */
+  installUpdate: (): Promise<void> => ipcRenderer.invoke("zibby:install-update"),
 });

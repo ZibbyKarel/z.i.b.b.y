@@ -48,15 +48,24 @@ describe("LatestDesktopReleaseCache", () => {
   const ok = (body: unknown) =>
     vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body } as Response);
 
-  it("caches a successful lookup for an hour", async () => {
+  it("caches a successful lookup for 24 hours", async () => {
     let now = 0;
     const fetchImpl = ok(RELEASES);
     const cache = new LatestDesktopReleaseCache(fetchImpl, () => now);
     expect((await cache.get())?.version).toBe("0.3.0");
-    now = 59 * 60 * 1000;
+    now = 23 * 60 * 60 * 1000;
     await cache.get();
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    now = 61 * 60 * 1000;
+    now = 25 * 60 * 60 * 1000;
+    await cache.get();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("invalidate() forces the next get() to refetch", async () => {
+    const fetchImpl = ok(RELEASES);
+    const cache = new LatestDesktopReleaseCache(fetchImpl, () => 0);
+    await cache.get();
+    cache.invalidate();
     await cache.get();
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });

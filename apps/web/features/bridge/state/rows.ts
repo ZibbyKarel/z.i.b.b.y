@@ -215,9 +215,14 @@ export interface TeamFilterOption {
   companyId?: string;
 }
 
-/** Every team asked to review `p` (`org/team`); falls back to the single display team. */
-const prRequestedTeams = (p: InboxPr): readonly string[] =>
-  p.reviewTeams ?? (p.reviewTeam ? [p.reviewTeam] : []);
+/**
+ * Every team `p` belongs to (`org/team`): asked to review it (code owner or requested by hand), or
+ * the author's own team.
+ */
+const prTeamsOf = (p: InboxPr): readonly string[] => [
+  ...(p.reviewTeams ?? (p.reviewTeam ? [p.reviewTeam] : [])),
+  ...(p.authorTeams ?? []),
+];
 
 /**
  * Team filter options of the PR widget: every configured team with a code owner slug (label = team
@@ -298,7 +303,7 @@ const countBy = <K extends string>(keys: readonly K[], list: InboxPr[], of: (p: 
 
 /**
  * The Pull requests screen's set (stored filters) as one flat list of stack trees, newest first.
- * `pick` narrows it by review / CI state, owner, company and review team; a picked PR keeps its listed ancestors as muted
+ * `pick` narrows it by review / CI state, owner, company and team (review requested or authored by a member); a picked PR keeps its listed ancestors as muted
  * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR.
  */
 export function prTree(
@@ -320,7 +325,7 @@ export function prTree(
   const shown = new Set(visible.map((p) => p.url));
   // AND across groups, OR within one; an empty group doesn't filter.
   const teamHit = (p: InboxPr) => {
-    const requested = prRequestedTeams(p);
+    const requested = prTeamsOf(p);
     return (
       !pick.teams?.length || requested.some((rt) => pick.teams?.some((v) => teamSlugMatches(rt, v)))
     );

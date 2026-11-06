@@ -152,6 +152,8 @@ export const InboxPrSchema = z.object({
   reviewTeam: z.string().min(1).optional(),
   /** Every `org/team` whose review-request search returned this PR (deduped); `reviewTeam` is the first. */
   reviewTeams: z.array(z.string().min(1)).optional(),
+  /** Every configured `org/team` the PR author is a member of. */
+  authorTeams: z.array(z.string().min(1)).optional(),
   blocker: InboxPrBlockerSchema,
   section: InboxPrSectionSchema,
   /** Phase 129 P2 — the latest ZIBBY code review of this PR (see `PrReviewStateSchema`). */

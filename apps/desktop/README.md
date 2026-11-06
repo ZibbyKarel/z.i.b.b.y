@@ -30,7 +30,7 @@ The script bumps `apps/desktop/package.json`, commits only that file, tags `desk
 
 Links to anything outside the app (GitHub PRs, Jira, docs) open in the default browser, not inside the ZibbyOS window.
 
-The installed app checks the releases one minute after launch and then every 6 hours, or on demand via **ZibbyOS → Check for Updates…**. When a newer `desktop-v*` release exists it asks **Update / Later / Skip This Version**. On **Update** it:
+The installed app checks the releases at launch and then every 24 hours, or on demand via **ZibbyOS → Check for Updates…** or **Settings → General → Updates** (whose **Download and install** skips the question below). When a newer `desktop-v*` release exists it asks **Update / Later / Skip This Version**. On **Update** it:
 
 1. downloads the zip, checks the sha256 against the sidecar, unpacks it with `ditto` and verifies the version and the signature;
 2. checks the app's own API for `running`/`pending` runs. If any are active it offers **Install When Runs Finish** (polls every 30 s), **Restart Now** or **Cancel**;

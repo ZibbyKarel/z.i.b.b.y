@@ -65,7 +65,7 @@ describe("SelfUpgrade", () => {
   it("runs the desktop updater when the preload bridge is present", async () => {
     statusRef.value = UPDATE;
     const checkForUpdates = vi.fn().mockResolvedValue(undefined);
-    window.zibbyDesktop = { checkForUpdates };
+    window.zibbyDesktop = { checkForUpdates, installUpdate: vi.fn() };
     const open = vi.spyOn(window, "open").mockReturnValue(null);
     renderWithProviders(<SelfUpgrade />);
     await userEvent.click(screen.getByTestId(SelfUpgradeTestId.Button));
@@ -91,7 +91,7 @@ describe("SelfUpgrade", () => {
           finish = resolve;
         }),
     );
-    window.zibbyDesktop = { checkForUpdates };
+    window.zibbyDesktop = { checkForUpdates, installUpdate: vi.fn() };
     renderWithProviders(<SelfUpgrade />);
     const button = screen.getByTestId(SelfUpgradeTestId.Button);
     await userEvent.click(button);
@@ -104,7 +104,10 @@ describe("SelfUpgrade", () => {
 
   it("leaves the loading state when the updater call fails", async () => {
     statusRef.value = UPDATE;
-    window.zibbyDesktop = { checkForUpdates: vi.fn().mockRejectedValue(new Error("ipc")) };
+    window.zibbyDesktop = {
+      checkForUpdates: vi.fn().mockRejectedValue(new Error("ipc")),
+      installUpdate: vi.fn(),
+    };
     renderWithProviders(<SelfUpgrade />);
     const button = screen.getByTestId(SelfUpgradeTestId.Button);
     await userEvent.click(button);

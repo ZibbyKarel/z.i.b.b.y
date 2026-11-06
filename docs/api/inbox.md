@@ -95,6 +95,8 @@ For every distinct repo of a project with a GitHub integration (token via
   case-insensitively against memberships; other-org slugs are skipped and a failing
   team search (e.g. 422) degrades to none. `reviewTeams` lists every such team whose search
   returned the PR (deduped, any bucket); `reviewTeam` stays the first/display team.
+  `authorTeams` lists every configured-slug team the PR author is a member of
+  (`GET /orgs/{org}/teams/{slug}/members`, first 100; a failed read → none).
 
 Direct beats team; mine is never in to-review. GitHub drops a review request once the
 user reviews and re-adds it on a re-request, so a PR leaves/returns to "to review"
