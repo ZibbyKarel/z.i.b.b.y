@@ -48,8 +48,10 @@ the work and lets the gate overlay act on its outcome:
 `companies` / `teams` are keyed by id and hold only the toggles the node overrides. Precedence is
 team > company > global (`resolveAutopilotAutomation`; `AutopilotService.automationFor`). The
 gate class follows the same tree (`AUTOPILOT_SCOPE_TOGGLE`, `AutopilotService.scope(at)`): a
-`channel` reply resolves at the item's project (its company and team), or the integration's
-company. Approvals from tasks and workflow gates resolve at global. While autopilot is `off`
+`channel` reply resolves at the item's project's company, or the integration's company.
+`Project.teamId` never picks the team level: several teams work in one project. Only the PR
+automation applies team toggles, at the PR's own teams (`docs/api/inbox.md`); the roadmap tick
+and channel replies resolve at company > global. Approvals from tasks and workflow gates resolve at global. While autopilot is `off`
 every effective toggle is `false`, but the stored tree is kept so the next switch-on pre-fills it.
 Autopilot may stay on indefinitely.
 

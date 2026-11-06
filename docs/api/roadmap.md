@@ -529,7 +529,7 @@ per project with a roadmap:
 
 1. drives `reconcileRunning` + `reconcileAwaitingMerge`;
 2. runs `RoadmapGateService.autoPickup` for every project whose effective Autopilot
-   `autoImplement` is true (team > company > global, `docs/api/autopilot.md`; always false while
+   `autoImplement` is true (company > global, never the project's team, `docs/api/autopilot.md`; always false while
    Autopilot is off). The legacy `_config.json` `autoPlay` / `Company.roadmapDefaults` are
    deprecated and no longer read.
 

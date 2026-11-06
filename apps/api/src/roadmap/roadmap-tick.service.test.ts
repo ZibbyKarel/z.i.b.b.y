@@ -113,10 +113,9 @@ describe("RoadmapTickService", () => {
     expect(gate.autoPickup).not.toHaveBeenCalled();
   });
 
-  it("a team override autoImplement:false beats the global true", async () => {
+  it("the project's team toggle is never applied: several teams work in one project", async () => {
     await store.writeConfig("acme", {});
-    globalToggles = { autoImplement: true };
-    teamToggles = { "team-1": { autoImplement: false } };
+    teamToggles = { "team-1": { autoImplement: true } };
 
     await makeTick().tick();
 

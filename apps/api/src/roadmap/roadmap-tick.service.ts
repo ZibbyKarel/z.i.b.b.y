@@ -20,7 +20,7 @@ import { RoadmapStore } from "./roadmap.store";
  *    poll half of the two release signals (master plan "Release signals"): an
  *    operator who merges a PR straight on GitHub must still see its dependents
  *    released.
- * 2. **Auto-pickup** — if the project's effective `autoImplement` is `true`,
+ * 2. **Auto-pickup** — if the project's effective `autoImplement` (company > global) is `true`,
  *    `RoadmapGateService.autoPickup` enqueues its unblocked `todo` tasks and
  *    decomposes its never-decomposed childless epics. Skipped entirely for a
  *    project with the toggle off. Runs LAST so it sees the slots the reconcile
@@ -117,13 +117,15 @@ export class RoadmapTickService
   }
 
   /**
-   * The project's Autopilot automation toggles (team > company > global; all `false`
-   * while Autopilot is off). The legacy `_config.json` / `roadmapDefaults` are not read.
+   * The project's Autopilot automation toggles (company > global; all `false` while Autopilot
+   * is off). No team level: several teams work in one project, and auto-pickup only starts
+   * ZIBBY's own (manual) items, which belong to no team. The legacy `_config.json` /
+   * `roadmapDefaults` are not read.
    */
   private async effectiveConfig(projectId: string): Promise<AutomationToggles> {
     const project = await this.projects.get(projectId).catch(() => null);
     const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
-    return this.autopilot.automationFor({ companyId: company?.id, teamId: project?.teamId });
+    return this.autopilot.automationFor({ companyId: company?.id });
   }
 
   private async tickProject(projectId: string, config: AutomationToggles): Promise<void> {

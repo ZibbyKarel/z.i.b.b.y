@@ -599,7 +599,11 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
     return this.forcesTier3(project, item.vip === true);
   }
 
-  /** Where a reply acts for autopilot: the item's project (its company and team), else the integration's company. */
+  /**
+   * Where a reply acts for autopilot: the item's project's company, else the integration's
+   * company. Never the project's team — several teams work in one project, so its team toggles
+   * would cover every other team's messages.
+   */
   private async autopilotLocation(
     item: ChannelItem,
     integrationCompanyId: string | undefined,
@@ -609,7 +613,7 @@ export class ChannelTriageFlowService implements ChannelTriageFlow, ResumableRun
       : null;
     if (!project) return { companyId: integrationCompanyId };
     const company = await this.resolved.resolveCompany(project).catch(() => undefined);
-    return { companyId: company?.id, teamId: project.teamId };
+    return { companyId: company?.id };
   }
 
   // ---- Tier 3 / fallback: park a kind-"channel" approval ----------------------
