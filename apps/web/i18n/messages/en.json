@@ -1359,6 +1359,7 @@
       "backToRuns": "← Runs",
       "assignProject": "+ Assign project",
       "sourcePr": "Source PR {ref}",
+      "sourceIssue": "Source issue {ref}",
       "workflow": "Workflow · {name}",
       "action": {
         "pause": "Pause",

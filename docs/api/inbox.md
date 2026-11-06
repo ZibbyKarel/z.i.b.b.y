@@ -337,8 +337,14 @@ the two actions above on its own, per the Autopilot automation toggles `autoRevi
 knob `systemConfig.roadmapTickMs` (read live, `0` disables; no separate knob) and reports on
 `/api/health` as watcher `pr-automation`.
 
-Each tick first resolves every project's effective config; when no project has `autoReview` or
-`autoAddressComments` on, it ends there and never queries GitHub. Otherwise it reads
+The team level of that tree is the PR's own team, not the project's (one repo serves many teams):
+the configured team whose code owner id (`Team.slug`) the PR's review was requested from
+(`reviewTeams`) or whose member authored it (`authorTeams`). Only the operator's own PRs
+(`bucket === "mine"`) fall back to the project's `teamId`. A team without a `slug` therefore
+never matches a PR to review.
+
+Each tick first resolves every project's and every team's effective config; when none has
+`autoReview` or `autoAddressComments` on, it ends there and never queries GitHub. Otherwise it reads
 `InboxService.listPrs()` and the tasks store, then walks the PRs in inbox order:
 
 - **Auto review** — effective `autoReview`, `bucket === "to-review"`, not a draft, a known

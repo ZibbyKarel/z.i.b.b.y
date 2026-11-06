@@ -35,6 +35,7 @@ function pr(over: Partial<InboxPr> = {}): InboxPr {
     projectId: "p1",
     headSha: A,
     headRef: "feat",
+    reviewTeams: ["acme/p1-team"],
     ...over,
   };
 }
@@ -133,6 +134,9 @@ describe("PrAutomationService (todo-16)", () => {
           Object.keys(configs).map((id) => ({ id, name: id, path: `/repos/${id}` })),
       } as never,
       { resolveCompany: async (p: { id: string }) => companyByProject[p.id] ?? company } as never,
+      {
+        list: async () => Object.keys(configs).map((id) => ({ id, name: id, slug: `${id}-team` })),
+      } as never,
       autopilot as never,
       activity as never,
       fakeSystemConfigStore(sys),
@@ -268,6 +272,18 @@ describe("PrAutomationService (todo-16)", () => {
         });
       },
     );
+
+    it("a PR requesting another team's review is not reviewed, though the project is the team's", async () => {
+      prs = [pr({ reviewTeams: ["acme/core"], reviewTeam: "acme/core" })];
+      await make().tick();
+      expect(review.start).not.toHaveBeenCalled();
+    });
+
+    it("a PR authored by a team member counts as the team's", async () => {
+      prs = [pr({ reviewTeams: undefined, reviewReason: "direct", authorTeams: ["acme/p1-team"] })];
+      await make().tick();
+      expect(review.start).toHaveBeenCalledTimes(1);
+    });
 
     it("a review of another PR does not block this one", async () => {
       const other = reviewTask(A, "running");
@@ -422,7 +438,8 @@ describe("PrAutomationService (todo-16)", () => {
   });
 
   it("an unreadable project config skips that PR only", async () => {
-    prs = [pr({ number: 1, projectId: "broken" }), pr({ number: 2 })];
+    configs = { ...configs, broken: {} };
+    prs = [pr({ number: 1, reviewTeams: ["acme/broken-team"] }), pr({ number: 2 })];
     const svc = make();
     const result = await svc.tick();
     expect(result).toEqual({ started: 1 });
@@ -446,6 +463,7 @@ describe("PrAutomationService (todo-16)", () => {
       } as never,
       { get: async (id: string) => ({ id }), list: async () => [{ id: "p1" }] } as never,
       { resolveCompany: async () => undefined } as never,
+      { list: async () => [] } as never,
       {
         automationFor: () => ({
           autoImplement: false,

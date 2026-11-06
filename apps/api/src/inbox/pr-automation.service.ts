@@ -4,6 +4,8 @@ import {
   type InboxPr,
   type PrReviewLevel,
   type ScheduledTask,
+  type Team,
+  teamSlugMatches,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { AutopilotService } from "../autopilot/autopilot.service";
@@ -14,6 +16,7 @@ import { LoggerService, type ScopedLogger } from "../shared/logging/logger.servi
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
+import { TeamsStorageService } from "../teams/teams.storage.service";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
 import { InboxReviewService } from "./inbox-review.service";
 import { InboxService, isDeadTask } from "./inbox.service";
@@ -31,7 +34,9 @@ const errMsg = (error: unknown): string => (error instanceof Error ? error.messa
  * todo-16 — the PR automation heartbeat (docs/api/inbox.md "Automatic review & comment
  * handling"). Shares `systemConfig.roadmapTickMs` with the roadmap heartbeat (read live, `0`
  * disables; tests drive {@link tick} directly). Each tick reads the PR inbox and, per PR, the
- * project's EFFECTIVE Autopilot automation toggles (team > company > global; all off while Autopilot is off):
+ * PR's EFFECTIVE Autopilot automation toggles (team > company > global; all off while Autopilot is off).
+ * The team is the PR's own — a configured team whose code owner id the review was requested from
+ * or whose member wrote it ({@link teamOfPr}) — never the project's: one repo serves many teams.
  *
  * - **`autoReview`** — a non-draft `to-review` PR with a known head and no review task for that
  *   head (any state: a failed or discarded review of the same head is never retried) and none
@@ -61,6 +66,7 @@ export class PrAutomationService
     private readonly tasks: ScheduledTasksStorageService,
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
+    private readonly teams: TeamsStorageService,
     private readonly autopilot: AutopilotService,
     private readonly activity: ActivityLogService,
     private readonly systemConfig: SystemConfigStore,
@@ -92,9 +98,16 @@ export class PrAutomationService
 
   async tick(): Promise<{ started: number }> {
     const configs = new Map<string, Promise<AutomationToggles>>();
-    // Idle installs never touch GitHub: the inbox sweep runs only while some project has a
-    // toggle effectively on. The resolved configs are reused for the PRs below.
-    if (!(await this.anyAutomationOn(configs))) return { started: 0 };
+    let teams: Team[];
+    try {
+      teams = await this.teams.list();
+    } catch (error) {
+      this.log.warn("pr automation: teams unreadable — tick skipped", { error: errMsg(error) });
+      return { started: 0 };
+    }
+    // Idle installs never touch GitHub: the inbox sweep runs only while some project or team
+    // has a toggle effectively on.
+    if (!(await this.anyAutomationOn(teams))) return { started: 0 };
     let prs: InboxPr[];
     let tasks: ScheduledTask[];
     try {
@@ -113,8 +126,11 @@ export class PrAutomationService
       if (started >= PR_AUTOMATION_MAX_STARTS_PER_TICK) break;
       try {
         if (!pr.headSha) continue;
-        let config = configs.get(pr.projectId);
-        if (!config) configs.set(pr.projectId, (config = this.effectiveConfig(pr.projectId)));
+        const project = await this.projects.get(pr.projectId).catch(() => null);
+        const teamId = teamOfPr(pr, teams, project?.teamId);
+        const key = `${pr.projectId}\n${teamId ?? ""}`;
+        let config = configs.get(key);
+        if (!config) configs.set(key, (config = this.effectiveConfig(pr.projectId, teamId)));
         const effective = await config;
         if (effective.autoReview && wantsReview(pr) && isFresh(pr, reviewRuns)) {
           await this.startReview(pr);
@@ -139,20 +155,19 @@ export class PrAutomationService
     return { started };
   }
 
-  /** Resolve every project's effective config into `configs`; true when any toggle is on. */
-  private async anyAutomationOn(
-    configs: Map<string, Promise<AutomationToggles>>,
-  ): Promise<boolean> {
+  /** True when any project (with its own team) or any configured team has a toggle on. */
+  private async anyAutomationOn(teams: Team[]): Promise<boolean> {
     const projects = await this.projects.list().catch((error: unknown) => {
       this.log.warn("pr automation: projects unreadable — tick skipped", { error: errMsg(error) });
       return [];
     });
     const resolved = await Promise.all(
-      projects.map((project) => {
-        const config = this.effectiveConfig(project.id);
-        configs.set(project.id, config);
-        return config.catch(() => null);
-      }),
+      [
+        ...projects.map((project) => this.effectiveConfig(project.id, project.teamId)),
+        ...teams.map(async (team) =>
+          this.autopilot.automationFor({ companyId: team.companyId, teamId: team.id }),
+        ),
+      ].map((config) => config.catch(() => null)),
     );
     return resolved.some((c) => c?.autoReview === true || c?.autoAddressComments === true);
   }
@@ -197,12 +212,30 @@ export class PrAutomationService
     });
   }
 
-  /** The project's Autopilot automation toggles (team > company > global; all off while off). */
-  private async effectiveConfig(projectId: string): Promise<AutomationToggles> {
+  /** Autopilot automation toggles for a project's company and `teamId` (team > company > global). */
+  private async effectiveConfig(projectId: string, teamId?: string): Promise<AutomationToggles> {
     const project = await this.projects.get(projectId).catch(() => null);
     const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
-    return this.autopilot.automationFor({ companyId: company?.id, teamId: project?.teamId });
+    return this.autopilot.automationFor({ companyId: company?.id, teamId });
   }
+}
+
+/**
+ * The configured team a PR belongs to: one whose code owner id (`slug`) its review was requested
+ * from, or whose member authored it. The operator's own PR falls back to the project's team (the
+ * operator works there); a PR to review never does — a shared repo's other teams' PRs stay out.
+ */
+export function teamOfPr(
+  pr: InboxPr,
+  teams: readonly Team[],
+  projectTeamId?: string,
+): string | undefined {
+  const owners = [
+    ...(pr.reviewTeams ?? (pr.reviewTeam ? [pr.reviewTeam] : [])),
+    ...(pr.authorTeams ?? []),
+  ];
+  const hit = teams.find((t) => t.slug && owners.some((o) => teamSlugMatches(o, t.slug ?? "")));
+  return hit?.id ?? (pr.bucket === "mine" ? projectTeamId : undefined);
 }
 
 function wantsReview(pr: InboxPr): boolean {

@@ -135,4 +135,19 @@ describe("RunDetailHeader", () => {
       expect(screen.queryByTestId(RunDetailHeaderTestId.SourcePrLink)).not.toBeInTheDocument();
     });
   });
+  describe("source issue link", () => {
+    it("links to the in-app issue page of a roadmap release", async () => {
+      renderHeader({ projectId: "p1", roadmapItemId: "jira-cz-524", roadmapItemLabel: "CZ-524" });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourceIssueLink);
+      expect(link).toHaveTextContent("CZ-524");
+      expect(link).toHaveAccessibleName("Zdrojové issue CZ-524");
+      await userEvent.click(link);
+      expect(push).toHaveBeenLastCalledWith("/dashboard/inbox/issues/p1/jira-cz-524");
+    });
+
+    it("is absent without a roadmap item", () => {
+      renderHeader({ projectId: "p1" });
+      expect(screen.queryByTestId(RunDetailHeaderTestId.SourceIssueLink)).not.toBeInTheDocument();
+    });
+  });
 });

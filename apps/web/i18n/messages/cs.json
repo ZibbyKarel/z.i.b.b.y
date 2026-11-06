@@ -1359,6 +1359,7 @@
       "backToRuns": "← Běhy",
       "assignProject": "+ Přiřadit projekt",
       "sourcePr": "Zdrojový PR {ref}",
+      "sourceIssue": "Zdrojové issue {ref}",
       "workflow": "Workflow · {name}",
       "action": {
         "pause": "Pozastavit",

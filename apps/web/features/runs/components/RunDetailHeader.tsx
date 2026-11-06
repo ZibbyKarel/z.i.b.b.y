@@ -34,6 +34,7 @@ export enum RunDetailHeaderTestId {
   AgentLink = "run-detail-agent-link",
   ProjectLink = "run-detail-project-link",
   SourcePrLink = "run-detail-source-pr-link",
+  SourceIssueLink = "run-detail-source-issue-link",
   AssignProject = "run-detail-assign-project",
   Progress = "run-detail-progress",
   Metrics = "run-detail-metrics",
@@ -201,6 +202,26 @@ export function RunDetailHeader({
                   >
                     <Typography as="span" type="code">
                       {`${sourcePrRef} →`}
+                    </Typography>
+                  </Pressable>
+                </>
+              )}
+              {projectId && run.roadmapItemId && (
+                <>
+                  <Sep />
+                  <Pressable
+                    aria-label={t("detail.sourceIssue", {
+                      ref: run.roadmapItemLabel ?? run.roadmapItemId,
+                    })}
+                    data-testid={RunDetailHeaderTestId.SourceIssueLink}
+                    onClick={() =>
+                      router.push(
+                        `/dashboard/inbox/issues/${projectId}/${run.roadmapItemId}` as Route,
+                      )
+                    }
+                  >
+                    <Typography as="span" type="code">
+                      {`${run.roadmapItemLabel ?? run.roadmapItemId} →`}
                     </Typography>
                   </Pressable>
                 </>
