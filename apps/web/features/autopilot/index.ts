@@ -2,3 +2,4 @@
 export * from "./queries";
 export * from "./mutations";
 export { AutopilotToggle, AutopilotToggleTestId } from "./components/AutopilotToggle";
+export { ApprovalNotifier } from "./components/ApprovalNotifier";

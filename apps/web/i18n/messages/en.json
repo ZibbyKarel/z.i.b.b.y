@@ -3676,6 +3676,7 @@
     "autoCommunicate": "Automatic communication",
     "autoCommunicateHint": "Answers questions on GitHub, GitLab, Jira and Slack when it has a concrete answer.",
     "overridesHint": "A team inherits from its company. A switch set the same as its company follows the company.",
+    "approvalNotificationTitle": "ZIBBY needs your approval",
     "modeApprove": "Approve",
     "modeAutopilot": "AUTOPILOT",
     "modeLabel": "Autopilot mode",

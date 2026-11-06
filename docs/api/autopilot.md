@@ -10,6 +10,8 @@ Web: the Autopilot icon toggle in the top bar, on every page. Its dialog holds t
 company and team, and the mode on top (`Schvalovat` = `off`, `AUTOPILOT` = `full`) switches only
 the approval gates: the toggles start the work in both modes, `off` makes the outcome wait for
 approval, `full` sends it and only reports it. The `?` in the header explains each toggle.
+In `Schvalovat` the page also pops a system notification for every new approval
+(`ApprovalNotifier`, on the `approval-requested` activity event); under `AUTOPILOT` it stays quiet.
 
 ## State
 

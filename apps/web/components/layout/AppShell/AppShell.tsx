@@ -32,7 +32,7 @@ import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, formatCountdown } from "../../../utils/time";
 import { NotificationBell } from "../../../features/notifications";
-import { AutopilotToggle } from "../../../features/autopilot";
+import { ApprovalNotifier, AutopilotToggle } from "../../../features/autopilot";
 import {
   PinPageDialog,
   SubnavPinButton,
@@ -420,6 +420,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           "+ NEW TASK" action and the retired HUD's own doc history. */}
       <NewTaskProvider>
         <ChatProvider>
+          <ApprovalNotifier />
           <Suspense>
             <AppShellChrome>{children}</AppShellChrome>
           </Suspense>

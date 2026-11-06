@@ -3676,6 +3676,7 @@
     "autoCommunicate": "Automatická komunikace",
     "autoCommunicateHint": "Odpovídá na otázky na GitHubu, GitLabu, v Jiře a ve Slacku, když má konkrétní odpověď.",
     "overridesHint": "Tým dědí nastavení od své firmy. Přepínač nastavený stejně jako firma se řídí firmou.",
+    "approvalNotificationTitle": "ZIBBY čeká na tvé schválení",
     "modeApprove": "Schvalovat",
     "modeAutopilot": "AUTOPILOT",
     "modeLabel": "Režim autopilota",
