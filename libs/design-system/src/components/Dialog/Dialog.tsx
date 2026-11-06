@@ -20,6 +20,7 @@ export enum DialogTestId {
   CloseButton = "dialog-close-button",
   Body = "dialog-body",
   Footer = "dialog-footer",
+  HeaderActions = "dialog-header-actions",
 }
 
 const dialogWidthPx: Record<DialogWidth, string> = {
@@ -47,6 +48,8 @@ export interface DialogProps {
   title?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  /** Extra controls in the header, just before the close button (e.g. a help `Tooltip`). */
+  headerActions?: ReactNode;
   width?: DialogWidth;
   /**
    * Expand to fill the viewport (minus the standard margins), overriding `width`.
@@ -66,6 +69,7 @@ export function Dialog({
   title,
   description,
   actions,
+  headerActions,
   width = "md",
   fullscreen = false,
   ariaLabel,
@@ -157,6 +161,7 @@ export function Dialog({
             closeLabel={closeLabel}
             description={description}
             descriptionId={descriptionId}
+            headerActions={headerActions}
             onClose={onClose}
             title={title}
             titleId={titleId}
@@ -175,6 +180,7 @@ function DialogHeader({
   description,
   descriptionId,
   onClose,
+  headerActions,
   closeLabel = "Close dialog",
 }: {
   title: ReactNode;
@@ -182,6 +188,7 @@ function DialogHeader({
   description?: ReactNode;
   descriptionId: string;
   onClose?: () => void;
+  headerActions?: ReactNode;
   closeLabel?: string;
 }) {
   return (
@@ -197,19 +204,22 @@ function DialogHeader({
         >
           {title}
         </div>
-        {onClose && (
-          <button
-            aria-label={closeLabel}
-            className={cn(
-              "bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base hover:text-foreground",
-              focusRing,
-            )}
-            data-testid={DialogTestId.CloseButton}
-            onClick={onClose}
-          >
-            ✕
-          </button>
-        )}
+        <Row align="center" gap="100">
+          {headerActions && <div data-testid={DialogTestId.HeaderActions}>{headerActions}</div>}
+          {onClose && (
+            <button
+              aria-label={closeLabel}
+              className={cn(
+                "bg-transparent border-none cursor-pointer text-foreground-faint p-0.5 leading-none text-base hover:text-foreground",
+                focusRing,
+              )}
+              data-testid={DialogTestId.CloseButton}
+              onClick={onClose}
+            >
+              ✕
+            </button>
+          )}
+        </Row>
       </Row>
       {description && (
         <p

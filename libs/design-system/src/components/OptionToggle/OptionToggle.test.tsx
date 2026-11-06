@@ -47,4 +47,13 @@ describe("OptionToggle", () => {
     );
     expect(screen.getByTestId(OptionToggleTestId.Root)).toHaveAccessibleName("Handoff gate");
   });
+
+  it("size lg and intent primary style the active option like a primary button", () => {
+    render(
+      <OptionToggle intent="primary" onChange={() => {}} options={options} size="lg" value="ask" />,
+    );
+    const active = screen.getByTestId(`${OptionToggleTestId.Option}-ask`);
+    expect(active).toHaveClass("bg-accent", "text-accent-contrast", "text-[13px]");
+    expect(screen.getByTestId(`${OptionToggleTestId.Option}-auto`)).not.toHaveClass("bg-accent");
+  });
 });

@@ -137,6 +137,9 @@ error outcome. `replies` / `replied` / `repliesNote` record the thread replies, 
 `docs/api/inbox.md`). `auto: true` (todo-16, server-written by `PrAutomationService` only) marks
 a heartbeat-started run: its push is never approved on the spot, even after `Addressed: all`.
 `prReview.auto: true` marks a heartbeat-started review the same way (posting is gated as always).
+A heartbeat-started review or address-comments task also carries `autopilotAt`: the PR's places in
+the autopilot tree (one `{ companyId, teamId }` per team, or just the company) where autopilot
+resolves its approvals (`docs/api/autopilot.md`).
 
 **`prFixCi`** ("Fix CI") mirrors `prAddressComments` without replies: stamped by
 `InboxFixCiService.start` via `setPrFixCi` (`repo, number, url, head, base, headSha, ownPr,

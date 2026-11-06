@@ -57,4 +57,14 @@ describe("Tooltip", () => {
     expect(screen.queryByTestId(TooltipTestId.Content)).toBeNull();
     expect(trigger).toHaveFocus();
   });
+
+  it("widens the bubble with size=lg", async () => {
+    render(
+      <Tooltip content="x" size="lg">
+        <button type="button">?</button>
+      </Tooltip>,
+    );
+    await userEvent.tab();
+    expect(screen.getByTestId(TooltipTestId.Content)).toHaveClass("max-w-[360px]");
+  });
 });

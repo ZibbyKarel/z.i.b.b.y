@@ -342,7 +342,9 @@ the configured team whose code owner id (`Team.slug`) the PR's review was reques
 (`reviewTeams`) or whose member authored it (`authorTeams`); a PR of several teams is automated
 when any of them has the toggle on. `Project.teamId` is never used: several teams work in one
 project. A PR of no configured team gets the company/global level; a team without a `slug`
-never matches a PR.
+never matches a PR. The task it starts is stamped with those places (`prReview.autopilotAt` /
+`prAddressComments.autopilotAt`), so autopilot later signs off its approvals at the same teams /
+company, not at global (`./autopilot.md`).
 
 Each tick first resolves every project's and every team's effective config; when none has
 `autoReview` or `autoAddressComments` on, it ends there and never queries GitHub. Otherwise it reads

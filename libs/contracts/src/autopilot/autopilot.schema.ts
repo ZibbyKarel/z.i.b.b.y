@@ -95,10 +95,16 @@ export const AutopilotStateSchema = z
   .strict();
 export type AutopilotState = z.infer<typeof AutopilotStateSchema>;
 
+/** Where an action happens in the automation tree; empty = global. */
+export const AutopilotLocationSchema = z
+  .object({ companyId: z.string().min(1).optional(), teamId: z.string().min(1).optional() })
+  .strict();
+export type AutopilotLocation = z.infer<typeof AutopilotLocationSchema>;
+
 /** Effective toggles at a company/team: `off` or no tree = all false, else global <- company <- team. */
 export function resolveAutopilotAutomation(
   state: Pick<AutopilotState, "level" | "automation">,
-  at: { companyId?: string; teamId?: string },
+  at: { companyId?: string | undefined; teamId?: string | undefined },
 ): AutomationToggles {
   if (state.level === "off" || !state.automation) return { ...NO_AUTOMATION };
   const { global, companies, teams } = state.automation;

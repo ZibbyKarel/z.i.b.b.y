@@ -23,6 +23,13 @@ export const Overview: Story = {
       <Tooltip content="Appears below the trigger." side="bottom">
         <Button aria-label="Help" icon="help" intent="ghost" size="sm" />
       </Tooltip>
+      <Tooltip
+        content="A longer, multi-line explanation. Use the large size when several short lines need room."
+        side="bottom"
+        size="lg"
+      >
+        <Button aria-label="Help" icon="help" intent="ghost" size="sm" />
+      </Tooltip>
     </div>
   ),
 };

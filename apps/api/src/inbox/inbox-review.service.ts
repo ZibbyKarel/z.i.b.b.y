@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
+  AutopilotLocation,
   PrReviewEvent,
   PrReviewLevel,
   Project,
@@ -157,7 +158,7 @@ export class InboxReviewService implements OnModuleInit {
    */
   async start(
     input: ReviewInboxPrInput,
-    opts: { auto?: boolean; headSha?: string } = {},
+    opts: { auto?: boolean; headSha?: string; autopilotAt?: AutopilotLocation[] } = {},
   ): Promise<ReviewInboxPrResult> {
     const { project, link } = await this.projectLink(input.projectId, input.repo);
     // The url is derived, never taken from the client.
@@ -187,6 +188,7 @@ export class InboxReviewService implements OnModuleInit {
       state: "running",
       ...(headSha ? { headSha } : {}),
       ...(opts.auto ? { auto: true as const } : {}),
+      ...(opts.autopilotAt ? { autopilotAt: opts.autopilotAt } : {}),
     }));
     this.log?.info("pr review task started", {
       taskId: result.task.id,

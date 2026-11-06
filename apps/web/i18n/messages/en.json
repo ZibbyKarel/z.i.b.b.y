@@ -3635,11 +3635,8 @@
   "autopilot": {
     "label": "Autopilot",
     "turnOn": "Turn autopilot on",
-    "turnOff": "Turn autopilot off",
     "status": "Autopilot on · {pending} pending",
-    "confirm": "Turn on",
-    "dialogTitle": "Turn autopilot on?",
-    "dialogBody": "While it is on, ZIBBY does the actions switched on below without asking and reports each one. It only pushes to its own branches and to the branches of your PRs. Merge, deploy, payments, deletes, force pushes and pushes to shared branches still wait for you. Slack notifications are only sent while Autopilot is on.",
+    "dialogTitle": "Autopilot",
     "dialogPending": "Approvals already waiting stay waiting: {pending}.",
     "operatorTokenMissing": "Turning autopilot on needs the operator token. Set it in Settings first.",
     "failed": "Could not switch autopilot.",
@@ -3653,8 +3650,12 @@
     "autoImplementHint": "Picks up ready roadmap items and implements them on its own branch.",
     "autoCommunicate": "Automatic communication",
     "autoCommunicateHint": "Answers questions on GitHub, GitLab, Jira and Slack when it has a concrete answer.",
-    "overridesHint": "A company or team can differ from the level above. A switch set the same as its parent follows the parent.",
-    "edit": "Update",
-    "dialogTitleEdit": "Edit autopilot"
+    "overridesHint": "A team inherits from its company. A switch set the same as its company follows the company.",
+    "modeApprove": "Approve",
+    "modeAutopilot": "AUTOPILOT",
+    "modeLabel": "Autopilot mode",
+    "save": "Save",
+    "helpLabel": "What the switches do",
+    "helpNever": "Never automatic: merge, deploy, payments, deletes, force push and pushes to shared branches always wait for you."
   }
 }

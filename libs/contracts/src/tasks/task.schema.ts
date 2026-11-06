@@ -5,6 +5,7 @@ import { MakerRefSchema, VerifierSpecSchema } from "../goals/goal.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import { TeamIdSchema } from "../teams/team.schema";
+import { AutopilotLocationSchema } from "../autopilot/autopilot.schema";
 
 /**
  * Metadata for one uploaded attachment. The bytes live on disk under the set's dir
@@ -796,6 +797,8 @@ export const ScheduledTaskSchema = z.object({
        * Server-written only; posting stays behind the same `pr-review` approval gate.
        */
       auto: z.literal(true).optional(),
+      /** Where the PR sits in the autopilot tree (its teams, or its company): the review's autopilot sign-off resolves here. */
+      autopilotAt: z.array(AutopilotLocationSchema).max(50).optional(),
     })
     .optional(),
   /**
@@ -879,6 +882,8 @@ export const ScheduledTaskSchema = z.object({
        * push approval (Tier 3 — nobody clicked).
        */
       auto: z.literal(true).optional(),
+      /** Where the PR sits in the autopilot tree (its teams, or its company): the autopilot push/replies resolve here. */
+      autopilotAt: z.array(AutopilotLocationSchema).max(50).optional(),
     })
     .optional(),
   /**

@@ -41,6 +41,8 @@ export interface FieldProps {
   /** When present, replaces the hint and marks the control invalid. */
   error?: string;
   layout?: FieldLayout;
+  /** Label typography: `caps` (default, uppercase eyebrow) or `normal` (sentence case). */
+  labelCase?: FieldLabelCase;
   /**
    * Visually hide the label (`sr-only`) while keeping the real, associated
    * `<label htmlFor>` in the DOM — the control still has a proper accessible
@@ -55,8 +57,13 @@ export interface FieldProps {
   ref?: Ref<HTMLElement>;
 }
 
-const labelClass =
-  "font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-faint";
+/** `caps` — small uppercase eyebrow (default); `normal` — sentence-case readable label. */
+export type FieldLabelCase = "caps" | "normal";
+
+const labelClass: Record<FieldLabelCase, string> = {
+  caps: "font-sans font-semibold uppercase tracking-wider text-[11px] text-foreground-faint",
+  normal: "font-sans font-medium text-sm text-foreground",
+};
 const hintClass = "font-sans text-xs text-foreground-faint";
 const errorClass = "font-sans text-xs text-bad";
 
@@ -86,6 +93,7 @@ export function Field({
   hint,
   error,
   layout = "column",
+  labelCase = "caps",
   hideLabel = false,
   children,
   ref,
@@ -103,7 +111,7 @@ export function Field({
 
   const labelText = (
     <label
-      className={cn(labelClass, hideLabel && "sr-only")}
+      className={cn(labelClass[labelCase], hideLabel && "sr-only")}
       data-testid={FieldTestId.Label}
       htmlFor={id}
       id={labelId}

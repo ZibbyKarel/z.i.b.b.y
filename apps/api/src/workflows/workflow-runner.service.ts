@@ -2216,11 +2216,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * through the overlay. Anything it can't establish → false (the gate waits).
    */
   private async autopilotSignsOffGate(run: WorkflowRun, parked: Approval): Promise<boolean> {
-    if (!this.autopilot?.coversApproval(parked) || !run.taskId || !this.tasks) return false;
+    if (!this.autopilot?.isOn() || !run.taskId || !this.tasks) return false;
     const intent = autopilotIntentFor(parked);
     if (!intent) return false;
     try {
-      if (!(await this.tasks.get(run.taskId)).prReview) return false;
+      const prReview = (await this.tasks.get(run.taskId)).prReview;
+      if (!prReview) return false;
+      // Where the PR sits in the tree (its teams / company); none stamped = global.
+      const at = prReview.autopilotAt ?? {};
+      if (!this.autopilot.coversApproval(parked, undefined, undefined, at)) return false;
       const actors = await autopilotActors(
         { kind: "workflow", id: run.workflowId },
         { agents: this.agents, workflows: this.workflows },
@@ -2229,7 +2233,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         intent,
         actors.agents,
         actors.department,
-        autopilotContextFor(parked),
+        autopilotContextFor(parked, undefined, undefined, at),
       );
     } catch (error) {
       this.log.warn("autopilot gate check failed — left pending", {

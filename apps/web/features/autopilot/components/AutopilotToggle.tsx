@@ -1,7 +1,16 @@
 "use client";
 
 import { type AutopilotAutomation, NO_AUTOMATION } from "@zibby/contracts";
-import { Button, Container, Dialog, Stack, Typography } from "@zibby/design-system";
+import {
+  Button,
+  Container,
+  Dialog,
+  OptionToggle,
+  Row,
+  Stack,
+  Tooltip,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { isOperatorTokenError } from "../../../state/operatorToken";
@@ -14,11 +23,14 @@ import { AutomationTree } from "./AutomationTree";
 export enum AutopilotToggleTestId {
   Root = "autopilot-toggle",
   Toggle = "autopilot-toggle-button",
+  Mode = "autopilot-toggle-mode",
   Confirm = "autopilot-toggle-confirm",
   Cancel = "autopilot-toggle-cancel",
-  TurnOff = "autopilot-toggle-off",
+  Help = "autopilot-toggle-help",
   Error = "autopilot-toggle-error",
 }
+
+type Mode = "off" | "full";
 
 const EMPTY_AUTOMATION: AutopilotAutomation = {
   global: { ...NO_AUTOMATION },
@@ -26,11 +38,18 @@ const EMPTY_AUTOMATION: AutopilotAutomation = {
   teams: {},
 };
 
+const HELP_KEYS = [
+  "autoReview",
+  "autoAddressComments",
+  "autoImplement",
+  "autoCommunicate",
+] as const;
+
 /**
- * Phase 4 — the top-bar Autopilot button (`aria-pressed` while on). A click always opens the
- * dialog (saving needs the operator token): OFF → cancel + "turn on"; ON → "turn off" in
- * place of cancel + "edit". The dialog pre-fills from the stored tree, which the API keeps
- * across `off`.
+ * The top-bar Autopilot button (`aria-pressed` while on). A click opens a dialog (saving needs
+ * the operator token): "Approve" (level `off`) or "AUTOPILOT" (level `full`) plus, for
+ * AUTOPILOT, the per-company/team toggles. There is no global level: `global` is always
+ * forced to all-off, so nothing hidden is inherited. The dialog pre-fills from the stored tree.
  */
 export function AutopilotToggle() {
   const t = useTranslations("autopilot");
@@ -40,12 +59,11 @@ export function AutopilotToggle() {
   const { data: companies = [] } = useCompaniesQuery();
   const { data: teams = [] } = useTeamsQuery();
   const [confirming, setConfirming] = useState(false);
+  const [mode, setMode] = useState<Mode>("off");
   const [automation, setAutomation] = useState<AutopilotAutomation>(EMPTY_AUTOMATION);
-  const anyOn = [
-    automation.global,
-    ...Object.values(automation.companies),
-    ...Object.values(automation.teams),
-  ].some((node) => Object.values(node).includes(true));
+  const anyOn = [...Object.values(automation.companies), ...Object.values(automation.teams)].some(
+    (node) => Object.values(node).includes(true),
+  );
 
   const on = data?.level === "full";
   const pending = data?.pendingApprovals ?? 0;
@@ -56,8 +74,16 @@ export function AutopilotToggle() {
       : t("failed")
     : null;
 
-  const save = (body: Parameters<typeof setAutopilot.mutate>[0]["body"]) =>
-    setAutopilot.mutate({ body }, { onSuccess: () => setConfirming(false) });
+  const save = () =>
+    setAutopilot.mutate(
+      {
+        body:
+          mode === "off"
+            ? { level: "off" }
+            : { level: "full", automation: { ...automation, global: { ...NO_AUTOMATION } } },
+      },
+      { onSuccess: () => setConfirming(false) },
+    );
   const close = () => {
     setConfirming(false);
     setAutopilot.reset();
@@ -72,7 +98,11 @@ export function AutopilotToggle() {
         icon="sparkles"
         intent={on ? "primary" : "ghost"}
         onClick={() => {
-          setAutomation(data?.automation ?? EMPTY_AUTOMATION);
+          setAutomation({
+            ...(data?.automation ?? EMPTY_AUTOMATION),
+            global: { ...NO_AUTOMATION },
+          });
+          setMode(on ? "full" : "off");
           setConfirming(true);
         }}
         size="sm"
@@ -81,47 +111,74 @@ export function AutopilotToggle() {
       <Dialog
         actions={
           <>
-            {on ? (
-              <Button
-                data-testid={AutopilotToggleTestId.TurnOff}
-                intent="ghost"
-                loading={setAutopilot.isPending}
-                onClick={() => save({ level: "off" })}
-              >
-                {t("turnOff")}
-              </Button>
-            ) : (
-              <Button data-testid={AutopilotToggleTestId.Cancel} intent="ghost" onClick={close}>
-                {tc("cancel")}
-              </Button>
-            )}
+            <Button data-testid={AutopilotToggleTestId.Cancel} intent="ghost" onClick={close}>
+              {tc("cancel")}
+            </Button>
             <Button
               data-testid={AutopilotToggleTestId.Confirm}
-              disabled={!anyOn}
+              disabled={mode === "full" && !anyOn}
               icon="bolt"
               intent="primary"
               loading={setAutopilot.isPending}
-              onClick={() => save({ level: "full", automation })}
+              onClick={save}
             >
-              {on ? t("edit") : t("confirm")}
+              {t("save")}
             </Button>
           </>
         }
-        ariaLabel={on ? t("dialogTitleEdit") : t("dialogTitle")}
+        ariaLabel={t("dialogTitle")}
         closeLabel={tc("close")}
-        description={t("dialogBody")}
+        headerActions={
+          <Tooltip
+            content={
+              <Stack gap="50">
+                {HELP_KEYS.map((key) => (
+                  <Typography key={key} type="text">
+                    {t(key)} — {t(`${key}Hint`)}
+                  </Typography>
+                ))}
+                <Typography type="text">{t("helpNever")}</Typography>
+              </Stack>
+            }
+            side="bottom"
+            size="lg"
+          >
+            <Button
+              aria-label={t("helpLabel")}
+              data-testid={AutopilotToggleTestId.Help}
+              icon="help"
+              intent="ghost"
+              size="sm"
+            />
+          </Tooltip>
+        }
         onClose={close}
         open={confirming}
-        title={on ? t("dialogTitleEdit") : t("dialogTitle")}
+        title={t("dialogTitle")}
         width="md"
       >
         <Stack gap="100">
-          <AutomationTree
-            companies={companies}
-            onChange={setAutomation}
-            teams={teams}
-            value={automation}
-          />
+          <Row data-testid={AutopilotToggleTestId.Mode} justify="center">
+            <OptionToggle
+              ariaLabel={t("modeLabel")}
+              intent="primary"
+              onChange={setMode}
+              options={[
+                { id: "off", label: t("modeApprove") },
+                { id: "full", label: t("modeAutopilot") },
+              ]}
+              size="lg"
+              value={mode}
+            />
+          </Row>
+          {mode === "full" ? (
+            <AutomationTree
+              companies={companies}
+              onChange={setAutomation}
+              teams={teams}
+              value={automation}
+            />
+          ) : null}
           <Typography type="text">{t("dialogPending", { pending })}</Typography>
           {errorText ? (
             <Typography data-testid={AutopilotToggleTestId.Error} tone="bad" type="text">

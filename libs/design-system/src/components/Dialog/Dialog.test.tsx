@@ -211,4 +211,16 @@ describe("Dialog", () => {
 
     expect(document.body.style.overflow).toBe("hidden");
   });
+
+  it("renders headerActions before the close button", () => {
+    render(
+      <Dialog open headerActions={<button type="button">?</button>} onClose={() => {}} title="T">
+        x
+      </Dialog>,
+    );
+    const actions = screen.getByTestId(DialogTestId.HeaderActions);
+    const close = screen.getByTestId(DialogTestId.CloseButton);
+    expect(actions).toHaveTextContent("?");
+    expect(actions.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

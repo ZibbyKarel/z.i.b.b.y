@@ -6,7 +6,9 @@ Never-rules and merge are not affected. Only the operator token can turn autopil
 Anyone in the operator chat can turn it off.
 
 Code: `apps/api/src/autopilot/`. Contract: `libs/contracts/src/autopilot/`.
-Web: the Autopilot icon toggle in the top bar, on every page.
+Web: the Autopilot icon toggle in the top bar, on every page. Its dialog picks the mode
+(`Schvalovat` = `off`, `AUTOPILOT` = `full`) and, for `full`, the toggles per company and team;
+the `?` in the header explains each toggle.
 
 ## State
 
@@ -51,7 +53,14 @@ gate class follows the same tree (`AUTOPILOT_SCOPE_TOGGLE`, `AutopilotService.sc
 `channel` reply resolves at the item's project's company, or the integration's company.
 `Project.teamId` never picks the team level: several teams work in one project. Only the PR
 automation applies team toggles, at the PR's own teams (`docs/api/inbox.md`); the roadmap tick
-and channel replies resolve at company > global. Approvals from tasks and workflow gates resolve at global. While autopilot is `off`
+and channel replies resolve at company > global. A review or address-comments task the PR
+automation starts is stamped with the places it resolved at (`prReview.autopilotAt` /
+`prAddressComments.autopilotAt`: one `{ companyId, teamId }` per team of the PR, or just the
+company). Its approvals, the pr-review workflow sign-off and the gate check behind them
+(`AutopilotContext.at`) resolve there, covered when any of the places has the toggle on. Other
+approvals from tasks and workflow gates (a review the operator started, say) resolve at global.
+The web dialog no longer edits `global`: it always saves it all-off, so autonomy is set per
+company and team only. While autopilot is `off`
 every effective toggle is `false`, but the stored tree is kept so the next switch-on pre-fills it.
 Autopilot may stay on indefinitely.
 

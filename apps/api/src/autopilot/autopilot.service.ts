@@ -9,6 +9,7 @@ import {
   type AutopilotActor,
   type AutopilotAutomation,
   type AutopilotLevel,
+  type AutopilotLocation,
   type AutopilotScope,
   type AutopilotScopeKey,
   type AutopilotState,
@@ -41,11 +42,16 @@ export function isZibbyBranch(branch: string | undefined): boolean {
  *   operator's token, so this is "ZIBBY's or the operator's" branch); a push onto it is
  *   covered like a `zibby/*` one.
  * - `scope` — the class the caller acts for; a hook intent (none given) counts as `comments`.
+ * - `at` — where in the tree the class is read (any of several = covered); none = global.
  */
 export interface AutopilotContext {
   ownedBranch?: string;
   scope?: AutopilotScopeKey;
+  at?: AutopilotAt;
 }
+
+/** One place, or several (a PR of several teams: covered when any of them has the toggle on). */
+export type AutopilotAt = AutopilotLocation | readonly AutopilotLocation[];
 
 /** A push target autopilot covers: a `zibby/*` branch, or the given operator-owned PR head. */
 function isOwnBranch(branch: string | undefined, ownedBranch?: string): boolean {
@@ -149,19 +155,17 @@ export function autopilotContextFor(
   approval: Pick<Approval, "kind">,
   headBranch?: string,
   ownPr?: boolean,
+  at?: AutopilotAt,
 ): AutopilotContext {
   const scope = autopilotScopeFor(approval.kind);
   return {
     ...(scope ? { scope } : {}),
     ...(ownPr === true && headBranch ? { ownedBranch: headBranch } : {}),
+    ...(at ? { at } : {}),
   };
 }
 
-/** Where an action happens; empty = global. */
-export interface AutopilotLocation {
-  companyId?: string | undefined;
-  teamId?: string | undefined;
-}
+export type { AutopilotLocation };
 
 /** The gate rules of a run's acting unit: its agents' own rules and its department. */
 export interface AutopilotActors {
@@ -239,13 +243,26 @@ export class AutopilotService implements OnModuleInit {
    * The classes the overlay covers at a company/team (global when `at` is empty), read off
    * the automation tree. A legacy state without a tree keeps its stored scope (none = all).
    */
-  scope(at: AutopilotLocation = {}): AutopilotScope {
+  scope(at: AutopilotAt = {}): AutopilotScope {
     if (!this.state.automation) return this.state.scope ?? FULL_AUTOPILOT_SCOPE;
-    const toggles = resolveAutopilotAutomation(this.state, at);
+    const places: readonly AutopilotLocation[] = Array.isArray(at) ? at : [at as AutopilotLocation];
+    const all = (places.length ? places : [{}]).map((p) =>
+      resolveAutopilotAutomation(this.state, p),
+    );
     const out = { ...FULL_AUTOPILOT_SCOPE };
     for (const k of Object.keys(out) as AutopilotScopeKey[])
-      out[k] = toggles[AUTOPILOT_SCOPE_TOGGLE[k]];
+      out[k] = all.some((toggles) => toggles[AUTOPILOT_SCOPE_TOGGLE[k]]);
     return out;
+  }
+
+  /** Every node of the tree (global, each company, each team), for the switch summary. */
+  private everywhere(): AutopilotLocation[] {
+    const { companies = {}, teams = {} } = this.state.automation ?? {};
+    return [
+      {},
+      ...Object.keys(companies).map((companyId) => ({ companyId })),
+      ...Object.keys(teams).map((teamId) => ({ teamId })),
+    ];
   }
 
   /** Effective roadmap automation toggles at a company/team; all false while off. */
@@ -257,7 +274,7 @@ export class AutopilotService implements OnModuleInit {
   coversRule(ruleId: string, action: IntendedAction, context: AutopilotContext = {}): boolean {
     if (!this.isOn()) return false;
     // A PR comment belongs to whichever class posts it; a push is never toggled off.
-    if (action.action === "gh.pr_comment" && !this.scope()[context.scope ?? "comments"]) {
+    if (action.action === "gh.pr_comment" && !this.scope(context.at)[context.scope ?? "comments"]) {
       return false;
     }
     return AUTOPILOT_COVERED_RULES[ruleId]?.(action, context) ?? false;
@@ -268,7 +285,7 @@ export class AutopilotService implements OnModuleInit {
     approval: Pick<Approval, "kind" | "action" | "suggestedReviewEvent">,
     headBranch?: string,
     ownPr?: boolean,
-    at: AutopilotLocation = {},
+    at: AutopilotAt = {},
   ): boolean {
     if (!this.isOn()) return false;
     const key = autopilotScopeFor(approval.kind);
@@ -318,7 +335,7 @@ export class AutopilotService implements OnModuleInit {
       kind: "autopilot-changed",
       summary:
         level === "full"
-          ? `autopilot ON (${by}; ${describeScope(this.scope())}) — ${status.pendingApprovals} approvals still pending, not auto-decided`
+          ? `autopilot ON (${by}; ${describeScope(this.scope(this.everywhere()))}) — ${status.pendingApprovals} approvals still pending, not auto-decided`
           : `autopilot OFF (${by}) — every gate asks again`,
       refs: { status: level, decision: by },
     });

@@ -58,4 +58,15 @@ describe("Field", () => {
     render(<Sample />);
     expect(screen.getByTestId(FieldTestId.Label)).not.toHaveClass("sr-only");
   });
+
+  it("renders the caps label by default and sentence case with labelCase=normal", () => {
+    const { rerender } = render(<Sample />);
+    expect(screen.getByTestId(FieldTestId.Label)).toHaveClass("uppercase");
+    rerender(
+      <Field label="Název" labelCase="normal">
+        {({ id }) => <input id={id} />}
+      </Field>,
+    );
+    expect(screen.getByTestId(FieldTestId.Label)).not.toHaveClass("uppercase");
+  });
 });

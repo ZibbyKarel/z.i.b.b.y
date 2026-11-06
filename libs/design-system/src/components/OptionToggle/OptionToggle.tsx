@@ -8,6 +8,19 @@ export enum OptionToggleTestId {
   Option = "option-toggle-option",
 }
 
+export type OptionToggleSize = "md" | "lg";
+/** `primary` — the active segment wears the primary-button colours. */
+export type OptionToggleIntent = "default" | "primary";
+
+const sizeClass: Record<OptionToggleSize, string> = {
+  md: "px-[10px] py-[4px] text-[12px]",
+  lg: "px-5 py-2 text-[13px]",
+};
+const activeClass: Record<OptionToggleIntent, string> = {
+  default: "bg-raised text-ink shadow-card",
+  primary: "border border-accent bg-accent text-accent-contrast",
+};
+
 export interface OptionToggleOption<T extends string = string> {
   id: T;
   label: string;
@@ -22,6 +35,8 @@ export interface OptionToggleProps<T extends string = string> {
   onChange?: (value: T) => void;
   /** Accessible label for the group. */
   ariaLabel?: string;
+  size?: OptionToggleSize;
+  intent?: OptionToggleIntent;
   ref?: Ref<HTMLDivElement>;
 }
 
@@ -37,6 +52,8 @@ export function OptionToggle<T extends string = string>({
   value,
   onChange,
   ariaLabel,
+  size = "md",
+  intent = "default",
   ref,
 }: OptionToggleProps<T>) {
   const readOnly = !onChange;
@@ -55,9 +72,11 @@ export function OptionToggle<T extends string = string>({
             aria-disabled={readOnly || undefined}
             aria-pressed={readOnly ? undefined : active}
             className={cn(
-              "rounded-sm border-none px-[10px] py-[4px] font-sans text-[12px] font-medium transition-colors",
+              "rounded-sm font-sans font-medium transition-colors",
+              sizeClass[size],
+              !(active && intent === "primary") && "border-none",
               !readOnly && focusRing,
-              active ? "bg-raised text-ink shadow-card" : "bg-transparent text-foreground-faint",
+              active ? activeClass[intent] : "bg-transparent text-foreground-faint",
               !readOnly && !active && "cursor-pointer hover:text-foreground",
               readOnly && "cursor-default",
             )}

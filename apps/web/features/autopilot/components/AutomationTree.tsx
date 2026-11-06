@@ -1,12 +1,13 @@
 "use client";
 
-import type {
-  AutomationKey,
-  AutomationOverride,
-  AutomationToggles,
-  AutopilotAutomation,
-  Company,
-  Team,
+import {
+  type AutomationKey,
+  type AutomationOverride,
+  type AutomationToggles,
+  type AutopilotAutomation,
+  type Company,
+  NO_AUTOMATION,
+  type Team,
 } from "@zibby/contracts";
 import { Button, IndentRail, Row, Stack, ToggleField, Typography } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -99,6 +100,7 @@ function OverrideNode({
                   <ToggleField
                     checked={effective}
                     label={t(key)}
+                    labelCase="normal"
                     // Same as the parent = inherit (no override); different = an override.
                     onChange={(next) => onSet(key, next === inherited[key] ? undefined : next)}
                     size="sm"
@@ -115,9 +117,9 @@ function OverrideNode({
 }
 
 /**
- * Global -> Company -> Team tree of the four autopilot toggles. Precedence
- * team > company > global; a node only stores the toggles that differ from its parent.
- * A node holding an override (or containing one) starts expanded.
+ * Company -> Team tree of the four autopilot toggles. Precedence team > company > nothing
+ * (the root is all-off); a node only stores the toggles that differ from its parent.
+ * `value.global` is ignored here. A node holding an override (or containing one) starts expanded.
  */
 export function AutomationTree({ value, onChange, companies, teams }: AutomationTreeProps) {
   const t = useTranslations("autopilot");
@@ -152,25 +154,13 @@ export function AutomationTree({ value, onChange, companies, teams }: Automation
   // The web nests teams by `team.companyId`; the backend resolves `project.companyId ?? team.companyId`.
   return (
     <Stack data-testid={AutomationTreeTestId.Root} gap="100">
-      <Stack data-node="global" data-testid={AutomationTreeTestId.Node} gap="100">
-        {AUTOMATION_KEYS.map((key) => (
-          <Stack data-key={key} data-testid={AutomationTreeTestId.Toggle} key={key}>
-            <ToggleField
-              checked={value.global[key]}
-              hint={t(`${key}Hint`)}
-              label={t(key)}
-              onChange={(next) => onChange({ ...value, global: { ...value.global, [key]: next } })}
-            />
-          </Stack>
-        ))}
-      </Stack>
       {companies.length > 0 || teams.length > 0 ? (
         <Typography size="xs" type="note" variant="tertiary">
           {t("overridesHint")}
         </Typography>
       ) : null}
       {companies.map((company) => {
-        const inherited = apply(value.global, value.companies[company.id]);
+        const inherited = apply(NO_AUTOMATION, value.companies[company.id]);
         const companyTeams = teams.filter((tm) => tm.companyId === company.id);
         const overridden =
           hasOverride(value.companies[company.id]) ||
@@ -178,7 +168,7 @@ export function AutomationTree({ value, onChange, companies, teams }: Automation
         return (
           <OverrideNode
             {...nodeProps(`company:${company.id}`, overridden)}
-            inherited={value.global}
+            inherited={NO_AUTOMATION}
             key={company.id}
             label={company.name}
             onSet={(key, next) => setOverride("companies", company.id, key, next)}
@@ -190,7 +180,7 @@ export function AutomationTree({ value, onChange, companies, teams }: Automation
       })}
       {teams
         .filter((tm) => !tm.companyId || !companyIds.has(tm.companyId))
-        .map((tm) => teamNode(tm, value.global))}
+        .map((tm) => teamNode(tm, NO_AUTOMATION))}
     </Stack>
   );
 }

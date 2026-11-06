@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import type {
   AddressInboxPrCommentsInput,
+  AutopilotLocation,
   OperatorThreadReply,
   ReviewInboxPrResult,
   ScheduledTask,
@@ -112,7 +113,7 @@ export class InboxAddressCommentsService implements OnModuleInit {
    */
   async start(
     input: AddressInboxPrCommentsInput,
-    opts: { auto?: boolean } = {},
+    opts: { auto?: boolean; autopilotAt?: AutopilotLocation[] } = {},
   ): Promise<ReviewInboxPrResult> {
     const project = await this.projects.get(input.projectId); // ProjectNotFoundError → 404
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
@@ -175,6 +176,7 @@ export class InboxAddressCommentsService implements OnModuleInit {
       ownPr,
       state: "running",
       ...(opts.auto ? { auto: true as const } : {}),
+      ...(opts.autopilotAt ? { autopilotAt: opts.autopilotAt } : {}),
     }));
     this.log?.info("pr address-comments task started", {
       taskId: result.task.id,

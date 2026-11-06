@@ -82,4 +82,11 @@ export const Overview: Story = {
   ),
 };
 
+export const WithHeaderActions: Story = {
+  args: {
+    onClose: () => {},
+    headerActions: <Button aria-label="Help" icon="help" intent="ghost" size="sm" />,
+  },
+};
+
 export const Playground: Story = {};

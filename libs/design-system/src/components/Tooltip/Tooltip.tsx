@@ -15,6 +15,8 @@ export enum TooltipTestId {
 }
 
 export type TooltipSide = "top" | "bottom";
+/** `sm` — short hint (max 240px); `lg` — multi-line explanation (max 360px). */
+export type TooltipSize = "sm" | "lg";
 
 export interface TooltipProps {
   /** The bubble content shown on hover/focus (plain string or rich node). */
@@ -23,7 +25,14 @@ export interface TooltipProps {
   children: ReactElement;
   /** Which side of the trigger the bubble appears on (default `top`). */
   side?: TooltipSide;
+  /** Bubble max width (default `sm`). */
+  size?: TooltipSize;
 }
+
+const sizeClass: Record<TooltipSize, string> = {
+  sm: "max-w-[240px]",
+  lg: "max-w-[360px]",
+};
 
 const sideClass: Record<TooltipSide, string> = {
   top: "bottom-full left-1/2 -translate-x-1/2 mb-1.5",
@@ -37,7 +46,7 @@ const sideClass: Record<TooltipSide, string> = {
  * `aria-describedby` so it is announced. Positioned with pure CSS relative to the
  * trigger — intended for short hints, not long-form popovers.
  */
-export function Tooltip({ content, children, side = "top" }: TooltipProps) {
+export function Tooltip({ content, children, side = "top", size = "sm" }: TooltipProps) {
   const id = useId();
   const [open, setOpen] = useState(false);
 
@@ -63,7 +72,8 @@ export function Tooltip({ content, children, side = "top" }: TooltipProps) {
       {open && (
         <span
           className={cn(
-            "pointer-events-none absolute z-50 w-max max-w-[240px] rounded-sm border border-border-strong bg-elevated px-2 py-1 font-sans text-xs leading-snug text-foreground-dim shadow-[var(--shadow-modal)]",
+            "pointer-events-none absolute z-50 w-max rounded-sm border border-border-strong bg-elevated px-2 py-1 font-sans text-xs leading-snug text-foreground-dim shadow-[var(--shadow-modal)]",
+            sizeClass[size],
             sideClass[side],
           )}
           data-testid={TooltipTestId.Content}

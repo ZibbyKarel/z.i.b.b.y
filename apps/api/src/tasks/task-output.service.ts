@@ -239,7 +239,9 @@ export class TaskOutputService implements OnModuleInit {
     headBranch?: string,
     ownPr?: boolean,
   ): Promise<boolean> {
-    if (!this.autopilot?.coversApproval(approval, headBranch, ownPr)) return false;
+    // Where the PR sits in the tree (its teams / company); none stamped = global.
+    const at = task.prReview?.autopilotAt ?? task.prAddressComments?.autopilotAt ?? {};
+    if (!this.autopilot?.coversApproval(approval, headBranch, ownPr, at)) return false;
     const intent = autopilotIntentFor(approval, headBranch, ownPr);
     if (!intent || !this.gates || !this.agents) return false;
     try {
@@ -251,7 +253,7 @@ export class TaskOutputService implements OnModuleInit {
         intent,
         actors.agents,
         actors.department,
-        autopilotContextFor(approval, headBranch, ownPr),
+        autopilotContextFor(approval, headBranch, ownPr, at),
       );
     } catch (error) {
       this.log.warn("autopilot: gate check failed — leaving the approval for the operator", {

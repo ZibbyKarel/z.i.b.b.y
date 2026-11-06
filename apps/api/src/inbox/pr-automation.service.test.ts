@@ -174,17 +174,17 @@ describe("PrAutomationService (todo-16)", () => {
       expect(review.listPrFiles).toHaveBeenCalledWith("p1", "acme/app", 7);
       expect(review.start).toHaveBeenCalledWith(
         { projectId: "p1", repo: "acme/app", number: 7, title: "Add thing", level: "browser" },
-        { auto: true, headSha: A },
+        { auto: true, headSha: A, autopilotAt: [{ teamId: "p1" }] },
       );
     });
 
     it("a failed files fetch falls back to quick", async () => {
       review.listPrFiles.mockRejectedValue(new Error("HTTP 500"));
       await make().tick();
-      expect(review.start).toHaveBeenCalledWith(expect.objectContaining({ level: "quick" }), {
-        auto: true,
-        headSha: A,
-      });
+      expect(review.start).toHaveBeenCalledWith(
+        expect.objectContaining({ level: "quick" }),
+        expect.objectContaining({ auto: true, headSha: A }),
+      );
     });
 
     it("records a pr-automation-started activity with the spec's summary and refs", async () => {
@@ -268,10 +268,10 @@ describe("PrAutomationService (todo-16)", () => {
         prs = [pr({ headRef })];
         review.listPrFiles.mockResolvedValue([{ filename, additions: 1, deletions: 0 }]);
         await make().tick();
-        expect(review.start).toHaveBeenCalledWith(expect.objectContaining({ level }), {
-          auto: true,
-          headSha: A,
-        });
+        expect(review.start).toHaveBeenCalledWith(
+          expect.objectContaining({ level }),
+          expect.objectContaining({ auto: true, headSha: A }),
+        );
       },
     );
 
@@ -312,7 +312,7 @@ describe("PrAutomationService (todo-16)", () => {
       expect(result).toEqual({ started: 1 });
       expect(address.start).toHaveBeenCalledWith(
         { projectId: "p1", repo: "acme/app", number: 7, title: "Add thing" },
-        { auto: true },
+        expect.objectContaining({ auto: true }),
       );
       expect(review.start).not.toHaveBeenCalled();
       expect(activity.record).toHaveBeenCalledWith({

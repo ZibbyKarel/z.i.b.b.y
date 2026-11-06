@@ -25,4 +25,9 @@ describe("ToggleField", () => {
       hint.id,
     );
   });
+
+  it("passes labelCase=normal through to the label", () => {
+    render(<ToggleField checked label="Auto-run" labelCase="normal" onChange={vi.fn()} />);
+    expect(screen.getByTestId(FieldTestId.Label)).not.toHaveClass("uppercase");
+  });
 });

@@ -37,6 +37,12 @@ export const Overview: Story = {
   },
 };
 
+export const NormalCaseLabel: Story = {
+  render: () => (
+    <ToggleField checked label="Automatic code review" labelCase="normal" onChange={() => {}} />
+  ),
+};
+
 export const Playground: Story = {
   render: (args) => {
     const [checked, setChecked] = useState(args.checked ?? false);

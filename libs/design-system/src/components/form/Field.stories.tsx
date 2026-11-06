@@ -31,6 +31,9 @@ export const Overview: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
       <Field label="Column layout (default)">{sampleInput}</Field>
+      <Field label="Normal-case label" labelCase="normal">
+        {sampleInput}
+      </Field>
       <Field hint="Nápověda pod polem" label="With hint">
         {sampleInput}
       </Field>

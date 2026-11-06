@@ -31,6 +31,17 @@ export const Overview: Story = {
       <Controlled />
       <OptionToggle ariaLabel="Gate mode (read-only)" options={gateOptions} value="auto" />
       <OptionToggle
+        ariaLabel="Mode"
+        intent="primary"
+        onChange={() => {}}
+        options={[
+          { id: "approve", label: "Approve" },
+          { id: "autopilot", label: "AUTOPILOT" },
+        ]}
+        size="lg"
+        value="autopilot"
+      />
+      <OptionToggle
         ariaLabel="Scope"
         options={[
           { id: "mine", label: "Mine" },

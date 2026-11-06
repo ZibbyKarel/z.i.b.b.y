@@ -1,6 +1,6 @@
 import type { Ref } from "react";
 import { Toggle, type ToggleSize } from "../../Toggle/Toggle";
-import { Field } from "../Field";
+import { Field, type FieldLabelCase } from "../Field";
 
 export enum ToggleFieldTestId {
   Control = "toggle-control",
@@ -14,6 +14,8 @@ export interface ToggleFieldProps {
   checked: boolean;
   /** Fired with the next state when the user toggles. */
   onChange: (next: boolean) => void;
+  /** Label typography — `normal` for sentence-case labels (default `caps`). */
+  labelCase?: FieldLabelCase;
   size?: ToggleSize;
   disabled?: boolean;
   /** Overrides the control's testid — lets sibling toggles in one form be addressed individually. */
@@ -32,13 +34,14 @@ export function ToggleField({
   error,
   checked,
   onChange,
+  labelCase,
   size,
   disabled,
   "data-testid": testId = ToggleFieldTestId.Control,
   ref,
 }: ToggleFieldProps) {
   return (
-    <Field error={error} hint={hint} label={label} layout="row">
+    <Field error={error} hint={hint} label={label} labelCase={labelCase} layout="row">
       {({ id, describedBy, invalid }) => (
         <Toggle
           aria-describedby={describedBy}

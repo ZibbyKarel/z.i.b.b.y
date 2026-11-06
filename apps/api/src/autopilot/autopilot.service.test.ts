@@ -125,6 +125,29 @@ describe("AutopilotService", () => {
     ).toBe(false);
   });
 
+  it("a team-only tree covers a PR of that team, at both the approval and the gate check", async () => {
+    const svc = new AutopilotService(dir);
+    await svc.onModuleInit();
+    await svc.set("full", "operator", {
+      global: toggles(),
+      companies: {},
+      teams: { devrel: { autoReview: true, autoAddressComments: true } },
+    });
+    const review = { kind: "pr-review", action: "github.pr.review" } as const;
+    const devrelPr = [
+      { companyId: "co", teamId: "other" },
+      { companyId: "co", teamId: "devrel" },
+    ];
+    expect(svc.coversApproval(review)).toBe(false);
+    expect(svc.coversApproval(review, undefined, undefined, devrelPr)).toBe(true);
+    expect(svc.coversApproval(review, undefined, undefined, [{ teamId: "other" }])).toBe(false);
+    const comment = { action: "gh.pr_comment" } as const;
+    expect(svc.coversRule("floor-gh.pr_comment", comment, { scope: "reviews" })).toBe(false);
+    expect(svc.coversRule("floor-gh.pr_comment", comment, { scope: "reviews", at: devrelPr })).toBe(
+      true,
+    );
+  });
+
   it("a tree from before autoCommunicate takes communication from the legacy scope", async () => {
     await fs.writeFile(
       path.join(dir, "autopilot.json"),

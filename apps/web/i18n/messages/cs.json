@@ -3635,11 +3635,8 @@
   "autopilot": {
     "label": "Autopilot",
     "turnOn": "Zapnout autopilota",
-    "turnOff": "Vypnout autopilota",
     "status": "Autopilot zapnutý · čeká {pending}",
-    "confirm": "Zapnout",
-    "dialogTitle": "Zapnout autopilota?",
-    "dialogBody": "Dokud je zapnutý, ZIBBY provádí níže zapnuté akce bez ptaní a každou ohlásí. Pushuje jen do vlastních větví a do větví tvých PR. Merge, deploy, platby, mazání, force push a push do sdílených větví dál čekají na tebe. Upozornění na Slack se posílají jen při zapnutém Autopilotu.",
+    "dialogTitle": "Autopilot",
     "dialogPending": "Schválení, která už čekají, čekají dál: {pending}.",
     "operatorTokenMissing": "Zapnutí autopilota vyžaduje operátorský token. Nejdřív ho nastav v Nastavení.",
     "failed": "Autopilota se nepodařilo přepnout.",
@@ -3653,8 +3650,12 @@
     "autoImplementHint": "Bere připravené položky roadmapy a implementuje je ve vlastní větvi.",
     "autoCommunicate": "Automatická komunikace",
     "autoCommunicateHint": "Odpovídá na otázky na GitHubu, GitLabu, v Jiře a ve Slacku, když má konkrétní odpověď.",
-    "overridesHint": "Firma nebo tým se může lišit od vyšší úrovně. Přepínač nastavený stejně jako nadřazený se řídí nadřazeným.",
-    "edit": "Upravit",
-    "dialogTitleEdit": "Upravit autopilota"
+    "overridesHint": "Tým dědí nastavení od své firmy. Přepínač nastavený stejně jako firma se řídí firmou.",
+    "modeApprove": "Schvalovat",
+    "modeAutopilot": "AUTOPILOT",
+    "modeLabel": "Režim autopilota",
+    "save": "Uložit",
+    "helpLabel": "Co přepínače dělají",
+    "helpNever": "Nikdy automaticky: merge, deploy, platby, mazání, force push a push do sdílených větví vždy čekají na tebe."
   }
 }

@@ -28,16 +28,12 @@ function setup(value: AutopilotAutomation = empty) {
 }
 
 describe("AutomationTree", () => {
-  it("global switch emits the new value", async () => {
-    const onChange = setup();
-    await userEvent.click(within(toggle("global", "autoImplement")).getByRole("switch"));
-    expect(onChange).toHaveBeenCalledWith({
-      ...empty,
-      global: { ...NO_AUTOMATION, autoImplement: true },
-    });
+  it("has no global node", () => {
+    setup();
+    expect(row("global")).toBeUndefined();
   });
 
-  it("a company toggle different from global writes an override", async () => {
+  it("a company toggle different from its (all-off) parent writes an override", async () => {
     const onChange = setup({ ...empty, companies: { shoptet: { autoImplement: true } } });
     await userEvent.click(within(toggle("company:shoptet", "autoReview")).getByRole("switch"));
     expect(onChange).toHaveBeenCalledWith({
@@ -52,14 +48,13 @@ describe("AutomationTree", () => {
     expect(onChange).toHaveBeenCalledWith(empty);
   });
 
-  it("toggles are the four autopilot keys, small below global", () => {
+  it("toggles are the four autopilot keys", () => {
     setup({ ...empty, companies: { shoptet: { autoReview: true } } });
     const keys = (node: string) =>
       within(row(node) as HTMLElement)
         .getAllByTestId(AutomationTreeTestId.Toggle)
         .map((el) => el.getAttribute("data-key"));
     const all = ["autoReview", "autoAddressComments", "autoImplement", "autoCommunicate"];
-    expect(keys("global")).toEqual(all);
     expect(keys("company:shoptet")).toEqual(all);
   });
 
@@ -70,14 +65,14 @@ describe("AutomationTree", () => {
     expect(toggle("team:devrel", "autoReview")).toHaveAttribute("data-effective", "true");
   });
 
-  it("a node shows the inherited effective value", () => {
+  it("a team inherits its company's effective value; global is ignored", () => {
     setup({
-      ...empty,
-      global: { ...NO_AUTOMATION, autoReview: true },
+      global: { ...NO_AUTOMATION, autoCommunicate: true },
       companies: { shoptet: { autoImplement: true } },
+      teams: {},
     });
-    expect(toggle("company:shoptet", "autoReview")).toHaveAttribute("data-effective", "true");
     expect(toggle("company:shoptet", "autoCommunicate")).toHaveAttribute("data-effective", "false");
+    expect(toggle("company:shoptet", "autoImplement")).toHaveAttribute("data-effective", "true");
   });
 
   it("nodes without overrides are collapsed; expanding shows toggles and teams", async () => {

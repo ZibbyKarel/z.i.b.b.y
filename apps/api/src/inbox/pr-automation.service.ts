@@ -1,6 +1,6 @@
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import {
-  type AutomationToggles,
+  type AutopilotLocation,
   type InboxPr,
   type PrReviewLevel,
   type ScheduledTask,
@@ -97,7 +97,7 @@ export class PrAutomationService
   }
 
   async tick(): Promise<{ started: number }> {
-    const configs = new Map<string, Promise<AutomationToggles>>();
+    const locations = new Map<string, Promise<AutopilotLocation>>();
     let teams: Team[];
     try {
       teams = await this.teams.list();
@@ -128,27 +128,28 @@ export class PrAutomationService
         if (!pr.headSha) continue;
         // A PR of several teams is automated when any of them has the toggle on.
         const matched = teamsOfPr(pr, teams);
-        const resolved = await Promise.all(
+        const places = await Promise.all(
           (matched.length ? matched : [undefined]).map((teamId) => {
             const key = `${pr.projectId}\n${teamId ?? ""}`;
-            let config = configs.get(key);
-            if (!config) configs.set(key, (config = this.effectiveConfig(pr.projectId, teamId)));
-            return config;
+            let place = locations.get(key);
+            if (!place) locations.set(key, (place = this.locationOf(pr.projectId, teamId)));
+            return place;
           }),
         );
+        const resolved = places.map((at) => this.autopilot.automationFor(at));
         const effective = {
           autoReview: resolved.some((c) => c.autoReview),
           autoAddressComments: resolved.some((c) => c.autoAddressComments),
         };
         if (effective.autoReview && wantsReview(pr) && isFresh(pr, reviewRuns)) {
-          await this.startReview(pr);
+          await this.startReview(pr, places);
           started++;
         } else if (
           effective.autoAddressComments &&
           wantsAddressing(pr) &&
           isFresh(pr, addressRuns)
         ) {
-          await this.startAddressing(pr);
+          await this.startAddressing(pr, places);
           started++;
         }
       } catch (error) {
@@ -171,7 +172,9 @@ export class PrAutomationService
     });
     const resolved = await Promise.all(
       [
-        ...projects.map((project) => this.effectiveConfig(project.id)),
+        ...projects.map(async (project) =>
+          this.autopilot.automationFor(await this.locationOf(project.id)),
+        ),
         ...teams.map(async (team) =>
           this.autopilot.automationFor({ companyId: team.companyId, teamId: team.id }),
         ),
@@ -180,7 +183,7 @@ export class PrAutomationService
     return resolved.some((c) => c?.autoReview === true || c?.autoAddressComments === true);
   }
 
-  private async startReview(pr: InboxPr): Promise<void> {
+  private async startReview(pr: InboxPr, at: AutopilotLocation[]): Promise<void> {
     const byContent: PrReviewLevel = await this.reviews
       .listPrFiles(pr.projectId, pr.repo, pr.number)
       .then(selectReviewLevel)
@@ -199,15 +202,15 @@ export class PrAutomationService
       !pr.headRef && (byContent === "tested" || byContent === "browser") ? "thorough" : byContent;
     const { taskId } = await this.reviews.start(
       { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title, level },
-      { auto: true, headSha: pr.headSha },
+      { auto: true, headSha: pr.headSha, autopilotAt: at },
     );
     this.record(pr, taskId, `auto review (${level}) ${pr.repo}#${pr.number}`);
   }
 
-  private async startAddressing(pr: InboxPr): Promise<void> {
+  private async startAddressing(pr: InboxPr, at: AutopilotLocation[]): Promise<void> {
     const { taskId } = await this.addressComments.start(
       { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title },
-      { auto: true },
+      { auto: true, autopilotAt: at },
     );
     this.record(pr, taskId, `auto address comments ${pr.repo}#${pr.number}`);
   }
@@ -220,11 +223,11 @@ export class PrAutomationService
     });
   }
 
-  /** Autopilot automation toggles for a project's company and `teamId` (team > company > global). */
-  private async effectiveConfig(projectId: string, teamId?: string): Promise<AutomationToggles> {
+  /** Where a PR of a project (and `teamId`) sits in the autopilot tree: the project's company + the team. */
+  private async locationOf(projectId: string, teamId?: string): Promise<AutopilotLocation> {
     const project = await this.projects.get(projectId).catch(() => null);
     const company = project ? await this.resolvedProjects.resolveCompany(project) : undefined;
-    return this.autopilot.automationFor({ companyId: company?.id, teamId });
+    return { ...(company?.id ? { companyId: company.id } : {}), ...(teamId ? { teamId } : {}) };
   }
 }
 
