@@ -1927,6 +1927,9 @@
       "slug": "Code owner id týmu",
       "slugPlaceholder": "shoptet/frontend-team",
       "slugHint": "Tým jako v CODEOWNERS: GitHub org/tým nebo GitLab skupina/podskupina, např. shoptet/frontend-team",
+      "jiraProjectKey": "Jira projekt",
+      "jiraProjectKeyPlaceholder": "CZ3TDR1",
+      "jiraProjectKeyHint": "Klíč Jira projektu, ve kterém tým zakládá issues",
       "company": "Firma",
       "companyNone": "Bez firmy"
     },
@@ -3183,7 +3186,12 @@
       "title": "Nastavení widgetu",
       "name": "Název",
       "remove": "Odebrat z dashboardu",
-      "removeConfirm": "Opravdu odebrat"
+      "removeConfirm": "Opravdu odebrat",
+      "filters": "Výchozí filtry"
+    },
+    "filterControls": {
+      "companies": "Firmy",
+      "teams": "Týmy"
     },
     "editLayout": "Upravit rozložení",
     "catalog": {
@@ -3219,8 +3227,7 @@
           "ci": "Filtrovat podle CI",
           "owner": "Autor",
           "ownerMine": "Moje",
-          "ownerOthers": "Cizí",
-          "teams": "Týmy"
+          "ownerOthers": "Cizí"
         },
         "review": {
           "changes": "Požadované změny",

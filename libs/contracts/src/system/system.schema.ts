@@ -6,51 +6,67 @@ import { TeamIdSchema } from "../teams/team.schema";
 export const DensitySchema = z.enum(["compact", "comfort", "airy", "open"]);
 export type Density = z.infer<typeof DensitySchema>;
 
-/** Default filters of a `prs` widget; an empty/absent list leaves that group unfiltered. */
-export const PrWidgetFiltersSchema = z
+/**
+ * Filter pick of a Bridge widget — one shape for every widget type; each type reads only the
+ * keys its filter controls offer. An empty/absent list leaves that group unfiltered.
+ */
+export const WidgetFiltersSchema = z
   .object({
     review: z.array(z.enum(["waiting", "changes", "approved"])).optional(),
     ci: z.array(z.enum(["conflict", "failing", "passing"])).optional(),
     /** @deprecated Legacy "only mine" flag, read only; superseded by `owner: "mine"`. */
     mine: z.boolean().optional(),
     owner: z.enum(["mine", "others"]).optional(),
+    /** Team values: a team code owner slug on `prs` (review requested of it), a team id elsewhere. */
     teams: z.array(z.string().min(1)).optional(),
+    /** Company ids. */
+    companies: z.array(z.string().min(1)).optional(),
   })
   .strict();
-export type PrWidgetFilters = z.infer<typeof PrWidgetFiltersSchema>;
+export type WidgetFilters = z.infer<typeof WidgetFiltersSchema>;
+
+/** A widget stored before `filters` existed carries its PR defaults as `prFilters`. */
+function migrateLegacyFilters(value: unknown): unknown {
+  if (typeof value !== "object" || value === null || !("prFilters" in value)) return value;
+  const { prFilters, ...rest } = value as Record<string, unknown>;
+  return "filters" in rest ? rest : { ...rest, filters: prFilters };
+}
 
 /**
  * One widget placed on the Bridge's 12-column board. `x`/`w` are column units (the
  * widget must fit the grid), `y`/`h` are row units (unbounded downwards).
  */
-export const BridgeWidgetSchema = z.object({
-  id: z.string().min(1),
-  /** Catalog entry this widget renders. */
-  type: z.enum([
-    "briefing",
-    "issues",
-    "prs",
-    "tasks",
-    "runs",
-    "pins",
-    "todo",
-    "quickActions",
-    "teamKb",
-    "proposals",
-    "budgets",
-    "mentions",
-  ]),
-  x: z.number().int().min(0).max(11),
-  y: z.number().int().min(0),
-  w: z.number().int().min(2).max(12),
-  h: z.number().int().min(1),
-  /** Optional scope; only the `teamKb` widget reads it (`teamId` = the team it shows). */
-  scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional(),
-  /** Operator-given widget name; absent = the widget type's default label. */
-  title: z.string().trim().min(1).max(60).optional(),
-  /** Default filters of a `prs` widget; an empty/absent list leaves that group unfiltered. */
-  prFilters: PrWidgetFiltersSchema.optional(),
-});
+export const BridgeWidgetSchema = z.preprocess(
+  migrateLegacyFilters,
+  z.object({
+    id: z.string().min(1),
+    /** Catalog entry this widget renders. */
+    type: z.enum([
+      "briefing",
+      "issues",
+      "prs",
+      "tasks",
+      "runs",
+      "pins",
+      "todo",
+      "quickActions",
+      "teamKb",
+      "proposals",
+      "budgets",
+      "mentions",
+    ]),
+    x: z.number().int().min(0).max(11),
+    y: z.number().int().min(0),
+    w: z.number().int().min(2).max(12),
+    h: z.number().int().min(1),
+    /** Optional scope; only the `teamKb` widget reads it (`teamId` = the team it shows). */
+    scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional(),
+    /** Operator-given widget name; absent = the widget type's default label. */
+    title: z.string().trim().min(1).max(60).optional(),
+    /** Default filter pick of a filterable widget, edited in its settings. */
+    filters: WidgetFiltersSchema.optional(),
+  }),
+);
 export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;
 
 /**

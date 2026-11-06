@@ -43,6 +43,15 @@ describe("TeamsStorageService", () => {
     expect("slug" in (await service.get("devrel"))).toBe(false);
   });
 
+  it("stores and clears (null) a jiraProjectKey", async () => {
+    await service.create(base);
+    expect((await service.update("devrel", { jiraProjectKey: "CZ3TDR1" })).jiraProjectKey).toBe(
+      "CZ3TDR1",
+    );
+    await service.update("devrel", { jiraProjectKey: null });
+    expect("jiraProjectKey" in (await service.get("devrel"))).toBe(false);
+  });
+
   it("rejects a duplicate id (conflict)", async () => {
     await service.create(base);
     await expect(service.create(base)).rejects.toBeInstanceOf(TeamConflictError);

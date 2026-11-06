@@ -71,6 +71,13 @@ export const TeamSchema = z.object({
   desc: z.string().optional(),
   /** Team code owner id (GitHub `org/team` or GitLab `group/subgroup`) — filters the PRs widget to reviews requested of this team. */
   slug: TeamSlugSchema.optional(),
+  /** Key of the Jira project the team files its issues in (e.g. `CZ3TDR1`); only editable when its company has a Jira integration. */
+  jiraProjectKey: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z][A-Z0-9_]+$/, { message: "invalid Jira project key" })
+    .optional(),
   knowledgeBase: KnowledgeBaseSourceSchema.optional(),
 });
 export type Team = z.infer<typeof TeamSchema>;
@@ -90,6 +97,7 @@ export type CreateTeamInput = z.infer<typeof CreateTeamSchema>;
 export const UpdateTeamSchema = TeamSchema.omit({ id: true }).partial().extend({
   companyId: z.string().optional().nullable(),
   slug: TeamSlugSchema.optional().nullable(),
+  jiraProjectKey: TeamSchema.shape.jiraProjectKey.nullable(),
   knowledgeBase: KnowledgeBaseSourceSchema.optional().nullable(),
 });
 export type UpdateTeamInput = z.infer<typeof UpdateTeamSchema>;

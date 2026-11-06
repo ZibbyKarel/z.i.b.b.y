@@ -1,17 +1,18 @@
+import type { WidgetFilters } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { ReactNode } from "react";
 import type { BridgeWidget, WidgetType } from "../grid/layout";
 import { BriefingWidget } from "./BriefingWidget";
 import { BudgetsWidget } from "./BudgetsWidget";
-import { IssuesWidget } from "./IssuesWidget";
+import { IssuesFilterControls, IssuesWidget } from "./IssuesWidget";
 import { MentionsWidget } from "./MentionsWidget";
 import { PinsWidget } from "./PinsWidget";
+import { PrFilterControls } from "./PrFilterControls";
 import { PrsWidget } from "./PrsWidget";
 import { ProposalsWidget } from "./ProposalsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
-import { PrsWidgetSettings } from "./PrsWidgetSettings";
 import { TeamKbWidget, TeamKbWidgetSettings } from "./TeamKbWidget";
 import { TodoWidget } from "./TodoWidget";
 
@@ -70,7 +71,7 @@ export interface BridgeWidgetProps {
   /** Collapsed epic groups (`ui.bridge.epicClosed`), keyed by epic id (`none` = no epic). */
   epicClosed: Record<string, boolean>;
   onEpicToggle: (key: string, closed: boolean) => void;
-  /** The header filters toggle is on (only for `filterable` widgets): show the filter bar. */
+  /** The header filters toggle is on (only for widgets with `Filters`): show the filter bar. */
   filtersOpen?: boolean;
 }
 
@@ -78,6 +79,13 @@ export interface BridgeWidgetProps {
 export interface WidgetSettingsProps {
   draft: BridgeWidget;
   onChange: (next: BridgeWidget) => void;
+}
+
+/** Props of a widget type's filter controls — the live filter bar and the settings defaults. */
+export interface WidgetFiltersProps {
+  pick: WidgetFilters;
+  /** The whole next pick, unset groups already dropped. */
+  onChange: (next: WidgetFilters) => void;
 }
 
 export interface WidgetDefinition {
@@ -89,8 +97,12 @@ export interface WidgetDefinition {
   Component: (props: BridgeWidgetProps) => ReactNode;
   /** Has a header `+` toggle that drives `BridgeWidgetProps.adding`. */
   addable?: true;
-  /** Has a header filters toggle that drives `BridgeWidgetProps.filtersOpen`. */
-  filterable?: true;
+  /**
+   * Filter controls of the type. Their presence adds the header filters toggle (drives
+   * `BridgeWidgetProps.filtersOpen`) and a default-filters section to the settings dialog
+   * (saved as `widget.filters`; the body starts from it via `useWidgetFilterPick`).
+   */
+  Filters?: (props: WidgetFiltersProps) => ReactNode;
   /** Type-specific section of the settings dialog, below the common name / remove part. */
   Settings?: (props: WidgetSettingsProps) => ReactNode;
 }
@@ -107,6 +119,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.issues.desc",
     icon: "bug",
     Component: IssuesWidget,
+    Filters: IssuesFilterControls,
   },
   tasks: {
     labelKey: "bridge.widget.tasks.label",
@@ -119,8 +132,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.prs.desc",
     icon: "branch",
     Component: PrsWidget,
-    filterable: true,
-    Settings: PrsWidgetSettings,
+    Filters: PrFilterControls,
   },
   runs: {
     labelKey: "bridge.widget.runs.label",

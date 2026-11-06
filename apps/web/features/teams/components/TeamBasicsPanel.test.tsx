@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { DropdownTestId } from "@zibby/design-system";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen } from "../../../test/render";
 import { TeamBasicsPanel } from "./TeamBasicsPanel";
 
@@ -8,7 +8,16 @@ vi.mock("../../companies", () => ({
   useCompaniesQuery: () => ({ data: [{ id: "acme", name: "Acme Corp" }] }),
 }));
 
+const integrations = vi.hoisted(() => ({ kinds: [] as string[] }));
+vi.mock("../../integrations/queries", () => ({
+  useCompanyIntegrationsQuery: () => ({ data: integrations.kinds.map((kind) => ({ kind })) }),
+}));
+
 describe("TeamBasicsPanel", () => {
+  beforeEach(() => {
+    integrations.kinds = [];
+  });
+
   it("disables save until a name is entered", () => {
     render(<TeamBasicsPanel isNew onSave={vi.fn()} />);
     expect(screen.getByTestId("save-basics")).toBeDisabled();
@@ -97,6 +106,36 @@ describe("TeamBasicsPanel", () => {
     await userEvent.click(screen.getByTestId("save-basics"));
 
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ slug: null }));
+  });
+
+  it("hides the Jira project field without a Jira integration and omits the key", async () => {
+    integrations.kinds = ["slack"];
+    const onSave = vi.fn();
+    render(
+      <TeamBasicsPanel
+        isNew={false}
+        onSave={onSave}
+        team={{ id: "p", name: "Platform", companyId: "acme", jiraProjectKey: "OLD" }}
+      />,
+    );
+    expect(screen.queryByTestId("team-jira-project-input")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("save-basics"));
+    expect(onSave.mock.calls[0]?.[0]).not.toHaveProperty("jiraProjectKey");
+  });
+
+  it("shows the Jira project field with a Jira integration and saves the value", async () => {
+    integrations.kinds = ["jira"];
+    const onSave = vi.fn();
+    render(
+      <TeamBasicsPanel
+        isNew={false}
+        onSave={onSave}
+        team={{ id: "p", name: "Platform", companyId: "acme" }}
+      />,
+    );
+    await userEvent.type(screen.getByTestId("team-jira-project-input"), " CZ3TDR1 ");
+    await userEvent.click(screen.getByTestId("save-basics"));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ jiraProjectKey: "CZ3TDR1" }));
   });
 
   it("shows a delete button for an existing team but not for a new one", () => {

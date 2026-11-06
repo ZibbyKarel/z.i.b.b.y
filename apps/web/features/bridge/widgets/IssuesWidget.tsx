@@ -14,22 +14,46 @@ import { Fragment, useCallback, useMemo } from "react";
 import { sourceIcon } from "../../integrations/kindIcon";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo } from "../../../utils/time";
-import { visibleItems } from "../../inbox/inbox";
+import { itemScope, passesFilters, visibleItems } from "../../inbox/inbox";
 import { useRefreshInboxMutation } from "../../inbox/mutations";
 import { useInboxItemsQuery, useInboxPrsQuery } from "../../inbox/queries";
 import { type IssueRowVm, issueGroups } from "../state/rows";
 import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
-import type { BridgeWidgetProps } from "./registry";
+import { useTeamsQuery } from "../../teams/queries";
+import type { BridgeWidgetProps, WidgetFiltersProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
+import {
+  OrgFilterControls,
+  WidgetFilterBar,
+  compactPick,
+  useWidgetFilterPick,
+} from "./widgetFilters";
 
 export enum IssuesWidgetTestId {
   Source = "issues-widget-source",
 }
 
+/** Company + team filters of the Issues widget; a team matches the team of the issue's project. */
+export function IssuesFilterControls({ pick, onChange }: WidgetFiltersProps) {
+  const { data: teams = [] } = useTeamsQuery();
+  return (
+    <OrgFilterControls
+      onChange={(patch) => onChange(compactPick({ ...pick, ...patch }))}
+      pick={pick}
+      teams={teams.map((t) => ({
+        value: t.id,
+        label: t.name,
+        ...(t.companyId ? { companyId: t.companyId } : {}),
+      }))}
+    />
+  );
+}
+
 /**
  * Issues: exactly the set the `/dashboard/inbox/issues` screen lists with its defaults (stored
  * company/team/project filters, no search, done + hidden off), waiting-for-you first, grouped
- * under the epic. A group header collapses its epic (`epicClosed`).
+ * under the epic. A group header collapses its epic (`epicClosed`). The filter row narrows the
+ * list further by company and team (defaults from `widget.filters`).
  */
 export function IssuesWidget({
   widget,
@@ -40,6 +64,7 @@ export function IssuesWidget({
   sheetSide,
   epicClosed,
   onEpicToggle,
+  filtersOpen,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.issues");
   const stateText = (r: IssueRowVm) =>
@@ -52,6 +77,7 @@ export function IssuesWidget({
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const itemsQuery = useInboxItemsQuery();
   const prsQuery = useInboxPrsQuery();
+  const [pick, setPick] = useWidgetFilterPick(widget.filters);
 
   const list = useMemo(
     () =>
@@ -63,12 +89,22 @@ export function IssuesWidget({
       }),
     [itemsQuery.data, filters],
   );
+  // The header counts the whole set, not the picked slice: an empty pick must not collapse the
+  // widget (and its filter with it).
+  const picked = useMemo(() => {
+    const org = { company: pick.companies ?? [], team: pick.teams ?? [], project: [] };
+    return list.filter((item) => passesFilters(org, itemScope(item)));
+  }, [list, pick]);
   const groups = useMemo(
     () =>
-      issueGroups(widget.id, list, itemsQuery.data?.epics ?? [], prsQuery.data?.prs ?? [], (iso) =>
-        compactAgo(iso, now),
+      issueGroups(
+        widget.id,
+        picked,
+        itemsQuery.data?.epics ?? [],
+        prsQuery.data?.prs ?? [],
+        (iso) => compactAgo(iso, now),
       ),
-    [widget.id, list, itemsQuery.data, prsQuery.data, now],
+    [widget.id, picked, itemsQuery.data, prsQuery.data, now],
   );
 
   const you = groups.reduce((n, g) => n + g.rows.filter((r) => r.needsYou).length, 0);
@@ -79,12 +115,16 @@ export function IssuesWidget({
       loading: itemsQuery.isPending,
       count: itemsQuery.isPending ? undefined : list.length,
       you,
+      filtersActive: Object.keys(pick).length > 0,
     },
     { onEmptyChange, onCountChange },
   );
 
   return (
     <>
+      <WidgetFilterBar open={filtersOpen}>
+        <IssuesFilterControls onChange={setPick} pick={pick} />
+      </WidgetFilterBar>
       {groups.map((g) => {
         const title = g.epic?.title ?? t("noEpic");
         const closed = !!epicClosed[g.key];

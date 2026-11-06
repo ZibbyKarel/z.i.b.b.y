@@ -33,7 +33,7 @@ vi.mock("../widgets/registry", () => ({
     prs: {
       labelKey: "bridge.widget.prs.label",
       addable: true,
-      filterable: true,
+      Filters: () => null,
       Component: ({ onEmptyChange, onCountChange, adding, filtersOpen }: BridgeWidgetProps) => {
         const [loading, setLoading] = useState(true);
         h.setLoading = setLoading;
@@ -78,7 +78,7 @@ describe("BridgeBoard", () => {
     expect(screen.queryByTestId(WidgetFrameTestId.Loading)).toBeNull();
   });
 
-  it("shows the filters toggle only for filterable widgets and flips filtersOpen locally", async () => {
+  it("shows the filters toggle only for widgets with Filters and flips filtersOpen locally", async () => {
     const both = {
       ...state,
       layout: [

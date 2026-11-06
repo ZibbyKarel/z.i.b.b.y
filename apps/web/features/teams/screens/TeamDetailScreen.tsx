@@ -78,6 +78,7 @@ export function TeamDetailScreen({ teamId }: TeamDetailScreenProps) {
             ...body,
             companyId: body.companyId ?? undefined,
             slug: body.slug ?? undefined,
+            jiraProjectKey: body.jiraProjectKey ?? undefined,
             id: newId,
           },
         },

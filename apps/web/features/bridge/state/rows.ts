@@ -3,9 +3,9 @@ import type {
   InboxEpic,
   InboxPr,
   InboxRoadmapItem,
-  PrWidgetFilters,
   RoadmapSourceKind,
   Team,
+  WidgetFilters,
 } from "@zibby/contracts";
 import { teamSlugMatches } from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
@@ -201,16 +201,18 @@ export interface PrNodeVm {
 }
 
 /** The operator's pick; same shape as a widget's saved defaults. An empty group doesn't filter. */
-export type PrFilterPick = PrWidgetFilters;
+export type PrFilterPick = WidgetFilters;
 
 /** The author filter of a pick; a legacy `mine: true` reads as `"mine"`. */
 export function prOwner(pick: PrFilterPick): "mine" | "others" | undefined {
   return pick.owner ?? (pick.mine ? "mine" : undefined);
 }
 
-export interface PrTeamOption {
+/** A team in a filter dropdown; `companyId` narrows the list once companies are picked. */
+export interface TeamFilterOption {
   value: string;
   label: string;
+  companyId?: string;
 }
 
 /** Every team asked to review `p` (`org/team`); falls back to the single display team. */
@@ -218,23 +220,23 @@ const prRequestedTeams = (p: InboxPr): readonly string[] =>
   p.reviewTeams ?? (p.reviewTeam ? [p.reviewTeam] : []);
 
 /**
- * Team filter options: every configured team with a slug (value = slug, label = team name), plus
- * each discovered `reviewTeam` / saved default (`org/team`) no configured slug already covers.
+ * Team filter options of the PR widget: every configured team with a code owner slug (label = team
+ * name, value = slug), plus each saved default no configured slug covers, so a stale one can still
+ * be unticked. Teams GitHub reports but nobody configured are not offered.
  */
 export function prTeams(
-  prs: InboxPr[],
-  extra: readonly string[] = [],
   configured: readonly Team[] = [],
-): PrTeamOption[] {
-  const slugs = configured.flatMap((t) => (t.slug ? [{ slug: t.slug, name: t.name }] : []));
-  const options = new Map<string, PrTeamOption>(
-    slugs.map(({ slug, name }) => [slug, { value: slug, label: name }]),
+  extra: readonly string[] = [],
+): TeamFilterOption[] {
+  const options: TeamFilterOption[] = configured.flatMap((t) =>
+    t.slug
+      ? [{ value: t.slug, label: t.name, ...(t.companyId ? { companyId: t.companyId } : {}) }]
+      : [],
   );
-  const found = [...prs.flatMap(prRequestedTeams), ...extra];
-  for (const team of found)
-    if (!slugs.some(({ slug }) => teamSlugMatches(team, slug)))
-      options.set(team, { value: team, label: prTeamLabel(team) });
-  return [...options.values()].sort((a, b) => a.label.localeCompare(b.label));
+  for (const v of new Set(extra))
+    if (!options.some((o) => teamSlugMatches(v, o.value)))
+      options.push({ value: v, label: prTeamLabel(v) });
+  return options.sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /** `org/team` -> `team`. */
@@ -296,7 +298,7 @@ const countBy = <K extends string>(keys: readonly K[], list: InboxPr[], of: (p: 
 
 /**
  * The Pull requests screen's set (stored filters) as one flat list of stack trees, newest first.
- * `pick` narrows it by review / CI state, mine and review team; a picked PR keeps its listed ancestors as muted
+ * `pick` narrows it by review / CI state, owner, company and review team; a picked PR keeps its listed ancestors as muted
  * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR.
  */
 export function prTree(
@@ -329,6 +331,7 @@ export function prTree(
       (!pick.ci?.length || (pick.ci as string[]).includes(prCiState(p))) &&
       (owner !== "mine" || p.bucket === "mine") &&
       (owner !== "others" || p.bucket !== "mine") &&
+      (!pick.companies?.length || pick.companies.includes(p.companyId ?? "")) &&
       teamHit(p),
   );
   const hitUrls = new Set(hit.map((p) => p.url));

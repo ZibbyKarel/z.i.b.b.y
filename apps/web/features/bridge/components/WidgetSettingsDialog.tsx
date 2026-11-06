@@ -1,10 +1,18 @@
 "use client";
 
-import { Button, ConfirmDeleteButton, Dialog, Stack, TextInputField } from "@zibby/design-system";
+import {
+  Button,
+  ConfirmDeleteButton,
+  Dialog,
+  Stack,
+  TextInputField,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import type { BridgeWidget } from "../grid/layout";
 import { WIDGETS } from "../widgets/registry";
+import { compactPick } from "../widgets/widgetFilters";
 
 export enum WidgetSettingsDialogTestId {
   Name = "widget-settings-name",
@@ -23,7 +31,8 @@ export interface WidgetSettingsDialogProps {
 
 /**
  * Settings of one board widget: its name (empty = the type's default label) and removal, plus
- * the type's own `Settings` section. Edits stay a local draft until Save.
+ * the type's default filters (its `Filters` controls) and its own `Settings` section. Edits stay a
+ * local draft until Save.
  */
 export function WidgetSettingsDialog({
   widget,
@@ -77,6 +86,25 @@ export function WidgetSettingsDialog({
             placeholder={tr(def.labelKey)}
             value={name}
           />
+          {def.Filters ? (
+            <Stack gap="75">
+              <Typography size="sm" type="note" variant="secondary">
+                {t("filters")}
+              </Typography>
+              <Stack wrap direction="row" gap="100">
+                <def.Filters
+                  onChange={(next) => {
+                    const filters = compactPick(next);
+                    setDraft({
+                      ...draft,
+                      filters: Object.keys(filters).length > 0 ? filters : undefined,
+                    });
+                  }}
+                  pick={draft.filters ?? {}}
+                />
+              </Stack>
+            </Stack>
+          ) : null}
           {def.Settings ? <def.Settings draft={draft} onChange={setDraft} /> : null}
           <ConfirmDeleteButton
             confirmLabel={t("removeConfirm")}

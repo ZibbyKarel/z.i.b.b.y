@@ -5,6 +5,7 @@ import { Button, Panel, Stack, Typography } from "@zibby/design-system";
 import type { Team } from "@zibby/contracts";
 import { FormSelect, FormTextInput, useFormControls } from "@zibby/forms";
 import { useCompaniesQuery } from "../../companies";
+import { useCompanyIntegrationsQuery } from "../../integrations/queries";
 
 /** Security for "no company" in the company select — a real id can never be empty. */
 const NO_COMPANY = "";
@@ -22,6 +23,8 @@ export interface TeamBasicsBody {
   companyId?: string | null;
   /** Team code owner id (GitHub or GitLab); `null` clears it on edit. */
   slug?: string | null;
+  /** Jira project key; `null` clears it on edit. Omitted when the company has no Jira integration. */
+  jiraProjectKey?: string | null;
 }
 
 export interface TeamBasicsPanelProps {
@@ -39,6 +42,7 @@ type TeamEditValues = {
   name: string;
   desc: string;
   slug: string;
+  jiraProjectKey: string;
   companyId: string;
 };
 
@@ -61,6 +65,7 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
       name: team?.name ?? "",
       desc: team?.desc ?? "",
       slug: team?.slug ?? "",
+      jiraProjectKey: team?.jiraProjectKey ?? "",
       companyId: team?.companyId ?? NO_COMPANY,
     },
     onSubmit: (values) => {
@@ -68,12 +73,19 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
         slug: values.slug.trim() || (isNew ? undefined : null),
+        // Hidden field (no Jira integration) -> key omitted so the stored value survives.
+        ...(hasJira
+          ? { jiraProjectKey: values.jiraProjectKey.trim() || (isNew ? undefined : null) }
+          : {}),
         companyId: values.companyId === NO_COMPANY ? null : values.companyId,
       });
     },
   });
 
-  const [watchedName] = form.watch(["name"]);
+  const [watchedName, watchedCompanyId] = form.watch(["name", "companyId"]);
+  // Keyed by company id; "" (no company) matches no integration.
+  const { data: companyIntegrations = [] } = useCompanyIntegrationsQuery(watchedCompanyId ?? "");
+  const hasJira = companyIntegrations.some((i) => i.kind === "jira");
   const canSave = (watchedName ?? "").trim().length > 0;
 
   const companyOptions = [
@@ -131,6 +143,16 @@ export function TeamBasicsPanel({ team, isNew, saving, onSave, onDelete }: TeamB
           name="companyId"
           options={companyOptions}
         />
+
+        {hasJira && (
+          <FormTextInput<TeamEditValues>
+            data-testid="team-jira-project-input"
+            hint={t("fields.jiraProjectKeyHint")}
+            label={t("fields.jiraProjectKey")}
+            name="jiraProjectKey"
+            placeholder={t("fields.jiraProjectKeyPlaceholder")}
+          />
+        )}
 
         {!isNew && onDelete && (
           <Stack align="start" direction="row">

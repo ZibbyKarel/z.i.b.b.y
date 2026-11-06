@@ -152,6 +152,22 @@ describe("ResolveTeamKbQuestionSchema", () => {
   });
 });
 
+describe("Team jiraProjectKey", () => {
+  it("trims, upper-cases and accepts a project key", () => {
+    expect(
+      TeamSchema.parse({ id: "t", name: "T", jiraProjectKey: " cz3tdr1 " }).jiraProjectKey,
+    ).toBe("CZ3TDR1");
+  });
+  it("rejects an invalid key", () => {
+    expect(TeamSchema.safeParse({ id: "t", name: "T", jiraProjectKey: "1-ABC" }).success).toBe(
+      false,
+    );
+  });
+  it("update accepts null to clear", () => {
+    expect(UpdateTeamSchema.parse({ jiraProjectKey: null }).jiraProjectKey).toBeNull();
+  });
+});
+
 describe("Team slug", () => {
   it("trims and strips a leading @", () => {
     expect(TeamSchema.parse({ id: "t", name: "T", slug: " @shoptet/devrel-team " }).slug).toBe(

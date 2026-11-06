@@ -33,8 +33,8 @@ describe("BridgeWidgetSchema scope", () => {
   });
 });
 
-describe("BridgeWidgetSchema title and prFilters", () => {
-  it("accepts a trimmed title and pr filters", () => {
+describe("BridgeWidgetSchema title and filters", () => {
+  it("accepts a trimmed title and migrates legacy prFilters to filters", () => {
     const w = BridgeWidgetSchema.parse({
       ...base,
       type: "prs",
@@ -42,7 +42,19 @@ describe("BridgeWidgetSchema title and prFilters", () => {
       prFilters: { review: ["waiting"], ci: [], mine: true, teams: ["devrel"] },
     });
     expect(w.title).toBe("Mine");
-    expect(w.prFilters?.review).toEqual(["waiting"]);
+    expect(w.filters?.review).toEqual(["waiting"]);
+    expect(w).not.toHaveProperty("prFilters");
+  });
+
+  it("accepts company and team filters; filters win over a stale prFilters", () => {
+    const w = BridgeWidgetSchema.parse({
+      ...base,
+      type: "issues",
+      filters: { companies: ["shoptet"], teams: ["devrel"] },
+      prFilters: { owner: "mine" },
+    });
+    expect(w.filters).toEqual({ companies: ["shoptet"], teams: ["devrel"] });
+    expect(w).not.toHaveProperty("prFilters");
   });
 
   it("rejects an empty or over-long title", () => {

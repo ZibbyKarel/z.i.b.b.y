@@ -1927,6 +1927,9 @@
       "slug": "Team code owner id",
       "slugPlaceholder": "shoptet/frontend-team",
       "slugHint": "Team as in CODEOWNERS: GitHub org/team or GitLab group/subgroup, e.g. shoptet/frontend-team",
+      "jiraProjectKey": "Jira project",
+      "jiraProjectKeyPlaceholder": "CZ3TDR1",
+      "jiraProjectKeyHint": "Key of the Jira project the team files its issues in",
       "company": "Company",
       "companyNone": "No company"
     },
@@ -3183,7 +3186,12 @@
       "title": "Widget settings",
       "name": "Name",
       "remove": "Remove from dashboard",
-      "removeConfirm": "Confirm remove"
+      "removeConfirm": "Confirm remove",
+      "filters": "Default filters"
+    },
+    "filterControls": {
+      "companies": "Companies",
+      "teams": "Teams"
     },
     "editLayout": "Edit layout",
     "catalog": {
@@ -3219,8 +3227,7 @@
           "ci": "Filter by CI",
           "owner": "Author",
           "ownerMine": "Mine",
-          "ownerOthers": "Others'",
-          "teams": "Teams"
+          "ownerOthers": "Others'"
         },
         "review": {
           "changes": "Changes requested",

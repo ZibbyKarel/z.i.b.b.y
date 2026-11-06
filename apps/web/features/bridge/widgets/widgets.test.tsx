@@ -35,8 +35,13 @@ const d = vi.hoisted(() => ({
   archived: [] as unknown[],
   archivedPending: false,
   approvals: [] as unknown[],
+  teams: [] as unknown[],
+  companies: [] as unknown[],
   pending: false,
 }));
+
+vi.mock("../../teams/queries", () => ({ useTeamsQuery: () => ({ data: d.teams }) }));
+vi.mock("../../companies", () => ({ useCompaniesQuery: () => ({ data: d.companies }) }));
 
 vi.mock("../../inbox/queries", () => ({
   useInboxItemsQuery: () => ({
@@ -144,6 +149,8 @@ beforeEach(() => {
     archived: [],
     archivedPending: false,
     approvals: [],
+    teams: [],
+    companies: [],
     pending: false,
   });
   window.localStorage.clear();
@@ -258,6 +265,27 @@ describe("IssuesWidget", () => {
     renderWithProviders(<IssuesWidget {...loaded} />);
     expect(loaded.onEmptyChange).toHaveBeenLastCalledWith(true);
   });
+
+  it("narrows by the default company/team filters, keeps the header count whole", () => {
+    d.items = [
+      item("1", { companyId: "shoptet", teamId: "devrel" }),
+      item("2", { companyId: "shoptet", teamId: "frontend" }),
+      item("3", { companyId: "acme" }),
+    ];
+    d.teams = [{ id: "devrel", name: "DevRel", companyId: "shoptet" }];
+    d.companies = [{ id: "shoptet", name: "Shoptet" }];
+    const props = setup({
+      widget: { ...widget("w", "issues"), filters: { companies: ["shoptet"], teams: ["devrel"] } },
+      filtersOpen: true,
+    });
+    renderWithProviders(<IssuesWidget {...props} />);
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(1);
+    expect(screen.getByLabelText("Firmy")).toBeInTheDocument();
+    expect(screen.getByLabelText("Týmy")).toBeInTheDocument();
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ count: 3, filtersActive: true }),
+    );
+  });
 });
 
 describe("header sync button", () => {
@@ -371,10 +399,10 @@ describe("PrsWidget", () => {
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(3); // empty = unfiltered
   });
 
-  it("starts from widget.prFilters and resets to them when they change", async () => {
+  it("starts from widget.filters and resets to them when they change", async () => {
     d.prs = [pr(1), pr(2, { bucket: "to-review", author: "jana" })];
     const props = setup({
-      widget: { ...widget("w", "prs"), prFilters: { owner: "mine" } },
+      widget: { ...widget("w", "prs"), filters: { owner: "mine" } },
       filtersOpen: true,
     });
     const { rerender } = renderWithProviders(<PrsWidget {...props} />);
@@ -388,7 +416,7 @@ describe("PrsWidget", () => {
     await userEvent.click(mineBtn());
     expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(2);
 
-    rerender(<PrsWidget {...props} widget={{ ...props.widget, prFilters: { ci: ["failing"] } }} />);
+    rerender(<PrsWidget {...props} widget={{ ...props.widget, filters: { ci: ["failing"] } }} />);
     expect(mineBtn()).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`)).toHaveAttribute(
       "aria-pressed",
@@ -396,15 +424,26 @@ describe("PrsWidget", () => {
     );
   });
 
-  it("hides the team control without teams and offers them from the PRs", () => {
-    d.prs = [pr(1)];
+  it("offers configured teams only, not the review teams GitHub reports", () => {
+    d.prs = [pr(1, { reviewTeam: "o/blue" })];
     const props = setup({ widget: widget("w", "prs"), filtersOpen: true });
     const first = renderWithProviders(<PrsWidget {...props} />);
     expect(screen.queryByLabelText("Týmy")).not.toBeInTheDocument();
     first.unmount();
-    d.prs = [pr(1, { reviewTeam: "o/blue" })];
+    d.teams = [{ id: "blue", name: "Blue", slug: "o/blue" }];
     renderWithProviders(<PrsWidget {...props} />);
     expect(screen.getByLabelText("Týmy")).toBeInTheDocument();
+  });
+
+  it("narrows by the default company filter", () => {
+    d.prs = [pr(1, { companyId: "a" }), pr(2, { companyId: "b" })];
+    d.companies = [
+      { id: "a", name: "A" },
+      { id: "b", name: "B" },
+    ];
+    const props = setup({ widget: { ...widget("w", "prs"), filters: { companies: ["b"] } } });
+    renderWithProviders(<PrsWidget {...props} />);
+    expect(screen.getAllByTestId(BoardRowTestId.Root)).toHaveLength(1);
   });
 
   it("renders no filter bar until filtersOpen", () => {

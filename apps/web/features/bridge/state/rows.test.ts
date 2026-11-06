@@ -264,7 +264,7 @@ describe("pull requests", () => {
     expect(nums({ owner: "mine" })).toEqual(["#1"]);
   });
 
-  it("teams match on reviewTeam; prTeams lists distinct slugs plus extras, sorted", () => {
+  it("teams match on reviewTeam", () => {
     const all = [
       pr({ number: 1, reviewTeam: "o/blue" }),
       pr({ number: 2, reviewTeam: "o/red" }),
@@ -275,8 +275,6 @@ describe("pull requests", () => {
       prTree("p", all, none, { teams }, ago).nodes.map((n) => n.row.number);
     expect(nums(["o/blue"])).toEqual(["#1", "#4"]);
     expect(nums(["o/blue", "o/red"])).toEqual(["#1", "#2", "#4"]);
-    expect(prTeams(all, ["o/green"]).map((o) => o.value)).toEqual(["o/blue", "o/green", "o/red"]);
-    expect(prTeams(all, ["o/green"]).map((o) => o.label)).toEqual(["blue", "green", "red"]);
     expect(prTeamLabel("o/blue")).toBe("blue");
   });
 
@@ -288,29 +286,38 @@ describe("pull requests", () => {
     });
     const picked = prTree("p", [multi], none, { teams: ["devrel-team"] }, ago);
     expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
-    expect(prTeams([multi]).map((o) => o.value)).toEqual([
-      "shoptet/backend",
-      "shoptet/devrel-team",
-    ]);
   });
 
-  it("configured team slugs become options and match PRs by team segment", () => {
+  it("offers only configured teams (by name) plus uncovered saved defaults", () => {
     const all = [
       pr({ number: 1, reviewTeam: "shoptet/devrel-team" }),
       pr({ number: 2, reviewTeam: "shoptet/other" }),
     ];
     const configured = [
-      { id: "devrel", name: "DevRel", slug: "devrel-team" },
+      { id: "devrel", name: "DevRel", slug: "devrel-team", companyId: "shoptet" },
       { id: "quiet", name: "Quiet", slug: "quiet-team" },
       { id: "noslug", name: "NoSlug" },
     ];
-    expect(prTeams(all, [], configured)).toEqual([
-      { value: "devrel-team", label: "DevRel" },
-      { value: "shoptet/other", label: "other" },
+    // The discovered `shoptet/other` is not offered; the saved `shoptet/devrel-team` is covered by DevRel.
+    expect(prTeams(configured, ["shoptet/devrel-team", "o/green"])).toEqual([
+      { value: "devrel-team", label: "DevRel", companyId: "shoptet" },
+      { value: "o/green", label: "green" },
       { value: "quiet-team", label: "Quiet" },
     ]);
     const picked = prTree("p", all, none, { teams: ["devrel-team"] }, ago);
     expect(picked.nodes.map((n) => n.row.number)).toEqual(["#1"]);
+  });
+
+  it("narrows by company", () => {
+    const all = [
+      pr({ number: 1, companyId: "a" }),
+      pr({ number: 2, companyId: "b" }),
+      pr({ number: 3 }),
+    ];
+    const nums = (companies: string[]) =>
+      prTree("p", all, none, { companies }, ago).nodes.map((n) => n.row.number);
+    expect(nums(["b"])).toEqual(["#2"]);
+    expect(nums([])).toHaveLength(3);
   });
 
   it("applies the inbox filters before anything else", () => {

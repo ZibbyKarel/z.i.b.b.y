@@ -1,6 +1,6 @@
 "use client";
 
-import { ButtonGroup, Dropdown, Icon, type IconName, type IconTone } from "@zibby/design-system";
+import { ButtonGroup, Icon, type IconName, type IconTone } from "@zibby/design-system";
 import { teamSlugMatches } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import {
@@ -11,7 +11,10 @@ import {
   type PrReviewFilter,
   type PrReviewState,
 } from "../state/prStatus";
-import { type PrFilterPick, type PrTeamOption, prOwner } from "../state/rows";
+import { useTeamsQuery } from "../../teams/queries";
+import { type PrFilterPick, prOwner, prTeams } from "../state/rows";
+import type { WidgetFiltersProps } from "./registry";
+import { OrgFilterControls, compactPick } from "./widgetFilters";
 
 export const CI_ICON: Record<PrCiState, { name: IconName; tone: IconTone }> = {
   conflict: { name: "branch", tone: "bad" },
@@ -35,32 +38,19 @@ const REVIEW_FILTER_ICON: Record<PrReviewFilter, { name: IconName; tone: IconTon
   approved: REVIEW_ICON.approved,
 };
 
-/** Empty groups are dropped: an absent group doesn't filter. The legacy `mine` flag becomes `owner`. */
-function compact(pick: PrFilterPick): PrFilterPick {
-  const next: PrFilterPick = {};
-  if (pick.review?.length) next.review = pick.review;
-  if (pick.ci?.length) next.ci = pick.ci;
-  const owner = prOwner(pick);
-  if (owner) next.owner = owner;
-  if (pick.teams?.length) next.teams = pick.teams;
-  return next;
-}
-
-export interface PrFilterControlsProps {
-  pick: PrFilterPick;
-  onChange: (next: PrFilterPick) => void;
-  /** Team slugs on offer; the team control is hidden when empty. */
-  teams: PrTeamOption[];
+export interface PrFilterControlsProps extends WidgetFiltersProps {
   /** Per-option counts shown on the buttons; omitted in the settings dialog. */
   counts?: { review: Record<PrReviewFilter, number>; ci: Record<PrCiFilter, number> };
 }
 
-/** The PR widget's filters (review, CI, owner, teams), shared by the widget and its settings. */
-export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterControlsProps) {
+/** The PR widget's filters (review, CI, owner, company, team), shared by the widget and its settings. */
+export function PrFilterControls({ pick, onChange, counts }: PrFilterControlsProps) {
   const t = useTranslations("bridge.widgets.prs");
+  const { data: configured } = useTeamsQuery();
+  const teams = prTeams(configured, pick.teams);
   // `mine` is dropped from the base so an explicit owner patch (or its removal) wins over it.
   const set = (patch: PrFilterPick) => {
-    onChange(compact({ ...pick, mine: undefined, owner: prOwner(pick), ...patch }));
+    onChange(compactPick({ ...pick, mine: undefined, owner: prOwner(pick), ...patch }));
   };
   const option = <K extends string>(
     id: K,
@@ -109,18 +99,7 @@ export function PrFilterControls({ pick, onChange, teams, counts }: PrFilterCont
         ]}
         value={prOwner(pick) ?? ""}
       />
-      {teams.length > 0 ? (
-        <Dropdown
-          compact
-          multi
-          aria-label={t("filter.teams")}
-          onChange={(v) => set({ teams: v })}
-          options={teams}
-          placeholder={t("filter.teams")}
-          size="sm"
-          value={pickedTeams}
-        />
-      ) : null}
+      <OrgFilterControls onChange={set} pick={{ ...pick, teams: pickedTeams }} teams={teams} />
     </>
   );
 }

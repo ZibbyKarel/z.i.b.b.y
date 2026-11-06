@@ -85,7 +85,7 @@ function BridgeWidgetHost({
       onResizePointerDown={onDragStart && ((e, corner) => onDragStart(id, corner, e))}
       onSettings={() => onSettings(id)}
       onToggleCollapse={() => state.toggleCollapsed(id)}
-      onToggleFilters={def.filterable ? () => setFiltersOpen((o) => !o) : undefined}
+      onToggleFilters={def.Filters ? () => setFiltersOpen((o) => !o) : undefined}
       refreshLabel={t("bridge.refresh")}
       refreshing={info?.refreshing}
       resizeCornerLabels={{
