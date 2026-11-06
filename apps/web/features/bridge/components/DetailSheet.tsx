@@ -20,6 +20,8 @@ export interface DetailSheetProps {
   onClose: () => void;
   /** Reports the side the sheet opened to (the open row drops its ink rule on that edge). */
   onSideChange?: (side: "left" | "right") => void;
+  /** Lets a sheet open a linked entity (issue → PR → run …). */
+  onOpen?: (selection: BridgeSelection) => void;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface DetailSheetProps {
  * wrapper resizes, when any widget body scrolls, and on window resize. J/K step through the rows
  * of the row's widget.
  */
-export function DetailSheet({ selection, onClose, onSideChange }: DetailSheetProps) {
+export function DetailSheet({ selection, onClose, onSideChange, onOpen }: DetailSheetProps) {
   const marker = useRef<HTMLSpanElement>(null);
   const root = useRef<HTMLElement | null>(null);
   const [anchor, setAnchor] = useState<SheetAnchor | null>(null);
@@ -78,7 +80,7 @@ export function DetailSheet({ selection, onClose, onSideChange }: DetailSheetPro
   }, [key]);
 
   const kind = selection && anchor ? selection.kind : null;
-  const common = selection && anchor ? { id: selection.id, anchor, onClose } : null;
+  const common = selection && anchor ? { id: selection.id, anchor, onClose, onOpen } : null;
   return (
     <>
       <span hidden data-testid={DetailSheetTestId.Host} ref={marker} />

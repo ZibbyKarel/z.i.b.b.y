@@ -9,7 +9,7 @@ import { useApprovalSheetParam } from "../../../approvals/useApprovalSheetParam"
 import { useTaskRunQuery } from "../../../runs/queries/useTaskRunQuery";
 import { RunDetail, RunHeaderActions } from "../../../runs/components/RunDetail";
 import { runStateTone } from "../../../runs/run";
-import { type SheetProps, geometry } from "./sheetTypes";
+import { type SheetProps, geometry, selectionFor } from "./sheetTypes";
 
 /**
  * Run detail from `GET /api/tasks/runs/:id`: the very same `RunDetail` the run page renders
@@ -18,7 +18,7 @@ import { type SheetProps, geometry } from "./sheetTypes";
  * approval card opens the approval detail (where the gated phase's output lives). The run / task
  * pages are one footer click away.
  */
-export function RunSheet({ id, anchor, onClose }: SheetProps) {
+export function RunSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
   const approvalSheet = useApprovalSheetParam();
@@ -68,7 +68,15 @@ export function RunSheet({ id, anchor, onClose }: SheetProps) {
       title={run.title || run.taskTitle || run.runId}
       tone={normalizeStateTone(runStateTone(run.status) ?? "idle")}
     >
-      <RunDetail embedded onOpenApproval={openApproval} run={run} />
+      <RunDetail
+        embedded
+        onOpenApproval={openApproval}
+        onOpenIssue={
+          onOpen && ((projectId, itemId) => onOpen(selectionFor("issue", `${projectId}/${itemId}`)))
+        }
+        onOpenPr={onOpen && ((url) => onOpen(selectionFor("pr", url)))}
+        run={run}
+      />
     </AnchoredSheet>
   );
 }

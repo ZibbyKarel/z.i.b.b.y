@@ -115,6 +115,26 @@ export const INBOX_PR_SECTIONS = [
 export const InboxPrSectionSchema = z.enum(INBOX_PR_SECTIONS);
 export type InboxPrSection = z.infer<typeof InboxPrSectionSchema>;
 
+/**
+ * One ZIBBY run of a PR: its task (`runRef` = the run detail id, else the task id), the action
+ * and that action's own state (a `running` one whose task died reads `failed`).
+ */
+export const InboxPrRunSchema = z.object({
+  taskId: z.string().min(1),
+  runRef: z.string().min(1).optional(),
+  kind: z.enum(["review", "address-comments", "fix-ci", "rebase"]),
+  state: z.union([
+    PrReviewStateSchema,
+    PrAddressCommentsStateSchema,
+    PrFixCiStateSchema,
+    PrRebaseStateSchema,
+  ]),
+  startedAt: IsoDateTimeSchema,
+  finishedAt: IsoDateTimeSchema.optional(),
+  auto: z.literal(true).optional(),
+});
+export type InboxPrRun = z.infer<typeof InboxPrRunSchema>;
+
 export const InboxPrSchema = z.object({
   /** Only GitHub today; the field keeps the list open for another source. */
   source: z.literal("github"),
@@ -212,6 +232,8 @@ export const InboxPrSchema = z.object({
       finishedAt: IsoDateTimeSchema.optional(),
     })
     .optional(),
+  /** Every ZIBBY run of this PR (review, address comments, fix CI, rebase), newest first. */
+  runs: z.array(InboxPrRunSchema).optional(),
   projectId: z.string().min(1),
   companyId: z.string().min(1).optional(),
   teamId: z.string().min(1).optional(),

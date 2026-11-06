@@ -1502,13 +1502,38 @@
         "title": "Běh nenalezen",
         "body": "Běh s ID {id} neexistuje. Možná byl smazán.",
         "back": "← Všechny běhy"
-      }
+      },
+      "outputPr": "Pull request {ref}"
     },
     "artifacts": {
       "title": "Artefakty",
       "openPr": "Otevřít PR",
       "openFolder": "Otevřít složku",
       "openFile": "Otevřít {name}"
+    },
+    "entity": {
+      "title": "Běhy",
+      "latest": "Poslední",
+      "auto": "auto",
+      "linkedIssue": "Úkol {ref}",
+      "linkedIssues": "Úkoly",
+      "kind": {
+        "review": "Code review",
+        "address-comments": "Zpracování komentářů",
+        "fix-ci": "Oprava CI",
+        "rebase": "Rebase",
+        "implementation": "Implementace"
+      },
+      "state": {
+        "running": "Běží",
+        "awaiting-approval": "Čeká na schválení",
+        "posted": "Odesláno",
+        "pushed": "Pushnuto",
+        "discarded": "Zahozeno",
+        "failed": "Selhalo",
+        "awaiting-merge": "Čeká na merge",
+        "done": "Hotovo"
+      }
     }
   },
   "gates": {

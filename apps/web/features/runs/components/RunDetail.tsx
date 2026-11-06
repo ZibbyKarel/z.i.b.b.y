@@ -53,6 +53,9 @@ export interface RunDetailProps {
   embedded?: boolean;
   /** Opens the approval's detail sheet from its card. */
   onOpenApproval?: (approvalId: string) => void;
+  /** Bridge sheet: open the run's PR / source issue in place. */
+  onOpenPr?: (url: string) => void;
+  onOpenIssue?: (projectId: string, itemId: string) => void;
 }
 
 type View = "live" | "input" | "output";
@@ -111,7 +114,13 @@ const pad2 = (n: number) => String(n).padStart(2, "0");
  * the composer. Embedded (sheet): status row, metrics, approval card (with the gated phase's output inside), then the tabs panel
  * with the rail as the LIVE tab's sidebar.
  */
-export function RunDetail({ run, embedded, onOpenApproval }: RunDetailProps) {
+export function RunDetail({
+  run,
+  embedded,
+  onOpenApproval,
+  onOpenPr,
+  onOpenIssue,
+}: RunDetailProps) {
   const t = useTranslations("runs.detail");
   const router = useRouter();
   const [view, setView] = useState<View>("live");
@@ -241,6 +250,8 @@ export function RunDetail({ run, embedded, onOpenApproval }: RunDetailProps) {
         compact={embedded}
         metrics={metrics}
         mode={mode}
+        onOpenIssue={onOpenIssue}
+        onOpenPr={onOpenPr}
         progressPct={progressPct}
         run={run}
       />

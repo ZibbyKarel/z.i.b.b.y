@@ -1502,13 +1502,38 @@
         "title": "Run not found",
         "body": "There is no run with ID {id}. It may have been deleted.",
         "back": "← All runs"
-      }
+      },
+      "outputPr": "Pull request {ref}"
     },
     "artifacts": {
       "title": "Artifacts",
       "openPr": "Open PR",
       "openFolder": "Open folder",
       "openFile": "Open {name}"
+    },
+    "entity": {
+      "title": "Runs",
+      "latest": "Latest",
+      "auto": "auto",
+      "linkedIssue": "Issue {ref}",
+      "linkedIssues": "Issues",
+      "kind": {
+        "review": "Code review",
+        "address-comments": "Address comments",
+        "fix-ci": "Fix CI",
+        "rebase": "Rebase",
+        "implementation": "Implementation"
+      },
+      "state": {
+        "running": "Running",
+        "awaiting-approval": "Awaiting approval",
+        "posted": "Posted",
+        "pushed": "Pushed",
+        "discarded": "Discarded",
+        "failed": "Failed",
+        "awaiting-merge": "Awaiting merge",
+        "done": "Done"
+      }
     }
   },
   "gates": {

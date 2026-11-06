@@ -11,10 +11,11 @@ import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton"
 import { ChatProvider, useChat } from "../../../chat/ChatContext";
 import { fireEvent, renderWithProviders, screen, within } from "../../../../test/render";
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
+import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
 import { PrSheet } from "./PrSheet";
 
 const { hooks } = vi.hoisted(() => ({
-  hooks: { prs: [] as InboxPr[], diff: "" },
+  hooks: { prs: [] as InboxPr[], diff: "", items: [] as unknown[] },
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -33,17 +34,13 @@ vi.mock("../../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../../../inbox/queries", () => ({
+  useInboxItemsQuery: () => ({ data: { items: hooks.items, epics: [] } }),
   useInboxPrsQuery: () => ({ data: { prs: hooks.prs, errors: [] } }),
   useInboxPrThreadsQuery: () => ({ data: [] }),
   useInboxPrDiffQuery: () => ({
     data: { diff: hooks.diff, truncated: false },
     isPending: false,
   }),
-}));
-vi.mock("../../../approvals", () => ({
-  useApprovalsQuery: () => ({ data: [] }),
-  useApproveMutation: () => ({ mutate: vi.fn(), isPending: false }),
-  useRejectMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
 const anchor = {
@@ -86,6 +83,7 @@ const show = (p: InboxPr, all: InboxPr[] = [p]) => {
 afterEach(() => {
   hooks.prs = [];
   hooks.diff = "";
+  hooks.items = [];
 });
 
 describe("PrSheet action buttons", () => {
@@ -251,5 +249,72 @@ describe("PrSheet chat about", () => {
     );
     fireEvent.click(screen.getByTestId(ChatAboutButtonTestId.Root));
     expect(screen.getByTestId("probe")).toHaveTextContent(p.url);
+  });
+});
+
+describe("PrSheet runs and issue link", () => {
+  it("lists the PR's runs newest first, latest marked; a row opens the run", () => {
+    const onOpen = vi.fn();
+    const p = pr(30, {
+      runs: [
+        {
+          taskId: "t2",
+          runRef: "run-2",
+          kind: "review",
+          state: "awaiting-approval",
+          startedAt: "2026-01-02T00:00:00.000Z",
+        },
+        { taskId: "t1", kind: "fix-ci", state: "failed", startedAt: "2026-01-01T00:00:00.000Z" },
+      ],
+    });
+    hooks.prs = [p];
+    renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={() => {}} onOpen={onOpen} />);
+    const rows = screen.getAllByTestId(EntityRunListTestId.Row);
+    expect(rows).toHaveLength(2);
+    expect(within(rows[0]!).getByTestId(EntityRunListTestId.Latest)).toBeInTheDocument();
+    expect(within(rows[1]!).queryByTestId(EntityRunListTestId.Latest)).toBeNull();
+    fireEvent.click(rows[0]!);
+    expect(onOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "run", id: "run-2", key: "runs:run-2" }),
+    );
+    fireEvent.click(rows[1]!);
+    expect(onOpen).toHaveBeenLastCalledWith(expect.objectContaining({ id: "t1" }));
+  });
+
+  it("renders no approval card and no runs section without runs", () => {
+    show(pr(31, {}));
+    expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
+  });
+
+  it("links the issue that owns the PR and opens its sheet", () => {
+    const p = pr(32, {});
+    hooks.items = [
+      {
+        id: "i1",
+        projectId: "api",
+        name: "Fix",
+        lifecycle: "pr-open",
+        source: { kind: "jira", externalKey: "ZB-9", url: null },
+        project: { id: "api", name: "API" },
+        runs: [
+          {
+            taskId: "t",
+            startedAt: "2026-01-01T00:00:00.000Z",
+            outcome: "awaiting-merge",
+            prNumber: 32,
+            prUrl: p.url,
+          },
+        ],
+        hidden: false,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+    ];
+    hooks.prs = [p];
+    const onOpen = vi.fn();
+    renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={() => {}} onOpen={onOpen} />);
+    fireEvent.click(screen.getByText(/ZB-9/));
+    expect(onOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "issue", id: "api/i1", widgetId: "issues" }),
+    );
   });
 });

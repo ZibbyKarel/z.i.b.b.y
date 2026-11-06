@@ -7,11 +7,13 @@ import {
   type DetailTableRow,
   Markdown,
   NeedsYouCard,
+  Pressable,
   SheetAction,
   SheetBlock,
   SheetSection,
   SheetText,
   type SheetTone,
+  Typography,
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
@@ -19,7 +21,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { issueChatAbout } from "../../../chat/chatAbout";
-import { useInboxItemsQuery } from "../../../inbox/queries";
+import { useInboxItemsQuery, useInboxPrsQuery } from "../../../inbox/queries";
 import {
   chainKey,
   isSourceStatusShown,
@@ -27,12 +29,15 @@ import {
   latestTaskId,
   linkedPrOf,
   newTaskFromIssueHref,
+  prListHref,
   zibbyStatus,
 } from "../../../inbox/inbox";
 import { issueHref } from "../../../inbox/components/IssueRow";
 import { compactAgo } from "../../../../utils/time";
 import { useTeamsQuery } from "../../../teams";
-import { type SheetProps, geometry } from "./sheetTypes";
+import { EntityRunList, issueRunTone } from "../../../runs/components/EntityRunList";
+import { ExternalAnchor } from "../../../inbox/components/links";
+import { type SheetProps, geometry, selectionFor } from "./sheetTypes";
 
 const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
   new: "idle",
@@ -42,10 +47,11 @@ const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
 };
 
 /** Issue detail: description, details table; the Issues screen's primary action sits top-right. */
-export function IssueSheet({ id, anchor, onClose }: SheetProps) {
+export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
   const { data } = useInboxItemsQuery();
+  const { data: prsData } = useInboxPrsQuery();
   const { data: teams } = useTeamsQuery();
   const [now] = useState(() => Date.now());
 
@@ -63,12 +69,42 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
   const stateLabel = sourceShown ? item.sourceStatus?.name : t(`inboxPage.status.${status}`);
   const updated = compactAgo(item.updatedAt, now);
 
+  const openPr = (url: string) =>
+    onOpen ? onOpen(selectionFor("pr", url)) : router.push(prListHref(url) as Route);
+
   const rows: DetailTableRow[] = [
     { cells: [t("bridge.sheet.issue.epic"), epic ? `${epic.key ?? ""} · ${epic.title}` : "—"] },
     { cells: [t("bridge.sheet.issue.team"), team ?? t("bridge.sheet.issue.noTeam")] },
     { cells: [t("bridge.sheet.issue.source"), `${source} · ${itemKey(item)}`] },
-    { cells: [t("bridge.sheet.issue.pr"), pr ? `#${pr.number}` : none] },
+    {
+      cells: [
+        t("bridge.sheet.issue.pr"),
+        pr ? (
+          prsData?.prs.some((p) => p.url === pr.url) ? (
+            <Pressable onClick={() => openPr(pr.url)}>
+              <Typography as="span" type="code">{`#${pr.number} →`}</Typography>
+            </Pressable>
+          ) : (
+            <ExternalAnchor href={pr.url}>{`#${pr.number}`}</ExternalAnchor>
+          )
+        ) : (
+          none
+        ),
+      ],
+    },
   ];
+  const runRows = [...item.runs]
+    .sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))
+    .map((r) => ({
+      id: r.runRef ?? r.taskId,
+      label: r.prNumber
+        ? `${t("runs.entity.kind.implementation")} · #${r.prNumber}`
+        : t("runs.entity.kind.implementation"),
+      stateLabel: t(`runs.entity.state.${r.outcome}`),
+      tone: issueRunTone(r.outcome),
+      startedAt: r.startedAt,
+      ...(r.finishedAt && { finishedAt: r.finishedAt }),
+    }));
 
   const href = issueHref(item);
   const primary =
@@ -135,6 +171,18 @@ export function IssueSheet({ id, anchor, onClose }: SheetProps) {
             <SheetText lines={[t("bridge.sheet.issue.noDescription")]} />
           )}
         </SheetBlock>
+        {runRows.length > 0 ? (
+          <SheetBlock label={t("runs.entity.title")}>
+            <EntityRunList
+              onOpen={(runId) =>
+                onOpen
+                  ? onOpen(selectionFor("run", runId))
+                  : router.push(`/activity/runs/${runId}` as Route)
+              }
+              rows={runRows}
+            />
+          </SheetBlock>
+        ) : null}
         <SheetBlock label={t("bridge.sheet.details")}>
           <DetailTable rows={rows} />
         </SheetBlock>

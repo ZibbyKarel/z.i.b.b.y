@@ -6,9 +6,11 @@ import {
   Icon,
   type IconName,
   type IconTone,
+  Pressable,
   SheetBlock,
   SheetSection,
   type SheetTone,
+  Stack,
   StackCrumbs,
   StatCell,
   StatCellGrid,
@@ -16,15 +18,19 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import dynamic from "next/dynamic";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useApprovalsQuery } from "../../../approvals";
 import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { PrActionButtons } from "../../../inbox/components/PrActionButtons";
 import { PrReviewButton } from "../../../inbox/components/PrReviewButton";
-import { prBaseLabel, prChildren } from "../../../inbox/inbox";
+import { chainKey, itemKey, linkedPrOf, prBaseLabel, prChildren } from "../../../inbox/inbox";
+import { issueHref } from "../../../inbox/components/IssueRow";
+import { EntityRunList, prRunTone } from "../../../runs/components/EntityRunList";
 import { prChatAbout } from "../../../inbox/prChatAbout";
 import { PrThreads } from "../../../inbox/components/PrThreads";
 import {
+  useInboxItemsQuery,
   useInboxPrDiffQuery,
   useInboxPrThreadsQuery,
   useInboxPrsQuery,
@@ -37,8 +43,7 @@ import {
   prStatus,
   prStatusKey,
 } from "../../state/prStatus";
-import { ApprovalNeed } from "./ApprovalNeed";
-import { type SheetProps, geometry } from "./sheetTypes";
+import { type SheetProps, geometry, selectionFor } from "./sheetTypes";
 
 // The diff renderer is heavy and client-only — same lazy load as the inbox PR detail.
 const PrDiff = dynamic(
@@ -127,10 +132,11 @@ function reviewCell(pr: InboxPr): {
  * Header actions: the inbox's `PrActionButtons` (code review for others' PRs; address / fix CI /
  * rebase / merge only on my own, decided by the shared predicates).
  */
-export function PrSheet({ id, anchor, onClose }: SheetProps) {
+export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
+  const router = useRouter();
   const { data } = useInboxPrsQuery();
-  const { data: approvals = [] } = useApprovalsQuery();
+  const { data: itemsData } = useInboxItemsQuery();
   const [now] = useState(() => Date.now());
   const all = useMemo(() => data?.prs ?? [], [data]);
   const pr = all.find((p) => p.url === id || String(p.number) === id);
@@ -151,13 +157,16 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
   const key = prStatusKey(pr);
   const review = reviewCell(pr);
   const path = [...prStack(pr, all), pr, ...prChildren(pr, all)];
-  const taskIds = [
-    pr.codeReview?.taskId,
-    pr.addressComments?.taskId,
-    pr.fixCi?.taskId,
-    pr.rebase?.taskId,
-  ];
-  const approval = approvals.find((a) => taskIds.includes(a.runId));
+  const issues = (itemsData?.items ?? []).filter((i) => linkedPrOf(i)?.url === pr.url);
+  const runRows = (pr.runs ?? []).map((r) => ({
+    id: r.runRef ?? r.taskId,
+    label: t(`runs.entity.kind.${r.kind}`),
+    stateLabel: t(`runs.entity.state.${r.state}`),
+    tone: prRunTone(r.state),
+    startedAt: r.startedAt,
+    ...(r.finishedAt && { finishedAt: r.finishedAt }),
+    ...(r.auto && { auto: r.auto }),
+  }));
   const added = files.reduce((n, f) => n + f.added, 0);
   const removed = files.reduce((n, f) => n + f.removed, 0);
   const dash = "—";
@@ -190,7 +199,6 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
       titleHref={pr.url}
       tone={tone}
     >
-      {approval ? <ApprovalNeed approval={approval} /> : null}
       <StatCellGrid>
         <StatCell
           icon={statIcon(REVIEW_ICON[review.key])}
@@ -223,6 +231,41 @@ export function PrSheet({ id, anchor, onClose }: SheetProps) {
           }
         />
       </StatCellGrid>
+      {issues.length > 0 ? (
+        <Stack wrap align="center" direction="row" gap="150">
+          <Typography as="span" type="labelSm" variant="secondary">
+            {t("runs.entity.linkedIssues")}
+          </Typography>
+          {issues.map((i) => (
+            <Pressable
+              key={chainKey(i)}
+              onClick={() =>
+                onOpen
+                  ? onOpen(selectionFor("issue", chainKey(i)))
+                  : router.push(issueHref(i) as Route)
+              }
+            >
+              <Typography as="span" type="code">
+                {`${itemKey(i)} →`}
+              </Typography>
+            </Pressable>
+          ))}
+        </Stack>
+      ) : null}
+      {runRows.length > 0 ? (
+        <SheetSection>
+          <SheetBlock label={t("runs.entity.title")}>
+            <EntityRunList
+              onOpen={(runId) =>
+                onOpen
+                  ? onOpen(selectionFor("run", runId))
+                  : router.push(`/activity/runs/${runId}` as Route)
+              }
+              rows={runRows}
+            />
+          </SheetBlock>
+        </SheetSection>
+      ) : null}
       {path.length > 1 ? (
         <StackCrumbs
           crumbs={path.map((p) => ({

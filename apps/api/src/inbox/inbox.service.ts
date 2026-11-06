@@ -7,6 +7,7 @@ import type {
   InboxPrBlocker,
   InboxPrCi,
   InboxPrReview,
+  InboxPrRun,
   InboxPrSection,
   InboxPrsResponse,
   InboxSourceError,
@@ -224,7 +225,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
 
   /** Cached GitHub classification + the (uncached, local) review/rebase/address-comments task state per PR. */
   async listPrs(refresh = false): Promise<InboxPrsResponse> {
-    const [result, { reviews, rebases, addressings, fixes }] = await Promise.all([
+    const [result, { reviews, rebases, addressings, fixes, runs }] = await Promise.all([
       this.cachedPrs(refresh),
       this.prTaskStates(),
     ]);
@@ -236,12 +237,14 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         const rebase = rebases.get(key);
         const addressComments = addressings.get(key);
         const fixCi = fixes.get(key);
+        const prRuns = runs.get(key);
         return {
           ...pr,
           ...(codeReview ? { codeReview } : {}),
           ...(rebase ? { rebase } : {}),
           ...(addressComments ? { addressComments } : {}),
           ...(fixCi ? { fixCi } : {}),
+          ...(prRuns ? { runs: prRuns.reverse() } : {}),
         };
       }),
     };
@@ -270,15 +273,41 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     rebases: Map<string, NonNullable<InboxPr["rebase"]>>;
     addressings: Map<string, NonNullable<InboxPr["addressComments"]>>;
     fixes: Map<string, NonNullable<InboxPr["fixCi"]>>;
+    runs: Map<string, InboxPrRun[]>;
   }> {
     const tasks = await this.tasks.list().catch(() => []);
     const reviews = new Map<string, NonNullable<InboxPr["codeReview"]>>();
     const rebases = new Map<string, NonNullable<InboxPr["rebase"]>>();
     const addressings = new Map<string, NonNullable<InboxPr["addressComments"]>>();
     const fixes = new Map<string, NonNullable<InboxPr["fixCi"]>>();
+    const runs = new Map<string, InboxPrRun[]>();
     for (const task of [...tasks].sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
       const dead = isDeadTask(task);
       const { prReview: review, prRebase: rebase, prAddressComments: fix } = task;
+      // Oldest first here; `listPrs` reverses each list to newest first.
+      const addRun = (
+        pr: { repo: string; number: number; state: InboxPrRun["state"] },
+        kind: InboxPrRun["kind"],
+        extra: { finishedAt?: string | undefined; auto?: true | undefined } = {},
+      ) => {
+        const key = `${pr.repo.toLowerCase()}#${pr.number}`;
+        runs.set(key, [
+          ...(runs.get(key) ?? []),
+          {
+            taskId: task.id,
+            ...(task.runRef ? { runRef: task.runRef } : {}),
+            kind,
+            state: pr.state === "running" && dead ? "failed" : pr.state,
+            startedAt: task.createdAt,
+            ...(extra.finishedAt ? { finishedAt: extra.finishedAt } : {}),
+            ...(extra.auto ? { auto: true as const } : {}),
+          },
+        ]);
+      };
+      if (review) addRun(review, "review", review);
+      if (fix) addRun(fix, "address-comments", fix);
+      if (task.prFixCi) addRun(task.prFixCi, "fix-ci", task.prFixCi);
+      if (rebase) addRun(rebase, "rebase");
       if (review) {
         reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
           taskId: task.id,
@@ -310,7 +339,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
         });
       }
     }
-    return { reviews, rebases, addressings, fixes };
+    return { reviews, rebases, addressings, fixes, runs };
   }
 
   private async fetchPrs(): Promise<InboxPrsResponse> {

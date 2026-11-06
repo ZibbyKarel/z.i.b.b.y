@@ -35,6 +35,7 @@ export enum RunDetailHeaderTestId {
   ProjectLink = "run-detail-project-link",
   SourcePrLink = "run-detail-source-pr-link",
   SourceIssueLink = "run-detail-source-issue-link",
+  OutputPrLink = "run-detail-output-pr-link",
   AssignProject = "run-detail-assign-project",
   Progress = "run-detail-progress",
   Metrics = "run-detail-metrics",
@@ -52,6 +53,10 @@ export interface RunDetailHeaderProps {
   compact?: boolean;
   /** Rendered under the metrics strip (the sheet's approval banner). */
   afterMetrics?: ReactNode;
+  /** Open a PR in place (bridge sheet) instead of navigating to the PR list. */
+  onOpenPr?: (url: string) => void;
+  /** Open the source issue in place (bridge sheet) instead of navigating to its page. */
+  onOpenIssue?: (projectId: string, itemId: string) => void;
 }
 
 function Sep() {
@@ -96,6 +101,8 @@ export function RunDetailHeader({
   actions,
   compact,
   afterMetrics,
+  onOpenPr,
+  onOpenIssue,
 }: RunDetailHeaderProps) {
   const t = useTranslations("runs");
   const tCommon = useTranslations("common");
@@ -104,6 +111,11 @@ export function RunDetailHeader({
   const symbolOf = useAgentSymbol();
   const { taskId, projectId, department, sourcePr } = run;
   const sourcePrRef = sourcePr ? `${sourcePr.repo}#${sourcePr.number}` : "";
+  const openPr = (url: string) =>
+    onOpenPr ? onOpenPr(url) : router.push(prListHref(url) as Route);
+  // An implementation run's own PR (the source PR is the one a review-type run acts on).
+  const outputPr = run.prOutput && run.prOutput.url !== sourcePr?.url ? run.prOutput : undefined;
+  const outputPrRef = outputPr ? `#${outputPr.url.match(/\/pull\/(\d+)/)?.[1] ?? "PR"}` : "";
 
   return (
     <Stack data-testid={RunDetailHeaderTestId.Root} gap="0">
@@ -198,10 +210,24 @@ export function RunDetailHeader({
                   <Pressable
                     aria-label={t("detail.sourcePr", { ref: sourcePrRef })}
                     data-testid={RunDetailHeaderTestId.SourcePrLink}
-                    onClick={() => router.push(prListHref(sourcePr.url) as Route)}
+                    onClick={() => openPr(sourcePr.url)}
                   >
                     <Typography as="span" type="code">
                       {`${sourcePrRef} →`}
+                    </Typography>
+                  </Pressable>
+                </>
+              )}
+              {outputPr && (
+                <>
+                  <Sep />
+                  <Pressable
+                    aria-label={t("detail.outputPr", { ref: outputPrRef })}
+                    data-testid={RunDetailHeaderTestId.OutputPrLink}
+                    onClick={() => openPr(outputPr.url)}
+                  >
+                    <Typography as="span" type="code">
+                      {`${outputPrRef} →`}
                     </Typography>
                   </Pressable>
                 </>
@@ -215,9 +241,11 @@ export function RunDetailHeader({
                     })}
                     data-testid={RunDetailHeaderTestId.SourceIssueLink}
                     onClick={() =>
-                      router.push(
-                        `/dashboard/inbox/issues/${projectId}/${run.roadmapItemId}` as Route,
-                      )
+                      onOpenIssue
+                        ? onOpenIssue(projectId, run.roadmapItemId as string)
+                        : router.push(
+                            `/dashboard/inbox/issues/${projectId}/${run.roadmapItemId}` as Route,
+                          )
                     }
                   >
                     <Typography as="span" type="code">

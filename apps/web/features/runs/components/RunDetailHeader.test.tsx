@@ -150,4 +150,38 @@ describe("RunDetailHeader", () => {
       expect(screen.queryByTestId(RunDetailHeaderTestId.SourceIssueLink)).not.toBeInTheDocument();
     });
   });
+
+  it("opens the source PR / issue / output PR in place via the callbacks", async () => {
+    const onOpenPr = vi.fn();
+    const onOpenIssue = vi.fn();
+    render(
+      <RunDetailHeader
+        actions={null}
+        metrics={metrics}
+        mode="running"
+        onOpenIssue={onOpenIssue}
+        onOpenPr={onOpenPr}
+        progressPct={0}
+        run={{
+          ...run,
+          projectId: "p1",
+          roadmapItemId: "i1",
+          sourcePr: {
+            kind: "review",
+            repo: "a/b",
+            number: 3,
+            url: "https://github.com/a/b/pull/3",
+          },
+          prOutput: { url: "https://github.com/a/b/pull/9", additions: 1, deletions: 0 },
+        }}
+      />,
+    );
+    await userEvent.click(screen.getByTestId(RunDetailHeaderTestId.SourcePrLink));
+    expect(onOpenPr).toHaveBeenLastCalledWith("https://github.com/a/b/pull/3");
+    await userEvent.click(screen.getByTestId(RunDetailHeaderTestId.OutputPrLink));
+    expect(onOpenPr).toHaveBeenLastCalledWith("https://github.com/a/b/pull/9");
+    await userEvent.click(screen.getByTestId(RunDetailHeaderTestId.SourceIssueLink));
+    expect(onOpenIssue).toHaveBeenCalledWith("p1", "i1");
+    expect(push).not.toHaveBeenCalled();
+  });
 });

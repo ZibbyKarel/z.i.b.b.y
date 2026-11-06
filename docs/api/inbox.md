@@ -120,7 +120,10 @@ A failing repo lands in `errors` and never fails the request. The GitHub part is
 cached in memory for 30 s; any successful merge (`ProjectPrService.onMerged`) clears
 it. `codeReview` (the latest review task, of any level, per `repo#number`, from the tasks
 store) is joined on every read, uncached. A `running` review whose task failed or
-whose run errored reads `failed`.
+whose run errored reads `failed`. `runs` lists every ZIBBY run of the PR (`kind`: review,
+address-comments, fix-ci, rebase; the action's `state`, same dead-task rule; `runRef` /
+`taskId` for the run detail), newest first. The dashboard's PR sheet shows it in place of
+approval cards: approving happens on the run detail.
 
 Each row carries `updatedAt` (GitHub's `updated_at`: any comment, review, push or
 re-request bumps it). `codeReview.finishedAt` / `addressComments.finishedAt` are stamped

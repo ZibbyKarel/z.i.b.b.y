@@ -716,6 +716,13 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[1]?.codeReview).toEqual({ taskId: "t2", state: "awaiting-approval" });
     expect(byNumber[2]?.codeReview).toEqual({ taskId: "t3", state: "failed" });
     expect(byNumber[3]?.codeReview).toBeUndefined();
+    // Every run of the PR, newest first.
+    expect(byNumber[1]?.runs?.map((r) => [r.taskId, r.kind, r.state])).toEqual([
+      ["t2", "review", "awaiting-approval"],
+      ["t1", "review", "posted"],
+    ]);
+    expect(byNumber[2]?.runs?.[0]).toMatchObject({ taskId: "t3", state: "failed" });
+    expect(byNumber[3]?.runs).toBeUndefined();
   });
 
   it("counts unresolved review threads only on my PRs", async () => {

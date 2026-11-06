@@ -7,17 +7,24 @@ import {
 } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
+import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
 import { IssueSheet } from "./IssueSheet";
 import { TaskSheet } from "./TaskSheet";
 
 const { hooks, approve, push } = vi.hoisted(() => ({
-  hooks: { items: [] as unknown[], task: undefined as unknown, approvals: [] as unknown[] },
+  hooks: {
+    prs: [] as unknown[],
+    items: [] as unknown[],
+    task: undefined as unknown,
+    approvals: [] as unknown[],
+  },
   approve: vi.fn(),
   push: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 vi.mock("../../../inbox/queries", () => ({
   useInboxItemsQuery: () => ({ data: { items: hooks.items, epics: [] } }),
+  useInboxPrsQuery: () => ({ data: { prs: hooks.prs, errors: [] } }),
 }));
 vi.mock("../../../teams", () => ({ useTeamsQuery: () => ({ data: [] }) }));
 vi.mock("../../../tasks", () => ({ useTaskQuery: () => ({ data: hooks.task }) }));
@@ -53,6 +60,7 @@ const item = (lifecycle: string) => ({
 
 afterEach(() => {
   hooks.items = [];
+  hooks.prs = [];
   hooks.approvals = [];
   approve.mockReset();
   push.mockReset();
@@ -124,6 +132,64 @@ describe("IssueSheet", () => {
     hooks.items = [item("running")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.queryByText("Zpracovat do úkolu")).toBeNull();
+  });
+
+  const withRuns = () => ({
+    ...item("running"),
+    runs: [
+      { taskId: "t1", startedAt: "2026-01-01T00:00:00.000Z", outcome: "failed" },
+      {
+        taskId: "t2",
+        runRef: "run-2",
+        startedAt: "2026-01-02T00:00:00.000Z",
+        outcome: "awaiting-merge",
+        prNumber: 7,
+        prUrl: "https://github.com/a/b/pull/7",
+      },
+    ],
+  });
+
+  it("lists runs newest first with the latest marked and opens a run", () => {
+    hooks.items = [withRuns()];
+    const onOpen = vi.fn();
+    renderWithProviders(
+      <IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} onOpen={onOpen} />,
+    );
+    const rows = screen.getAllByTestId(EntityRunListTestId.Row);
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toHaveTextContent("#7");
+    expect(rows[0]).toHaveAttribute("data-latest", "true");
+    expect(rows[1]).not.toHaveAttribute("data-latest");
+    fireEvent.click(rows[0]!);
+    expect(onOpen).toHaveBeenCalledWith(expect.objectContaining({ kind: "run", id: "run-2" }));
+  });
+
+  it("opens the PR sheet when the PR is on the board, else links to GitHub", () => {
+    hooks.items = [withRuns()];
+    hooks.prs = [{ url: "https://github.com/a/b/pull/7" }];
+    const onOpen = vi.fn();
+    const { unmount } = renderWithProviders(
+      <IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} onOpen={onOpen} />,
+    );
+    fireEvent.click(screen.getByText("#7 →"));
+    expect(onOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "pr", id: "https://github.com/a/b/pull/7" }),
+    );
+    unmount();
+    hooks.prs = [];
+    renderWithProviders(
+      <IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} onOpen={onOpen} />,
+    );
+    expect(screen.getByText("#7").closest("a")).toHaveAttribute(
+      "href",
+      "https://github.com/a/b/pull/7",
+    );
+  });
+
+  it("hides the runs section without runs", () => {
+    hooks.items = [item("todo")];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
   });
 });
 

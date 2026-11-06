@@ -66,6 +66,7 @@ export function BridgeScreen() {
         {/* Sheet layer: the detail-sheet task renders its overlay here, over the board. */}
         <DetailSheet
           onClose={state.closeSelection}
+          onOpen={state.setSelection}
           onSideChange={setSheetSide}
           selection={state.selection}
         />
