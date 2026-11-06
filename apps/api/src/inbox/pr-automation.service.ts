@@ -36,7 +36,7 @@ const errMsg = (error: unknown): string => (error instanceof Error ? error.messa
  * disables; tests drive {@link tick} directly). Each tick reads the PR inbox and, per PR, the
  * PR's EFFECTIVE Autopilot automation toggles (team > company > global; all off while Autopilot is off).
  * The team is the PR's own — a configured team whose code owner id the review was requested from
- * or whose member wrote it ({@link teamOfPr}) — never the project's: one repo serves many teams.
+ * or whose member wrote it ({@link teamsOfPr}) — never the project's: one repo serves many teams.
  *
  * - **`autoReview`** — a non-draft `to-review` PR with a known head and no review task for that
  *   head (any state: a failed or discarded review of the same head is never retried) and none
@@ -126,12 +126,20 @@ export class PrAutomationService
       if (started >= PR_AUTOMATION_MAX_STARTS_PER_TICK) break;
       try {
         if (!pr.headSha) continue;
-        const project = await this.projects.get(pr.projectId).catch(() => null);
-        const teamId = teamOfPr(pr, teams, project?.teamId);
-        const key = `${pr.projectId}\n${teamId ?? ""}`;
-        let config = configs.get(key);
-        if (!config) configs.set(key, (config = this.effectiveConfig(pr.projectId, teamId)));
-        const effective = await config;
+        // A PR of several teams is automated when any of them has the toggle on.
+        const matched = teamsOfPr(pr, teams);
+        const resolved = await Promise.all(
+          (matched.length ? matched : [undefined]).map((teamId) => {
+            const key = `${pr.projectId}\n${teamId ?? ""}`;
+            let config = configs.get(key);
+            if (!config) configs.set(key, (config = this.effectiveConfig(pr.projectId, teamId)));
+            return config;
+          }),
+        );
+        const effective = {
+          autoReview: resolved.some((c) => c.autoReview),
+          autoAddressComments: resolved.some((c) => c.autoAddressComments),
+        };
         if (effective.autoReview && wantsReview(pr) && isFresh(pr, reviewRuns)) {
           await this.startReview(pr);
           started++;
@@ -155,7 +163,7 @@ export class PrAutomationService
     return { started };
   }
 
-  /** True when any project (with its own team) or any configured team has a toggle on. */
+  /** True when any project (company/global level) or any configured team has a toggle on. */
   private async anyAutomationOn(teams: Team[]): Promise<boolean> {
     const projects = await this.projects.list().catch((error: unknown) => {
       this.log.warn("pr automation: projects unreadable — tick skipped", { error: errMsg(error) });
@@ -163,7 +171,7 @@ export class PrAutomationService
     });
     const resolved = await Promise.all(
       [
-        ...projects.map((project) => this.effectiveConfig(project.id, project.teamId)),
+        ...projects.map((project) => this.effectiveConfig(project.id)),
         ...teams.map(async (team) =>
           this.autopilot.automationFor({ companyId: team.companyId, teamId: team.id }),
         ),
@@ -221,21 +229,18 @@ export class PrAutomationService
 }
 
 /**
- * The configured team a PR belongs to: one whose code owner id (`slug`) its review was requested
- * from, or whose member authored it. The operator's own PR falls back to the project's team (the
- * operator works there); a PR to review never does — a shared repo's other teams' PRs stay out.
+ * The configured teams a PR belongs to: those whose code owner id (`slug`) its review was
+ * requested from, or whose member authored it. Never the project's team — several teams work in
+ * one project, so a project-level team would pull in every other team's PRs.
  */
-export function teamOfPr(
-  pr: InboxPr,
-  teams: readonly Team[],
-  projectTeamId?: string,
-): string | undefined {
+export function teamsOfPr(pr: InboxPr, teams: readonly Team[]): string[] {
   const owners = [
     ...(pr.reviewTeams ?? (pr.reviewTeam ? [pr.reviewTeam] : [])),
     ...(pr.authorTeams ?? []),
   ];
-  const hit = teams.find((t) => t.slug && owners.some((o) => teamSlugMatches(o, t.slug ?? "")));
-  return hit?.id ?? (pr.bucket === "mine" ? projectTeamId : undefined);
+  return teams
+    .filter((t) => t.slug && owners.some((o) => teamSlugMatches(o, t.slug ?? "")))
+    .map((t) => t.id);
 }
 
 function wantsReview(pr: InboxPr): boolean {

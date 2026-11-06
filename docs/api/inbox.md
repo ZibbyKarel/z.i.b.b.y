@@ -339,9 +339,10 @@ knob `systemConfig.roadmapTickMs` (read live, `0` disables; no separate knob) an
 
 The team level of that tree is the PR's own team, not the project's (one repo serves many teams):
 the configured team whose code owner id (`Team.slug`) the PR's review was requested from
-(`reviewTeams`) or whose member authored it (`authorTeams`). Only the operator's own PRs
-(`bucket === "mine"`) fall back to the project's `teamId`. A team without a `slug` therefore
-never matches a PR to review.
+(`reviewTeams`) or whose member authored it (`authorTeams`); a PR of several teams is automated
+when any of them has the toggle on. `Project.teamId` is never used: several teams work in one
+project. A PR of no configured team gets the company/global level; a team without a `slug`
+never matches a PR.
 
 Each tick first resolves every project's and every team's effective config; when none has
 `autoReview` or `autoAddressComments` on, it ends there and never queries GitHub. Otherwise it reads

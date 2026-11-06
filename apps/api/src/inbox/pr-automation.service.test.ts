@@ -47,6 +47,8 @@ const mine = (over: Partial<InboxPr> = {}) =>
     unresolvedThreads: 2,
     blocker: "changes-requested",
     section: "needs-action",
+    reviewTeams: undefined,
+    authorTeams: ["acme/p1-team"],
     ...over,
   });
 
@@ -285,6 +287,13 @@ describe("PrAutomationService (todo-16)", () => {
       expect(review.start).toHaveBeenCalledTimes(1);
     });
 
+    it("a PR of several teams is reviewed when any of them has autoReview on", async () => {
+      configs = { p1: { autoReview: false }, p2: { autoReview: true } };
+      prs = [pr({ reviewTeams: ["acme/p1-team", "acme/p2-team"] })];
+      await make().tick();
+      expect(review.start).toHaveBeenCalledTimes(1);
+    });
+
     it("a review of another PR does not block this one", async () => {
       const other = reviewTask(A, "running");
       tasks = [{ ...other, prReview: { repo: "acme/app", number: 8, url: "u", state: "running" } }];
@@ -311,6 +320,12 @@ describe("PrAutomationService (todo-16)", () => {
         summary: "auto address comments acme/app#7",
         refs: { projectId: "p1", taskId: "task_1", itemId: "acme/app#7" },
       });
+    });
+
+    it("the operator's PR outside the team does not inherit the project's team", async () => {
+      prs = [mine({ authorTeams: undefined })];
+      await make().tick();
+      expect(address.start).not.toHaveBeenCalled();
     });
 
     it("does nothing when the effective autoAddressComments is off", async () => {
