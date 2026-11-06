@@ -16,6 +16,7 @@ export enum AutopilotToggleTestId {
   Toggle = "autopilot-toggle-button",
   Confirm = "autopilot-toggle-confirm",
   Cancel = "autopilot-toggle-cancel",
+  TurnOff = "autopilot-toggle-off",
   Error = "autopilot-toggle-error",
 }
 
@@ -26,9 +27,10 @@ const EMPTY_AUTOMATION: AutopilotAutomation = {
 };
 
 /**
- * Phase 4 — the top-bar Autopilot switch, an icon toggle (`aria-pressed`). OFF → opens a
- * confirm dialog (ON needs the operator token); ON → filled, one click turns it off.
- * The dialog pre-fills from the stored tree, which the API keeps across `off`.
+ * Phase 4 — the top-bar Autopilot button (`aria-pressed` while on). A click always opens the
+ * dialog (saving needs the operator token): OFF → cancel + "turn on"; ON → "turn off" in
+ * place of cancel + "edit". The dialog pre-fills from the stored tree, which the API keeps
+ * across `off`.
  */
 export function AutopilotToggle() {
   const t = useTranslations("autopilot");
@@ -54,11 +56,8 @@ export function AutopilotToggle() {
       : t("failed")
     : null;
 
-  const turnOn = () =>
-    setAutopilot.mutate(
-      { body: { level: "full", automation } },
-      { onSuccess: () => setConfirming(false) },
-    );
+  const save = (body: Parameters<typeof setAutopilot.mutate>[0]["body"]) =>
+    setAutopilot.mutate({ body }, { onSuccess: () => setConfirming(false) });
   const close = () => {
     setConfirming(false);
     setAutopilot.reset();
@@ -72,39 +71,48 @@ export function AutopilotToggle() {
         data-testid={AutopilotToggleTestId.Toggle}
         icon="sparkles"
         intent={on ? "primary" : "ghost"}
-        loading={on && setAutopilot.isPending}
         onClick={() => {
-          if (on) return setAutopilot.mutate({ body: { level: "off" } });
           setAutomation(data?.automation ?? EMPTY_AUTOMATION);
           setConfirming(true);
         }}
         size="sm"
-        title={on ? `${t("status", { pending })} — ${t("turnOff")}` : t("turnOn")}
+        title={on ? t("status", { pending }) : t("turnOn")}
       />
       <Dialog
         actions={
           <>
-            <Button data-testid={AutopilotToggleTestId.Cancel} intent="ghost" onClick={close}>
-              {tc("cancel")}
-            </Button>
+            {on ? (
+              <Button
+                data-testid={AutopilotToggleTestId.TurnOff}
+                intent="ghost"
+                loading={setAutopilot.isPending}
+                onClick={() => save({ level: "off" })}
+              >
+                {t("turnOff")}
+              </Button>
+            ) : (
+              <Button data-testid={AutopilotToggleTestId.Cancel} intent="ghost" onClick={close}>
+                {tc("cancel")}
+              </Button>
+            )}
             <Button
               data-testid={AutopilotToggleTestId.Confirm}
               disabled={!anyOn}
               icon="bolt"
               intent="primary"
               loading={setAutopilot.isPending}
-              onClick={turnOn}
+              onClick={() => save({ level: "full", automation })}
             >
-              {t("confirm")}
+              {on ? t("edit") : t("confirm")}
             </Button>
           </>
         }
-        ariaLabel={t("dialogTitle")}
+        ariaLabel={on ? t("dialogTitleEdit") : t("dialogTitle")}
         closeLabel={tc("close")}
         description={t("dialogBody")}
         onClose={close}
         open={confirming}
-        title={t("dialogTitle")}
+        title={on ? t("dialogTitleEdit") : t("dialogTitle")}
         width="md"
       >
         <Stack gap="100">

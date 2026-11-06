@@ -1924,9 +1924,9 @@
       "namePlaceholder": "Platform",
       "desc": "Description",
       "descPlaceholder": "What the team does",
-      "slug": "GitHub team",
-      "slugPlaceholder": "shoptet/devrel-team",
-      "slugHint": "Team id as in CODEOWNERS, e.g. shoptet/devrel-team",
+      "slug": "Team code owner id",
+      "slugPlaceholder": "shoptet/frontend-team",
+      "slugHint": "Team as in CODEOWNERS: GitHub org/team or GitLab group/subgroup, e.g. shoptet/frontend-team",
       "company": "Company",
       "companyNone": "No company"
     },
@@ -3614,7 +3614,7 @@
   "autopilot": {
     "label": "Autopilot",
     "turnOn": "Turn autopilot on",
-    "turnOff": "Autopilot off",
+    "turnOff": "Turn autopilot off",
     "status": "Autopilot on · {pending} pending",
     "confirm": "Turn on",
     "dialogTitle": "Turn autopilot on?",
@@ -3632,6 +3632,8 @@
     "autoImplementHint": "Picks up ready roadmap items and implements them on its own branch.",
     "autoCommunicate": "Automatic communication",
     "autoCommunicateHint": "Answers questions on GitHub, GitLab, Jira and Slack when it has a concrete answer.",
-    "overridesHint": "A company or team can differ from the level above. A switch set the same as its parent follows the parent."
+    "overridesHint": "A company or team can differ from the level above. A switch set the same as its parent follows the parent.",
+    "edit": "Update",
+    "dialogTitleEdit": "Edit autopilot"
   }
 }

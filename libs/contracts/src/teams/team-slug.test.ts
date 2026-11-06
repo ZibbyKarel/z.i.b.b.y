@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { qualifyTeamSlug, teamSlugMatches } from "./team-slug";
+import { TEAM_SLUG_RE, qualifyTeamSlug, teamSlugMatches } from "./team-slug";
 
 describe("qualifyTeamSlug", () => {
   it("prefixes an unqualified slug with the owner", () => {
@@ -17,5 +17,22 @@ describe("teamSlugMatches", () => {
   it("does not match another org or team", () => {
     expect(teamSlugMatches("acme/devrel-team", "shoptet/devrel-team")).toBe(false);
     expect(teamSlugMatches("shoptet/frontend", "devrel-team")).toBe(false);
+  });
+  it("matches a nested GitLab group path", () => {
+    expect(teamSlugMatches("team-blue/shoptet/frontend", "@team-blue/shoptet/frontend")).toBe(true);
+    expect(teamSlugMatches("team-blue/shoptet/frontend", "frontend")).toBe(true);
+    expect(teamSlugMatches("team-blue/other/frontend", "team-blue/shoptet/frontend")).toBe(false);
+  });
+});
+
+describe("TEAM_SLUG_RE", () => {
+  it.each(["frontend-team", "shoptet/frontend-team", "team-blue/shoptet/frontend"])(
+    "accepts %s",
+    (s) => {
+      expect(TEAM_SLUG_RE.test(s)).toBe(true);
+    },
+  );
+  it.each(["", "a//b", "/a", "a/", "a b"])("rejects %j", (s) => {
+    expect(TEAM_SLUG_RE.test(s)).toBe(false);
   });
 });

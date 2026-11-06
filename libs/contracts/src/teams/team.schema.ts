@@ -54,7 +54,7 @@ const TeamSlugSchema = z
   .string()
   .trim()
   .transform((s) => s.replace(/^@/, ""))
-  .pipe(z.string().regex(TEAM_SLUG_RE, { message: "invalid GitHub team slug" }));
+  .pipe(z.string().regex(TEAM_SLUG_RE, { message: "invalid team code owner id" }));
 
 /**
  * A team inside a company — the layer that owns a knowledge base.
@@ -69,7 +69,7 @@ export const TeamSchema = z.object({
   name: z.string().min(1),
   companyId: z.string().optional(),
   desc: z.string().optional(),
-  /** GitHub team slug (`team` or `org/team`) — filters the PRs widget to reviews requested of this team. */
+  /** Team code owner id (GitHub `org/team` or GitLab `group/subgroup`) — filters the PRs widget to reviews requested of this team. */
   slug: TeamSlugSchema.optional(),
   knowledgeBase: KnowledgeBaseSourceSchema.optional(),
 });

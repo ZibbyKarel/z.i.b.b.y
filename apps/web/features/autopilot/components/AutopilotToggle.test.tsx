@@ -96,19 +96,24 @@ describe("AutopilotToggle", () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 
-  it("ON: the pressed toggle switches off in one click", async () => {
+  it("ON: the toggle opens the dialog with turn-off in place of cancel and update", async () => {
     status = {
       level: "full",
       since: "2026-10-29T12:00:00.000Z",
       by: "operator",
       pendingApprovals: 1,
+      automation: { global: { ...NO_AUTOMATION, autoReview: true }, companies: {}, teams: {} },
     };
     render(<AutopilotToggle />);
-    const off = screen.getByTestId(AutopilotToggleTestId.Toggle);
-    expect(off).toHaveAccessibleName();
-    expect(off).toHaveAttribute("aria-pressed", "true");
-    await userEvent.click(off);
-    expect(mutate).toHaveBeenCalledWith({ body: { level: "off" } });
+    const toggle = screen.getByTestId(AutopilotToggleTestId.Toggle);
+    expect(toggle).toHaveAccessibleName();
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(toggle);
+    expect(mutate).not.toHaveBeenCalled();
+    expect(screen.queryByTestId(AutopilotToggleTestId.Cancel)).not.toBeInTheDocument();
+    expect(screen.getByTestId(AutopilotToggleTestId.Confirm)).toHaveTextContent("Upravit");
+    await userEvent.click(screen.getByTestId(AutopilotToggleTestId.TurnOff));
+    expect(mutate).toHaveBeenCalledWith({ body: { level: "off" } }, expect.anything());
   });
 
   it("a 401 says the operator token is missing", async () => {

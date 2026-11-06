@@ -320,7 +320,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       if (link && !repos.has(link.repo)) repos.set(link.repo, { project, token: link.token });
     }
 
-    // Teams with a configured GitHub slug: searched in addition to the user's memberships.
+    // Teams with a configured code owner id: searched in addition to the user's memberships.
     const configuredSlugs = (await this.teamsStorage.list()).flatMap((t) =>
       t.slug ? [t.slug] : [],
     );

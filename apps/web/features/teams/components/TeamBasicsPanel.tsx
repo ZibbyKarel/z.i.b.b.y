@@ -20,7 +20,7 @@ export interface TeamBasicsBody {
   name: string;
   desc?: string;
   companyId?: string | null;
-  /** GitHub team slug; `null` clears it on edit. */
+  /** Team code owner id (GitHub or GitLab); `null` clears it on edit. */
   slug?: string | null;
 }
 

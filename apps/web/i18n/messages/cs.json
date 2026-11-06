@@ -1924,9 +1924,9 @@
       "namePlaceholder": "Platforma",
       "desc": "Popis",
       "descPlaceholder": "Čím se tým zabývá",
-      "slug": "GitHub tým",
-      "slugPlaceholder": "shoptet/devrel-team",
-      "slugHint": "Id týmu jako v CODEOWNERS, např. shoptet/devrel-team",
+      "slug": "Code owner id týmu",
+      "slugPlaceholder": "shoptet/frontend-team",
+      "slugHint": "Tým jako v CODEOWNERS: GitHub org/tým nebo GitLab skupina/podskupina, např. shoptet/frontend-team",
       "company": "Firma",
       "companyNone": "Bez firmy"
     },
@@ -3632,6 +3632,8 @@
     "autoImplementHint": "Bere připravené položky roadmapy a implementuje je ve vlastní větvi.",
     "autoCommunicate": "Automatická komunikace",
     "autoCommunicateHint": "Odpovídá na otázky na GitHubu, GitLabu, v Jiře a ve Slacku, když má konkrétní odpověď.",
-    "overridesHint": "Firma nebo tým se může lišit od vyšší úrovně. Přepínač nastavený stejně jako nadřazený se řídí nadřazeným."
+    "overridesHint": "Firma nebo tým se může lišit od vyšší úrovně. Přepínač nastavený stejně jako nadřazený se řídí nadřazeným.",
+    "edit": "Upravit",
+    "dialogTitleEdit": "Upravit autopilota"
   }
 }
