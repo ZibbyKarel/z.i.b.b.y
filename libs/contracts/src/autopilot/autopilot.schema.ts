@@ -39,9 +39,9 @@ export const FULL_AUTOPILOT_SCOPE: AutopilotScope = {
 
 /**
  * The autopilot toggles, one Global -> Company -> Team override tree. Precedence
- * team > company > global; while autopilot is `off` all are false. Each key both starts
- * the work (`autoReview` / `autoAddressComments` / `autoImplement`) and lets the gate
- * overlay act on its outcome ({@link AUTOPILOT_SCOPE_TOGGLE}).
+ * team > company > global. Each key starts the work (`autoReview` / `autoAddressComments` /
+ * `autoImplement`) in both levels; only while `full` does it also let the gate overlay act on
+ * its outcome ({@link AUTOPILOT_SCOPE_TOGGLE}). While `off` the outcome waits for approval.
  */
 export const AutomationTogglesSchema = z
   .object({
@@ -70,7 +70,10 @@ export const AUTOPILOT_SCOPE_TOGGLE: Readonly<Record<AutopilotScopeKey, Automati
 };
 
 /** A node's explicit choices; an absent key inherits from the level above. */
-export const AutomationOverrideSchema = AutomationTogglesSchema.partial();
+export const AutomationOverrideSchema = AutomationTogglesSchema.extend({
+  // No default here: a filled-in `false` would override the level above instead of inheriting.
+  autoCommunicate: z.boolean().optional(),
+}).partial();
 export type AutomationOverride = z.infer<typeof AutomationOverrideSchema>;
 
 /** `companies` / `teams` are keyed by company id / team id. */
@@ -101,12 +104,12 @@ export const AutopilotLocationSchema = z
   .strict();
 export type AutopilotLocation = z.infer<typeof AutopilotLocationSchema>;
 
-/** Effective toggles at a company/team: `off` or no tree = all false, else global <- company <- team. */
+/** Effective toggles at a company/team, whatever the level: no tree = all false, else global <- company <- team. */
 export function resolveAutopilotAutomation(
   state: Pick<AutopilotState, "level" | "automation">,
   at: { companyId?: string | undefined; teamId?: string | undefined },
 ): AutomationToggles {
-  if (state.level === "off" || !state.automation) return { ...NO_AUTOMATION };
+  if (!state.automation) return { ...NO_AUTOMATION };
   const { global, companies, teams } = state.automation;
   const company = at.companyId ? companies[at.companyId] : undefined;
   const team = at.teamId ? teams[at.teamId] : undefined;

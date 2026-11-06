@@ -3681,6 +3681,7 @@
     "modeLabel": "Autopilot mode",
     "save": "Save",
     "helpLabel": "What the switches do",
+    "helpMode": "The toggles start the work in both modes. Approve: the outcome waits for your approval. AUTOPILOT: it is sent without approval and you only get notified.",
     "helpNever": "Never automatic: merge, deploy, payments, deletes, force push and pushes to shared branches always wait for you."
   }
 }

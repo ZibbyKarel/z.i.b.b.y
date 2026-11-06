@@ -23,14 +23,15 @@ export class AutopilotController {
       getAutopilot: async () => ({ status: 200, body: await this.autopilot.status() }),
 
       setAutopilot: async ({ body: { level, automation }, headers }) => {
-        if (level === "full" && !hasOperatorToken(this.tokens, headers)) {
+        const operator = hasOperatorToken(this.tokens, headers);
+        if (level === "full" && !operator) {
           return {
             status: 401,
             body: { message: "Turning autopilot on requires the operator token." },
           };
         }
-        // Tokenless callers may only tighten: a tree planted with `off` would be live at the next switch-on.
-        const tree = level === "full" ? automation : undefined;
+        // The toggles start work in both levels, so only the token may change the tree.
+        const tree = operator ? automation : undefined;
         return {
           status: 200,
           body: await this.autopilot.set(level, "operator", tree),

@@ -20,7 +20,7 @@ const tree: AutopilotAutomation = {
 };
 
 describe("resolveAutopilotAutomation", () => {
-  it("is all false while off, whatever the tree says", () => {
+  it("resolves the tree while off too (off only re-arms the approval gates)", () => {
     const all = {
       autoImplement: true,
       autoReview: true,
@@ -29,7 +29,7 @@ describe("resolveAutopilotAutomation", () => {
     };
     expect(
       resolveAutopilotAutomation({ level: "off", automation: { ...tree, global: all } }, {}),
-    ).toEqual(NO_AUTOMATION);
+    ).toEqual(all);
   });
 
   it("is all false for full without a tree", () => {
@@ -76,7 +76,7 @@ describe("autopilot automation schemas", () => {
 });
 
 describe("resolveAutopilotAutomation copy", () => {
-  it("returns a fresh object when off, never the shared constant", () => {
+  it("returns a fresh object without a tree, never the shared constant", () => {
     const a = resolveAutopilotAutomation({ level: "off" }, {});
     expect(a).toEqual(NO_AUTOMATION);
     expect(a).not.toBe(NO_AUTOMATION);

@@ -6,9 +6,10 @@ Never-rules and merge are not affected. Only the operator token can turn autopil
 Anyone in the operator chat can turn it off.
 
 Code: `apps/api/src/autopilot/`. Contract: `libs/contracts/src/autopilot/`.
-Web: the Autopilot icon toggle in the top bar, on every page. Its dialog picks the mode
-(`Schvalovat` = `off`, `AUTOPILOT` = `full`) and, for `full`, the toggles per company and team;
-the `?` in the header explains each toggle.
+Web: the Autopilot icon toggle in the top bar, on every page. Its dialog holds the toggles per
+company and team, and the mode on top (`Schvalovat` = `off`, `AUTOPILOT` = `full`) switches only
+the approval gates: the toggles start the work in both modes, `off` makes the outcome wait for
+approval, `full` sends it and only reports it. The `?` in the header explains each toggle.
 
 ## State
 
@@ -37,8 +38,8 @@ counts as `off`.
 
 ## The four toggles
 
-`automation` is one Global -> Company -> Team tree of four toggles. Each toggle both starts
-the work and lets the gate overlay act on its outcome:
+`automation` is one Global -> Company -> Team tree of four toggles. Each toggle starts the work
+in both levels, and while `full` also lets the gate overlay act on its outcome:
 
 | Toggle                | Starts                                             | Gate class (`scope`) it lifts                                                            |
 | --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
@@ -61,7 +62,7 @@ company). Its approvals, the pr-review workflow sign-off and the gate check behi
 approvals from tasks and workflow gates (a review the operator started, say) resolve at global.
 The web dialog no longer edits `global`: it always saves it all-off, so autonomy is set per
 company and team only. While autopilot is `off`
-every effective toggle is `false`, but the stored tree is kept so the next switch-on pre-fills it.
+the toggles still start the work, but every gate asks as normal.
 Autopilot may stay on indefinitely.
 
 Pushes are not a toggle: a `pr-fix-ci` push and a hook `git.push` onto `zibby/*` are covered
@@ -72,10 +73,10 @@ synchronous. Use the API to switch the level: a hand edit only takes effect afte
 
 ## Endpoints
 
-| Route                | Auth                      | Notes                                                                                                                              |
-| -------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                                                          |
-| `PUT /api/autopilot` | operator token for `full` | `{ level, automation? }`. `full` without the token returns `401`; `off` is always allowed (any `automation` it carries is ignored) |
+| Route                | Auth                      | Notes                                                                                                                                     |
+| -------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/autopilot` | none                      | The state plus `pendingApprovals` (the count waiting now)                                                                                 |
+| `PUT /api/autopilot` | operator token for `full` | `{ level, automation? }`. `full` without the token returns `401`; `off` is always allowed, but `automation` is only stored with the token |
 
 Setting the same level and automation tree again is a no-op (the file isn't written). `PUT`
 with `automation` omitted keeps the stored tree. Slack notifications are only sent while

@@ -47,9 +47,11 @@ const HELP_KEYS = [
 
 /**
  * The top-bar Autopilot button (`aria-pressed` while on). A click opens a dialog (saving needs
- * the operator token): "Approve" (level `off`) or "AUTOPILOT" (level `full`) plus, for
- * AUTOPILOT, the per-company/team toggles. There is no global level: `global` is always
- * forced to all-off, so nothing hidden is inherited. The dialog pre-fills from the stored tree.
+ * the operator token) with the per-company/team toggles, which start the work in both modes.
+ * The mode only switches the approval gates: "Approve" (level `off`) keeps them, "AUTOPILOT"
+ * (level `full`) sends the toggled work without asking and only reports it. There is no global
+ * level: `global` is always forced to all-off, so nothing hidden is inherited. The dialog
+ * pre-fills from the stored tree.
  */
 export function AutopilotToggle() {
   const t = useTranslations("autopilot");
@@ -76,12 +78,7 @@ export function AutopilotToggle() {
 
   const save = () =>
     setAutopilot.mutate(
-      {
-        body:
-          mode === "off"
-            ? { level: "off" }
-            : { level: "full", automation: { ...automation, global: { ...NO_AUTOMATION } } },
-      },
+      { body: { level: mode, automation: { ...automation, global: { ...NO_AUTOMATION } } } },
       { onSuccess: () => setConfirming(false) },
     );
   const close = () => {
@@ -137,6 +134,7 @@ export function AutopilotToggle() {
                     {t(key)} — {t(`${key}Hint`)}
                   </Typography>
                 ))}
+                <Typography type="text">{t("helpMode")}</Typography>
                 <Typography type="text">{t("helpNever")}</Typography>
               </Stack>
             }
@@ -171,14 +169,12 @@ export function AutopilotToggle() {
               value={mode}
             />
           </Row>
-          {mode === "full" ? (
-            <AutomationTree
-              companies={companies}
-              onChange={setAutomation}
-              teams={teams}
-              value={automation}
-            />
-          ) : null}
+          <AutomationTree
+            companies={companies}
+            onChange={setAutomation}
+            teams={teams}
+            value={automation}
+          />
           <Typography type="text">{t("dialogPending", { pending })}</Typography>
           {errorText ? (
             <Typography data-testid={AutopilotToggleTestId.Error} tone="bad" type="text">

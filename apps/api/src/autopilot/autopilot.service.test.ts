@@ -184,7 +184,7 @@ describe("AutopilotService", () => {
     teams: {},
   };
 
-  it("stores the automation tree, keeps it across off, and resolves it only while on", async () => {
+  it("stores the automation tree, keeps it across off, and resolves it in both levels", async () => {
     const svc = new AutopilotService(dir);
     await svc.onModuleInit();
     await svc.set("full", "operator", tree);
@@ -194,7 +194,8 @@ describe("AutopilotService", () => {
     ).toEqual(tree);
 
     await svc.set("off", "chat");
-    expect(svc.automationFor({})).toEqual(toggles());
+    expect(svc.automationFor({}).autoImplement).toBe(true);
+    expect(svc.coversApproval({ kind: "pr-review", action: "github.pr.review" })).toBe(false);
     expect((await svc.status()).automation).toEqual(tree);
 
     await svc.set("full", "operator");

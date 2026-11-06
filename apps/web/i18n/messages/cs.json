@@ -3681,6 +3681,7 @@
     "modeLabel": "Režim autopilota",
     "save": "Uložit",
     "helpLabel": "Co přepínače dělají",
+    "helpMode": "Přepínače práci spouští v obou režimech. Schvalovat: výsledek čeká na tvé schválení. AUTOPILOT: odešle se bez schválení a jen dostaneš notifikaci.",
     "helpNever": "Nikdy automaticky: merge, deploy, platby, mazání, force push a push do sdílených větví vždy čekají na tebe."
   }
 }

@@ -36,7 +36,7 @@ const companyToggle = (key: string) =>
   ).getByRole("switch");
 
 describe("AutopilotToggle", () => {
-  it("opens on Approve, with no tree and no global toggles; saving sends level off", async () => {
+  it("opens on Approve with the tree; saving sends level off with the tree", async () => {
     render(<AutopilotToggle />);
     const on = screen.getByTestId(AutopilotToggleTestId.Toggle);
     expect(on).toHaveAccessibleName();
@@ -46,10 +46,18 @@ describe("AutopilotToggle", () => {
       "aria-pressed",
       "true",
     );
-    expect(screen.queryByTestId(AutomationTreeTestId.Root)).not.toBeInTheDocument();
+    expect(screen.getByTestId(AutomationTreeTestId.Root)).toBeInTheDocument();
     expect(screen.getByText(/3/)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId(AutopilotToggleTestId.Confirm));
-    expect(mutate).toHaveBeenCalledWith({ body: { level: "off" } }, expect.anything());
+    expect(mutate).toHaveBeenCalledWith(
+      {
+        body: {
+          level: "off",
+          automation: { global: { ...NO_AUTOMATION }, companies: {}, teams: {} },
+        },
+      },
+      expect.anything(),
+    );
   });
 
   it("AUTOPILOT shows the tree; save is disabled until a company/team toggle is on", async () => {

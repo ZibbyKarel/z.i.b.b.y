@@ -72,7 +72,12 @@ describe("Autopilot API (e2e)", () => {
 
   it("stores and echoes the automation tree", async () => {
     const automation = {
-      global: { autoImplement: true, autoReview: false, autoAddressComments: false },
+      global: {
+        autoImplement: true,
+        autoReview: false,
+        autoAddressComments: false,
+        autoCommunicate: false,
+      },
       companies: { acme: { autoReview: true } },
       teams: {},
     };
