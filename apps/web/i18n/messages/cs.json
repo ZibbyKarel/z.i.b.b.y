@@ -3224,7 +3224,14 @@
       "name": "Název",
       "remove": "Odebrat z dashboardu",
       "removeConfirm": "Opravdu odebrat",
-      "filters": "Výchozí filtry"
+      "filters": "Výchozí filtry",
+      "sort": "Řazení",
+      "sortBy": {
+        "updated-desc": "Poslední změna, nejnovější nahoře",
+        "updated-asc": "Poslední změna, nejstarší nahoře",
+        "created-desc": "Vytvoření, nejnovější nahoře",
+        "created-asc": "Vytvoření, nejstarší nahoře"
+      }
     },
     "filterControls": {
       "companies": "Firmy",

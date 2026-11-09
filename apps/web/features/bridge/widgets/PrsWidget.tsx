@@ -53,7 +53,7 @@ function StateIcon({
 
 /**
  * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters) as
- * one flat list, newest first, each stack kept together (base -> head, indented behind a rail).
+ * one flat list ordered by `widget.sort` (default: last change, newest first), each stack kept together (base -> head, indented behind a rail).
  * The filter row above narrows by review / CI state, owner, company and requested review team and
  * doubles as the legend of the card icons.
  * No action buttons here; they live in the detail sheet.
@@ -78,8 +78,16 @@ export function PrsWidget({
   const [pick, setPick, filtersChanged] = useWidgetFilterPick(widget.filters);
 
   const { nodes, counts, total, you } = useMemo(
-    () => prTree(widget.id, prsQuery.data?.prs ?? [], filters, pick, (iso) => compactAgo(iso, now)),
-    [widget.id, prsQuery.data, filters, pick, now],
+    () =>
+      prTree(
+        widget.id,
+        prsQuery.data?.prs ?? [],
+        filters,
+        pick,
+        (iso) => compactAgo(iso, now),
+        widget.sort,
+      ),
+    [widget.id, prsQuery.data, filters, pick, now, widget.sort],
   );
   // The header counts the whole set, not the picked slice: an empty pick must not collapse the
   // widget (and its filter with it).

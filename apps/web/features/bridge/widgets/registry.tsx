@@ -15,6 +15,7 @@ import { RunsWidget } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
 import { TeamKbWidget, TeamKbWidgetSettings } from "./TeamKbWidget";
 import { TodoWidget } from "./TodoWidget";
+import { WidgetSortSettings } from "./widgetFilters";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
 export interface BridgeSelection {
@@ -120,6 +121,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     icon: "bug",
     Component: IssuesWidget,
     Filters: IssuesFilterControls,
+    Settings: WidgetSortSettings,
   },
   tasks: {
     labelKey: "bridge.widget.tasks.label",
@@ -133,6 +135,7 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     icon: "branch",
     Component: PrsWidget,
     Filters: PrFilterControls,
+    Settings: WidgetSortSettings,
   },
   runs: {
     labelKey: "bridge.widget.runs.label",

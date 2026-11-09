@@ -3224,7 +3224,14 @@
       "name": "Name",
       "remove": "Remove from dashboard",
       "removeConfirm": "Confirm remove",
-      "filters": "Default filters"
+      "filters": "Default filters",
+      "sort": "Sort",
+      "sortBy": {
+        "updated-desc": "Last change, newest first",
+        "updated-asc": "Last change, oldest first",
+        "created-desc": "Created, newest first",
+        "created-asc": "Created, oldest first"
+      }
     },
     "filterControls": {
       "companies": "Companies",

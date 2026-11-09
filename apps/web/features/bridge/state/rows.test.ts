@@ -1,10 +1,15 @@
-import type { BudgetStatus, InboxEpic, InboxPr, InboxRoadmapItem } from "@zibby/contracts";
+import type {
+  BudgetStatus,
+  InboxEpic,
+  InboxPr,
+  InboxRoadmapItem,
+  WidgetSort,
+} from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
 import type { RunView } from "../../runs/run";
 import {
   type PrFilterPick,
   type PrNodeVm,
-  compareIssues,
   formatUsd,
   issueGroups,
   prOwner,
@@ -52,19 +57,30 @@ const pr = (over: Partial<InboxPr> & { number: number }): InboxPr => ({
 });
 
 describe("issues", () => {
-  it("sorts waiting first, then new, running, done; recent first", () => {
+  it("orders by the widget sort; default = last change, newest first", () => {
     const list = [
-      item({ id: "run", lifecycle: "running" }),
-      item({ id: "new-old", updatedAt: "2026-09-01T00:00:00.000Z" }),
-      item({ id: "new-recent" }),
-      item({ id: "wait", lifecycle: "failed" }),
+      item({
+        id: "a",
+        createdAt: "2026-08-01T00:00:00.000Z",
+        updatedAt: "2026-09-01T00:00:00.000Z",
+      }),
+      item({
+        id: "b",
+        createdAt: "2026-07-01T00:00:00.000Z",
+        updatedAt: "2026-10-01T00:00:00.000Z",
+      }),
+      item({
+        id: "c",
+        createdAt: "2026-09-15T00:00:00.000Z",
+        updatedAt: "2026-09-20T00:00:00.000Z",
+      }),
     ];
-    expect([...list].sort(compareIssues).map((i) => i.id)).toEqual([
-      "wait",
-      "new-recent",
-      "new-old",
-      "run",
-    ]);
+    const ids = (sort?: WidgetSort) =>
+      issueGroups("w", list, [], [], ago, sort)[0]?.rows.map((r) => r.id.split("/")[1]);
+    expect(ids()).toEqual(["b", "c", "a"]);
+    expect(ids("updated-asc")).toEqual(["a", "c", "b"]);
+    expect(ids("created-desc")).toEqual(["c", "a", "b"]);
+    expect(ids("created-asc")).toEqual(["b", "a", "c"]);
   });
 
   it("groups under the epic with progress, loose items last", () => {
@@ -144,6 +160,28 @@ describe("pull requests", () => {
       ["#4", 0],
     ]);
     expect(nodes[0]?.kids[0]?.row).toMatchObject({ mine: false, author: "jana" });
+  });
+
+  it("orders roots by the widget sort; no updatedAt falls back to createdAt", () => {
+    const all = [
+      pr({
+        number: 1,
+        createdAt: "2026-08-01T00:00:00.000Z",
+        updatedAt: "2026-10-09T00:00:00.000Z",
+      }),
+      pr({ number: 2, createdAt: "2026-09-01T00:00:00.000Z" }),
+      pr({
+        number: 3,
+        createdAt: "2026-10-01T00:00:00.000Z",
+        updatedAt: "2026-10-02T00:00:00.000Z",
+      }),
+    ];
+    const order = (sort?: WidgetSort) =>
+      prTree("p", all, none, {}, ago, sort).nodes.map((n) => n.row.number);
+    expect(order()).toEqual(["#1", "#3", "#2"]);
+    expect(order("updated-asc")).toEqual(["#2", "#3", "#1"]);
+    expect(order("created-desc")).toEqual(["#3", "#2", "#1"]);
+    expect(order("created-asc")).toEqual(["#1", "#2", "#3"]);
   });
 
   it("row: author name or login, avatar, repo, age, icons and tone", () => {

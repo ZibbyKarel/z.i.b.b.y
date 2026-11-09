@@ -6,12 +6,12 @@ import type {
   RoadmapSourceKind,
   Team,
   WidgetFilters,
+  WidgetSort,
 } from "@zibby/contracts";
 import { teamSlugMatches } from "@zibby/contracts";
 import { type StateTone, normalizeStateTone } from "@zibby/design-system";
 import {
   type InboxFilters,
-  ZIBBY_STATUS_RANK,
   type ZibbyStatus,
   chainKey,
   findPr,
@@ -99,15 +99,6 @@ export interface IssueGroupVm {
   progress: number;
 }
 
-/** Waiting (needs you) -> new -> running -> done, then the most recently updated first. */
-export function compareIssues(a: InboxRoadmapItem, b: InboxRoadmapItem): number {
-  const rank = (i: InboxRoadmapItem) => {
-    const s = zibbyStatus(i);
-    return s === "waiting" ? -1 : ZIBBY_STATUS_RANK[s];
-  };
-  return rank(a) - rank(b) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt);
-}
-
 export function issueRow(
   widgetId: string,
   item: InboxRoadmapItem,
@@ -134,15 +125,30 @@ export function issueRow(
   };
 }
 
-/** The same sorted set the Issues screen lists, grouped under its epic (`null` = no epic, last). */
+/** A row's time for a widget `sort`: its last change (no change = creation) or its creation. */
+const sortTime = (sort: WidgetSort, row: { createdAt: string; updatedAt?: string }) =>
+  Date.parse(sort.startsWith("updated") ? (row.updatedAt ?? row.createdAt) : row.createdAt);
+
+/** Orders two times by `sort`'s direction (`*-desc` = newest first). */
+const bySortDirection = (sort: WidgetSort, a: number, b: number) =>
+  sort.endsWith("desc") ? b - a : a - b;
+
+/**
+ * The Issues screen's set ordered by `sort` (default: last change, newest first), grouped under its
+ * epic (`null` = no epic, last). Groups follow their first row.
+ */
 export function issueGroups(
   widgetId: string,
   list: InboxRoadmapItem[],
   epics: InboxEpic[],
   prs: InboxPr[],
   ago: Ago,
+  sort: WidgetSort = "updated-desc",
 ): IssueGroupVm[] {
-  return groupByEpic([...list].sort(compareIssues), epics).map(({ epic, children }) => {
+  const sorted = [...list].sort((a, b) =>
+    bySortDirection(sort, sortTime(sort, a), sortTime(sort, b)),
+  );
+  return groupByEpic(sorted, epics).map(({ epic, children }) => {
     const total = epic?.total ?? 0;
     return {
       key: epic?.id ?? "none",
@@ -302,9 +308,11 @@ const countBy = <K extends string>(keys: readonly K[], list: InboxPr[], of: (p: 
   >;
 
 /**
- * The Pull requests screen's set (stored filters) as one flat list of stack trees, newest first.
- * `pick` narrows it by review / CI state, owner, company and team (review requested or authored by a member); a picked PR keeps its listed ancestors as muted
- * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR.
+ * The Pull requests screen's set (stored filters) as one flat list of stack trees, ordered by `sort`
+ * (default: last change, newest first). `pick` narrows it by review / CI state, owner, company and
+ * team (review requested or authored by a member); a picked PR keeps its listed ancestors as muted
+ * context so a stack never loses its middle. Siblings and roots sort by their subtree's newest PR
+ * (`*-desc`) or oldest PR (`*-asc`).
  */
 export function prTree(
   widgetId: string,
@@ -312,6 +320,7 @@ export function prTree(
   filters: InboxFilters,
   pick: PrFilterPick,
   ago: Ago,
+  sort: WidgetSort = "updated-desc",
 ): {
   nodes: PrNodeVm[];
   /** The whole listed set, before `pick`. */
@@ -358,11 +367,12 @@ export function prTree(
     if (up) kids.set(up.url, [...(kids.get(up.url) ?? []), p]);
     else roots.push(p);
   }
-  const newest = (p: InboxPr): number =>
-    Math.max(Date.parse(p.createdAt), ...(kids.get(p.url) ?? []).map(newest));
+  const pickTime = sort.endsWith("desc") ? Math.max : Math.min;
+  const subtreeTime = (p: InboxPr): number =>
+    pickTime(sortTime(sort, p), ...(kids.get(p.url) ?? []).map(subtreeTime));
   const build = (list: InboxPr[]): PrNodeVm[] =>
     [...list]
-      .sort((a, b) => newest(b) - newest(a))
+      .sort((a, b) => bySortDirection(sort, subtreeTime(a), subtreeTime(b)))
       .map((p) => ({
         row: prRow(widgetId, p, ago, !hitUrls.has(p.url)),
         kids: build(kids.get(p.url) ?? []),

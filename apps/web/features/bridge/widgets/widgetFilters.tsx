@@ -1,11 +1,34 @@
 "use client";
 
-import type { WidgetFilters } from "@zibby/contracts";
-import { Container, Dropdown, FilterBar } from "@zibby/design-system";
+import { type WidgetFilters, WidgetSortSchema } from "@zibby/contracts";
+import { Container, Dropdown, FilterBar, SelectField, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
 import { useCompaniesQuery } from "../../companies";
 import type { TeamFilterOption } from "../state/rows";
+import type { WidgetSettingsProps } from "./registry";
+
+export enum WidgetSortSettingsTestId {
+  Sort = "widget-settings-sort",
+}
+
+/** Settings section of a sortable widget (`prs`, `issues`): the list order, saved as `widget.sort`. */
+export function WidgetSortSettings({ draft, onChange }: WidgetSettingsProps) {
+  const t = useTranslations("bridge.settings");
+  return (
+    <Stack data-testid={WidgetSortSettingsTestId.Sort}>
+      <SelectField
+        label={t("sort")}
+        onValueChange={(v) => {
+          const sort = WidgetSortSchema.safeParse(v);
+          if (sort.success) onChange({ ...draft, sort: sort.data });
+        }}
+        options={WidgetSortSchema.options.map((s) => ({ value: s, label: t(`sortBy.${s}`) }))}
+        value={draft.sort ?? "updated-desc"}
+      />
+    </Stack>
+  );
+}
 
 /** Drops unset groups (empty lists, `undefined`, `false`): an absent group doesn't filter. */
 export function compactPick(pick: WidgetFilters): WidgetFilters {

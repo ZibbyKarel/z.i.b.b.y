@@ -25,6 +25,15 @@ export const WidgetFiltersSchema = z
   .strict();
 export type WidgetFilters = z.infer<typeof WidgetFiltersSchema>;
 
+/** List order of a sortable widget (`prs`, `issues`): last change or creation date, either way. */
+export const WidgetSortSchema = z.enum([
+  "updated-desc",
+  "updated-asc",
+  "created-desc",
+  "created-asc",
+]);
+export type WidgetSort = z.infer<typeof WidgetSortSchema>;
+
 /** A widget stored before `filters` existed carries its PR defaults as `prFilters`. */
 function migrateLegacyFilters(value: unknown): unknown {
   if (typeof value !== "object" || value === null || !("prFilters" in value)) return value;
@@ -65,6 +74,8 @@ export const BridgeWidgetSchema = z.preprocess(
     title: z.string().trim().min(1).max(60).optional(),
     /** Default filter pick of a filterable widget, edited in its settings. */
     filters: WidgetFiltersSchema.optional(),
+    /** List order of a sortable widget, edited in its settings; absent = `updated-desc`. */
+    sort: WidgetSortSchema.optional(),
   }),
 );
 export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;

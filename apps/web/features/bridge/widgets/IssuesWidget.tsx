@@ -51,8 +51,8 @@ export function IssuesFilterControls({ pick, onChange }: WidgetFiltersProps) {
 
 /**
  * Issues: exactly the set the `/dashboard/inbox/issues` screen lists with its defaults (stored
- * company/team/project filters, no search, done + hidden off), waiting-for-you first, grouped
- * under the epic. A group header collapses its epic (`epicClosed`). The filter row narrows the
+ * company/team/project filters, no search, done + hidden off), ordered by `widget.sort` (default:
+ * last change, newest first), grouped under the epic. A group header collapses its epic (`epicClosed`). The filter row narrows the
  * list further by company and team (defaults from `widget.filters`).
  */
 export function IssuesWidget({
@@ -103,8 +103,9 @@ export function IssuesWidget({
         itemsQuery.data?.epics ?? [],
         prsQuery.data?.prs ?? [],
         (iso) => compactAgo(iso, now),
+        widget.sort,
       ),
-    [widget.id, picked, itemsQuery.data, prsQuery.data, now],
+    [widget.id, picked, itemsQuery.data, prsQuery.data, now, widget.sort],
   );
 
   const you = groups.reduce((n, g) => n + g.rows.filter((r) => r.needsYou).length, 0);

@@ -188,7 +188,7 @@ describe("IssuesWidget", () => {
   it("lists issues under their epic with data-rk, opens on click, folds the epic", async () => {
     d.items = [
       item("a", { parentId: "e1", lifecycle: "failed" }),
-      item("b", { parentId: "e1" }),
+      item("b", { parentId: "e1", updatedAt: new Date(Date.now() - 7200_000).toISOString() }),
       item("done", { lifecycle: "done" }),
     ];
     d.epics = [
@@ -207,7 +207,7 @@ describe("IssuesWidget", () => {
 
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows).toHaveLength(2); // done hidden
-    expect(rows[0]).toHaveAttribute("data-rk", "w-issues:p1/a"); // waiting first
+    expect(rows[0]).toHaveAttribute("data-rk", "w-issues:p1/a"); // last changed first
     expect(rows[0]).toHaveTextContent("ZB-a");
     expect(rows[0]).toHaveTextContent("Ty · 1h");
     expect(screen.getByTestId(RowGroupHeaderTestId.Title)).toHaveTextContent("Checkout");
