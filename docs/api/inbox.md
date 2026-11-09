@@ -300,8 +300,8 @@ reports as unresolved; empty bodies are never posted. Then each open thread whos
 flagged `resolve: true` and was just posted (or has an empty body) gets GraphQL
 `resolveReviewThread` — the operator's tick wins over the report's `done in`, which is only
 required when the operator sent no replies (a thread whose reply failed stays open), and review is re-requested via
-`POST /repos/{repo}/pulls/{n}/requested_reviewers` from every user whose latest review
-(`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, excluding the PR author and bots.
+`POST /repos/{repo}/pulls/{n}/requested_reviewers` from the author of the first comment of every thread named in the report and from every user whose latest review
+(`latestOpinionatedReviews`) is `CHANGES_REQUESTED`, deduplicated, excluding the PR author and bots.
 `replied` / `repliesNote` record what was posted and why the rest was skipped; `resolved`,
 `reviewersRequested` and `followUpNote` record the rest. A follow-up failure leaves the push
 `pushed`, a push failure does nothing. A missing reply file never blocks the push. The third phase
@@ -361,7 +361,7 @@ Each tick first resolves every project's and every team's effective config; when
   fails, so the dedupe always has a head). Posting stays behind the workflow's `comment` gate and
   the `pr-review` approval, unchanged.
 - **Auto address comments** — effective `autoAddressComments`, `bucket === "mine"`,
-  `review === "changes-requested"`, `unresolvedThreads > 0`, a known head, the same head dedupe
+  `unresolvedThreads > 0` (any review state, plain comments included), a known head, the same head dedupe
   against `prAddressComments.headSha` — and against `prAddressComments.fixedSha`, so the head
   ZIBBY's own approved push created is never treated as new work (the reviewer's
   CHANGES_REQUESTED and any skipped threads outlive the push) — nothing in flight. It calls

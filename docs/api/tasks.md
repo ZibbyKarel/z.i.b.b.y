@@ -133,7 +133,7 @@ head, base, headSha, state: "running"`), written to `awaiting-approval` by
 pushes; no report / no worktree / no new commits → `failed` + `note`), and to
 `pushed`/`discarded`/`failed` by the `pr-address-comments` approval runner, which pushes only
 from `awaiting-approval`, fast-forward only. An interrupted run with `state === "running"` gets an
-error outcome. `replies` / `replied` / `repliesNote` record the thread replies, `resolved` / `reviewersRequested` / `followUpNote` the thread resolving and review re-request (see
+error outcome. `replies` / `replied` / `repliesNote` record the thread replies, `resolved` / `reviewersRequested` / `followUpNote` the thread resolving and the review re-request (`reviewersRequested` = authors of the addressed threads plus users with changes requested; see
 `docs/api/inbox.md`). `auto: true` (todo-16, server-written by `PrAutomationService` only) marks
 a heartbeat-started run: its push is never approved on the spot, even after `Addressed: all`.
 `prReview.auto: true` marks a heartbeat-started review the same way (posting is gated as always).

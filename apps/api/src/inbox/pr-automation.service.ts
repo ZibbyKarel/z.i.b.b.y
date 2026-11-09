@@ -42,14 +42,17 @@ const errMsg = (error: unknown): string => (error instanceof Error ? error.messa
  *   head (any state: a failed or discarded review of the same head is never retried) and none
  *   in flight → `InboxReviewService.start` at the level `selectReviewLevel` picks from the PR's
  *   files (fetch failure → `quick`). Posting stays behind the `pr-review` approval.
- * - **`autoAddressComments`** — the operator's own PR with changes requested and unresolved
- *   threads, same head dedupe → `InboxAddressCommentsService.start(…, { auto: true })`. Such a
+ * - **`autoAddressComments`** — the operator's own PR with unresolved
+ *   threads (any review state), same head dedupe → `InboxAddressCommentsService.start(…, { auto: true })`. Such a
  *   run never auto-pushes: its push always parks as an approval (Tier 3 — nobody clicked).
  *
  * Throttled to {@link PR_AUTOMATION_MAX_STARTS_PER_TICK} starts per tick. Fail open per PR; a
  * `listPrs` failure ends the tick quietly. Unreadable task storage ends it too — without the
  * past tasks the head dedupe is impossible, so it fails closed (starts nothing).
  */
+/** Delay of the one extra tick after boot (lets the other services settle). */
+const PR_AUTOMATION_BOOT_TICK_MS = 30_000;
+
 @Injectable()
 export class PrAutomationService
   extends TickingWatcherBase
@@ -79,6 +82,9 @@ export class PrAutomationService
 
   onModuleInit(): void {
     this.arm();
+    // The interval alone fires first after a full tick (15 min default): also sweep shortly after boot.
+    if (this.tickMs() > 0)
+      setTimeout(() => void this.guardedTick(), PR_AUTOMATION_BOOT_TICK_MS).unref();
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
     this.watcherHealthRegistry.register(() => this.watcherHealth());
   }
@@ -252,7 +258,8 @@ function wantsReview(pr: InboxPr): boolean {
 
 function wantsAddressing(pr: InboxPr): boolean {
   return (
-    pr.bucket === "mine" && pr.review === "changes-requested" && (pr.unresolvedThreads ?? 0) > 0
+    // Any unresolved thread on my PR counts: plain review comments (no CHANGES_REQUESTED) too.
+    pr.bucket === "mine" && (pr.unresolvedThreads ?? 0) > 0
   );
 }
 

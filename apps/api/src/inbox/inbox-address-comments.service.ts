@@ -60,7 +60,7 @@ export function addressCommentsTaskText(p: RebaseBrief, auto = false): string {
     }`,
     "",
     "## Phase `reply`",
-    `Read \`${PR_ADDRESS_COMMENTS_ARTIFACT}\`. For every thread marked \`done in <sha>\`, write the reply the operator would post on it, in your usual voice (e.g. "Good catch, fixed in abc1234."). Write a draft for EVERY thread in the report. \`done in\`: what was fixed, citing the sha. \`skipped\`: the reason in one plain sentence. \`question\`: answer it from facts in the code, the diff and the commit messages; where the answer depends on the author's intent, state the facts and leave the intent to the operator — never guess it. When nothing concrete can be said, use \`"body": ""\`. The operator reviews and edits every draft before anything is posted. Write ONLY \`${PR_REPLIES_ARTIFACT}\`: a JSON array \`[{ "threadId": "PRRT_…", "body": "…", "resolve": true }]\` (ids exactly as in the report, body under 500 characters; \`"resolve": true\` ONLY on a thread marked \`done in <sha>\` — never on a skipped one). ZIBBY posts them after the push, resolves the threads you marked \`resolve\` and re-requests review from whoever requested changes; you never post, resolve or run any \`gh\` write.`,
+    `Read \`${PR_ADDRESS_COMMENTS_ARTIFACT}\`. For every thread marked \`done in <sha>\`, write the reply the operator would post on it, in your usual voice (e.g. "Good catch, fixed in abc1234."). Write a draft for EVERY thread in the report. \`done in\`: what was fixed, citing the sha. \`skipped\`: the reason in one plain sentence. \`question\`: answer it from facts in the code, the diff and the commit messages; where the answer depends on the author's intent, state the facts and leave the intent to the operator — never guess it. When nothing concrete can be said, use \`"body": ""\`. The operator reviews and edits every draft before anything is posted. Write ONLY \`${PR_REPLIES_ARTIFACT}\`: a JSON array \`[{ "threadId": "PRRT_…", "body": "…", "resolve": true }]\` (ids exactly as in the report, body under 500 characters; \`"resolve": true\` ONLY on a thread marked \`done in <sha>\` — never on a skipped one). ZIBBY posts them after the push, resolves the threads you marked \`resolve\` and re-requests review from the author of every thread in the report and from whoever requested changes; you never post, resolve or run any \`gh\` write.`,
     "",
     "## Phase `describe`",
     `The fixes change what the PR does, so its description may be stale. Read \`${PR_ADDRESS_COMMENTS_ARTIFACT}\`, the current title and body (\`gh pr view ${p.number} --repo ${p.repo} --json title,body\`) and what the PR now contains (\`git diff origin/${p.base}...HEAD\`, \`git log origin/${p.base}..HEAD\`). Update the description so it matches the current state: keep its structure, template headings and everything that is still true, change only what the review fixes made outdated (what changed, test plan, anything now removed or added). Never write about the review itself or add a changelog of the fixes. Write ONLY \`${PR_DESCRIPTION_ARTIFACT}\`: line 1 is \`# <title>\` (keep the current title unless it is no longer accurate), the rest is the full PR body. If nothing in the description is outdated, write nothing. ZIBBY applies it after the push; you never run any \`gh\` write.`,
@@ -375,18 +375,40 @@ export class InboxAddressCommentsService implements OnModuleInit {
             latestOpinionatedReviews: {
               nodes: { author: { __typename: string; login: string } | null; state: string }[];
             };
+            reviewThreads: {
+              nodes: {
+                id: string;
+                comments: { nodes: { author: { __typename: string; login: string } | null }[] };
+              }[];
+            };
           } | null;
         } | null;
       }>(
-        "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){author{login} latestOpinionatedReviews(first:100){nodes{author{__typename login} state}}}}}",
+        "query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){author{login} latestOpinionatedReviews(first:100){nodes{author{__typename login} state}} reviewThreads(first:100){nodes{id comments(first:1){nodes{author{__typename login}}}}}}}}",
         { owner, name, n: fix.number },
       );
       const pr = data.repository?.pullRequest;
       const author = pr?.author?.login.toLowerCase();
-      const logins = (pr?.latestOpinionatedReviews.nodes ?? [])
+      // Every author of a thread this run worked on is asked to re-review, plus whoever
+      // requested changes — the fixes are only done once the commenter has looked again.
+      const reported = new Set(
+        [...(fix.report ?? "").matchAll(/thread:\s*`?([A-Za-z0-9_-]+)`?/g)].map((m) => m[1]),
+      );
+      const commenters = (pr?.reviewThreads.nodes ?? [])
+        .filter((t) => reported.has(t.id))
+        .map((t) => t.comments.nodes[0]?.author)
+        .filter((a) => a?.__typename === "User");
+      const requesters = (pr?.latestOpinionatedReviews.nodes ?? [])
         .filter((n) => n.state === "CHANGES_REQUESTED" && n.author?.__typename === "User")
-        .map((n) => n.author?.login ?? "")
-        .filter((l) => l && l.toLowerCase() !== author);
+        .map((n) => n.author);
+      const logins = [
+        ...new Map(
+          [...commenters, ...requesters]
+            .map((a) => a?.login ?? "")
+            .filter((l) => l && l.toLowerCase() !== author)
+            .map((l) => [l.toLowerCase(), l] as const),
+        ).values(),
+      ];
       if (logins.length) {
         // ponytail: one POST for all logins — one invalid login 422s the whole request; per-login calls if that bites.
         const res = await this.fetchImpl(

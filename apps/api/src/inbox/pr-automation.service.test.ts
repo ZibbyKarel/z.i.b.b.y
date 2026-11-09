@@ -336,7 +336,6 @@ describe("PrAutomationService (todo-16)", () => {
 
     it.each([
       ["a PR to review", { bucket: "to-review" as const }],
-      ["no changes requested", { review: "approved" as const }],
       ["no unresolved threads", { unresolvedThreads: 0 }],
       ["unknown unresolved threads", { unresolvedThreads: undefined }],
       ["an unknown head", { headSha: undefined }],
@@ -345,6 +344,13 @@ describe("PrAutomationService (todo-16)", () => {
       configs = { p1: { autoAddressComments: true } };
       await make().tick();
       expect(address.start).not.toHaveBeenCalled();
+    });
+
+    it("addresses plain comments too (no CHANGES_REQUESTED)", async () => {
+      prs = [mine({ review: "commented" })];
+      configs = { p1: { autoAddressComments: true } };
+      await make().tick();
+      expect(address.start).toHaveBeenCalledTimes(1);
     });
 
     it.each(["pushed", "failed", "discarded"] as const)(

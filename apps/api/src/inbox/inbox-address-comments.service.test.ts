@@ -106,6 +106,18 @@ describe("InboxAddressCommentsService", () => {
                   pullRequest: {
                     author: { login: "octo" },
                     latestOpinionatedReviews: { nodes: reviews },
+                    reviewThreads: {
+                      nodes: [
+                        {
+                          id: "PRRT_a",
+                          comments: { nodes: [{ author: { __typename: "User", login: "carol" } }] },
+                        },
+                        {
+                          id: "PRRT_r",
+                          comments: { nodes: [{ author: { __typename: "User", login: "dave" } }] },
+                        },
+                      ],
+                    },
                   },
                 },
               },
@@ -366,7 +378,7 @@ describe("InboxAddressCommentsService", () => {
       ];
     });
 
-    it("replies, resolves only open threads flagged resolve, re-requests changes-requested reviewers", async () => {
+    it("replies, resolves only open threads flagged resolve, re-requests thread authors and changes-requested reviewers", async () => {
       const taskId = await parkedWithReplies();
       await service.push(taskId);
       const resolves = graphql.filter((b) => b.includes("resolveReviewThread"));
@@ -378,13 +390,13 @@ describe("InboxAddressCommentsService", () => {
       expect(rest[0]?.url).toBe(
         "https://api.github.com/repos/acme/app/pulls/7/requested_reviewers",
       );
-      expect(JSON.parse(rest[0]?.body ?? "{}")).toEqual({ reviewers: ["alice"] });
+      expect(JSON.parse(rest[0]?.body ?? "{}")).toEqual({ reviewers: ["carol", "dave", "alice"] });
       const fix = (await storage.get(taskId)).prAddressComments;
       expect(fix).toMatchObject({
         state: "pushed",
         replied: 2,
         resolved: 1,
-        reviewersRequested: ["alice"],
+        reviewersRequested: ["carol", "dave", "alice"],
       });
       expect(fix?.repliesNote).toMatch(/1 skipped/);
     });
@@ -441,7 +453,7 @@ describe("InboxAddressCommentsService", () => {
         state: "pushed",
         replied: 2,
         resolved: 0,
-        reviewersRequested: ["alice"],
+        reviewersRequested: ["carol", "dave", "alice"],
       });
       expect(fix?.followUpNote).toMatch(/resolve PRRT_a: .*502/);
       expect(rest).toHaveLength(1);

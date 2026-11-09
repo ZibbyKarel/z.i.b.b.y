@@ -604,7 +604,7 @@ export class TaskOutputService implements OnModuleInit {
     const descriptionBlock = description
       ? `\n\n## PR description ZIBBY will update after the push\n\n# ${description.title}\n\n${description.body}`
       : "";
-    const followUpBlock = `${repliesBlock}${descriptionBlock}\n\nThen ${resolving ? "resolves the threads marked (resolve) and " : ""}re-requests review from everyone whose latest review is "Changes requested".`;
+    const followUpBlock = `${repliesBlock}${descriptionBlock}\n\nThen ${resolving ? "resolves the threads marked (resolve) and " : ""}re-requests review from the authors of the addressed comments and everyone whose latest review is "Changes requested".`;
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-address-comments",
