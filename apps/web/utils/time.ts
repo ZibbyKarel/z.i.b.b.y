@@ -21,9 +21,14 @@ export function relativeTime(
   return ago(h, "h");
 }
 
-/** Compact relative time ("now" / "3m" / "2h") for dense panels. */
-export const compactAgo = (iso: string, now: number): string =>
-  relativeTime(iso, now, (n, unit) => (n === 0 ? "now" : `${n}${unit}`));
+/** Compact relative time ("now" / "3m" / "2h" / "3d 4h") for dense panels; a day or more drops the minutes. */
+export function compactAgo(iso: string, now: number): string {
+  const h = Math.floor(Math.max(0, now - Date.parse(iso)) / HOUR_MS);
+  // `!(h >= 24)` also routes an unparsable `iso` (NaN) the old way.
+  if (!(h >= 24)) return relativeTime(iso, now, (n, unit) => (n === 0 ? "now" : `${n}${unit}`));
+  const d = Math.floor(h / 24);
+  return h % 24 ? `${d}d ${h % 24}h` : `${d}d`;
+}
 
 /**
  * A span of milliseconds as a compact duration ("45s" / "3m 12s" / "2h 5m") — the

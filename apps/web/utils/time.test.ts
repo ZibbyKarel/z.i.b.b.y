@@ -39,6 +39,12 @@ describe("compactAgo", () => {
     expect(compactAgo(iso(10_000), T0)).toBe("now");
     expect(compactAgo(iso(3 * 60_000), T0)).toBe("3m");
     expect(compactAgo(iso(2 * 60 * 60_000), T0)).toBe("2h");
+    expect(compactAgo(iso(23 * HOUR_MS + 59 * MINUTE_MS), T0)).toBe("23h");
+  });
+
+  it("renders a day or more as days and hours", () => {
+    expect(compactAgo(iso(DAY_MS), T0)).toBe("1d");
+    expect(compactAgo(iso(502 * HOUR_MS + 30 * MINUTE_MS), T0)).toBe("20d 22h");
   });
 });
 
