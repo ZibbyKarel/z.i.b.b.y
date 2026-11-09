@@ -332,12 +332,12 @@ export class BriefingService {
   }
 
   /**
-   * Read the latest pattern proposals from the vault (`patterns/suggestions`),
+   * Read the latest pattern proposals from the vault (`patterns-suggestions`),
    * parsing `- [ ] …` and `- [x] …` bullet lines. Returns [] on any error.
    */
   private async readLearnedPatterns(): Promise<string[]> {
     try {
-      const note = await this.vault.note("patterns/suggestions");
+      const note = await this.vault.note("patterns-suggestions");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))
@@ -350,12 +350,12 @@ export class BriefingService {
 
   /**
    * Read the GapDetector's "automate it?" suggestions from the vault
-   * (`suggestions/automation-gaps`), parsing the `- [ ] …` bullet lines. Caps at the
+   * (`automation-gaps`), parsing the `- [ ] …` bullet lines. Caps at the
    * first 5. [] on error.
    */
   private async readAutomationGaps(): Promise<string[]> {
     try {
-      const note = await this.vault.note("suggestions/automation-gaps");
+      const note = await this.vault.note("automation-gaps");
       return (note.body ?? "")
         .split("\n")
         .filter((l) => l.startsWith("- [ ] ") || l.startsWith("- [x] "))

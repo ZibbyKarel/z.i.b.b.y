@@ -14,7 +14,7 @@ and drafts "I noticed X — automate it?" suggestions for the morning briefing.
    `task-created` entries.
 2. Each summary is normalised (lowercase, punctuation→space, collapsed, capped 80 chars)
    and tallied. A normalised summary seen **≥ 3×** is an automation gap.
-3. The top 10 gaps are written to `vault/suggestions/automation-gaps.md` as
+3. The top 10 gaps are written to `vault/automation-gaps.md` as
    `- [ ] You created N similar tasks ("…") — automate it?` bullets.
 4. The morning briefing reads the top 5 into its **"Gaps I noticed"** section
    (`Briefing.automationGaps`).
@@ -25,7 +25,7 @@ automation or dispatches anything. Approving a suggestion is an operator action.
 ## Structured proposals (TODO 14)
 
 Each gap is also upserted as a `gap-detect` proposal (dedupe key = the normalised
-pattern, provenance `{ automationId, noteId: "suggestions/automation-gaps" }`).
+pattern, provenance `{ automationId, noteId: "automation-gaps" }`).
 Dismissed proposals are left out of the note; edited ones are written with their
 `editedText`. When no gap qualifies, the existing note is still cleaned of
 dismissed lines. See `docs/api/proposals.md`.

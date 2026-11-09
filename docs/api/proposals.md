@@ -66,11 +66,11 @@ directory). Writes are atomic (tmp + rename) and serialized in-process.
 
 ## Producers
 
-| Source            | Dedupe key              | Provenance                                                | Note                          |
-| ----------------- | ----------------------- | --------------------------------------------------------- | ----------------------------- |
-| `pattern-extract` | `action:decision`       | `{ automationId, noteId: "patterns/suggestions" }`        | `patterns/suggestions`        |
-| `gap-detect`      | normalised task summary | `{ automationId, noteId: "suggestions/automation-gaps" }` | `suggestions/automation-gaps` |
-| `agent-factory`   | candidate agent id      | `{ agentId, approvalId }`                                 | — (approval queue)            |
+| Source            | Dedupe key              | Provenance                                         | Note                   |
+| ----------------- | ----------------------- | -------------------------------------------------- | ---------------------- |
+| `pattern-extract` | `action:decision`       | `{ automationId, noteId: "patterns-suggestions" }` | `patterns-suggestions` |
+| `gap-detect`      | normalised task summary | `{ automationId, noteId: "automation-gaps" }`      | `automation-gaps`      |
+| `agent-factory`   | candidate agent id      | `{ agentId, approvalId }`                          | — (approval queue)     |
 
 `automationId` is the firing automation's id, passed by the scheduler
 (`extract(now, { automationId })` / `detect(now, { automationId })`); an unattributed

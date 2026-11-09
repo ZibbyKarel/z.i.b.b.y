@@ -14,7 +14,7 @@ const MAX_GAPS = 10;
 const WINDOW_DAYS = 30;
 
 /** The vault note recurring-gap suggestions are written to (read by the briefing). */
-const NOTE_ID = "suggestions/automation-gaps";
+const NOTE_ID = "automation-gaps";
 
 export interface AutomationGap {
   /** The normalised summary the recurring tasks share. */
@@ -40,7 +40,7 @@ export interface GapDetectOptions {
  * Scans the past {@link WINDOW_DAYS} of `task-created` activity for recurring
  * manual work — tasks the operator (or a channel) keeps creating by hand — groups
  * them by a normalised summary, and drafts "I noticed X — automate it?" suggestions
- * into `vault/suggestions/automation-gaps.md` for the morning briefing to surface.
+ * into `vault/automation-gaps.md` for the morning briefing to surface.
  *
  * Deterministic — no LLM call. *Proposes ≠ acts*: it only writes a vault note; it
  * never creates an automation. Reading only + an idempotent vault overwrite.

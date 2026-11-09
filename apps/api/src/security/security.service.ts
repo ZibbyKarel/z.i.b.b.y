@@ -19,7 +19,7 @@ const GITHUB_API = "https://api.github.com";
 
 /** The findings-store snapshot key + the vault note id (gap-detector's note pattern). */
 const FINDINGS_KEY = "sec";
-const NOTE_ID = "suggestions/security-findings";
+const NOTE_ID = "security-findings";
 
 /** A dependency CVE from GitHub Dependabot's open alerts. */
 export interface SecurityCveFinding {

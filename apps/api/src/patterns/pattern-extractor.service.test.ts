@@ -51,7 +51,7 @@ function makeService(
     note: vi.fn(async () => {
       if (!vaultBody) throw new Error("not found");
       return {
-        id: "patterns/suggestions",
+        id: "patterns-suggestions",
         title: "Pattern Suggestions",
         body: vaultBody,
         tier: "memory",
@@ -175,7 +175,7 @@ describe("PatternExtractorService", () => {
         source: "pattern-extract",
         occurrences: 4,
         confidence: "medium",
-        provenance: { automationId: "nightly-patterns", noteId: "patterns/suggestions" },
+        provenance: { automationId: "nightly-patterns", noteId: "patterns-suggestions" },
       });
       expect(listed[0]?.text).toContain("Always allow");
     });
@@ -183,7 +183,7 @@ describe("PatternExtractorService", () => {
     it("omits automationId when the run is not attributed to an automation", async () => {
       const { svc, proposals } = makeService(deploys());
       await svc.extract(new Date());
-      expect((await proposals.list())[0]?.provenance).toEqual({ noteId: "patterns/suggestions" });
+      expect((await proposals.list())[0]?.provenance).toEqual({ noteId: "patterns-suggestions" });
     });
 
     it("a dismissed proposal is omitted from the note on rerun", async () => {

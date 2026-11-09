@@ -11,7 +11,7 @@ const P: Proposal = {
   text: "Automate it?",
   confidence: "low",
   occurrences: 3,
-  provenance: { noteId: "suggestions/automation-gaps" },
+  provenance: { noteId: "automation-gaps" },
   createdAt: "2026-10-24T08:00:00.000Z",
   lastSeenAt: "2026-10-24T08:00:00.000Z",
   expiresAt: "2026-11-23T08:00:00.000Z",

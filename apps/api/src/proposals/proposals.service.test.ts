@@ -86,7 +86,7 @@ describe("ProposalsService", () => {
       text: "Automate deploy?",
       occurrences: 3,
       minOccurrences: 3,
-      provenance: { noteId: "suggestions/automation-gaps" },
+      provenance: { noteId: "automation-gaps" },
       now: NOW,
       ...over,
     });
@@ -118,7 +118,7 @@ describe("ProposalsService", () => {
     const second = await gap({
       text: "Automate deploy now?",
       occurrences: 7,
-      provenance: { noteId: "suggestions/automation-gaps", automationId: "gap-detect" },
+      provenance: { noteId: "automation-gaps", automationId: "gap-detect" },
       now: at(2),
     });
     expect(second).toMatchObject({
@@ -131,7 +131,7 @@ describe("ProposalsService", () => {
       lastSeenAt: at(2).toISOString(),
       expiresAt: at(32).toISOString(),
       decidedAt: at(1).toISOString(),
-      provenance: { noteId: "suggestions/automation-gaps", automationId: "gap-detect" },
+      provenance: { noteId: "automation-gaps", automationId: "gap-detect" },
       status: "open",
     });
     expect(await svc.list(at(2))).toHaveLength(1);

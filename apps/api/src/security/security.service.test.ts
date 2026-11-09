@@ -126,7 +126,7 @@ describe("SecurityService.scan", () => {
     expect(vault.createNote).toHaveBeenCalledTimes(1);
     expect(vault.updateIndex).toHaveBeenCalledWith(
       "department-sec-moc",
-      "suggestions/security-findings",
+      "security-findings",
       expect.any(String),
     );
     expect(activity.record).toHaveBeenCalledWith(
@@ -204,7 +204,7 @@ describe("SecurityService.scan", () => {
       rule: "aws-access-key",
     });
 
-    const noteBody = vault.notes.get("suggestions/security-findings")?.body ?? "";
+    const noteBody = vault.notes.get("security-findings")?.body ?? "";
     expect(noteBody).not.toContain(secret);
     for (const call of vault.createNote.mock.calls as Array<[{ body: string }]>) {
       expect(call[0].body).not.toContain(secret);

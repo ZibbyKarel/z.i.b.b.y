@@ -386,3 +386,5 @@ target:
   output:
     type: pr
 ```
+
+<!-- Last reviewed 2026-11-09: still accurate; the pattern-extract vault note id is now flat (`patterns-suggestions`), see docs/api/patterns.md. -->

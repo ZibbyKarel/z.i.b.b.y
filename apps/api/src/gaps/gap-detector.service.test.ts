@@ -44,7 +44,7 @@ function makeService(
     note: vi.fn(async () => {
       if (!vaultBody) throw new Error("not found");
       return {
-        id: "suggestions/automation-gaps",
+        id: "automation-gaps",
         title: "Automation Gaps",
         body: vaultBody,
         tier: "memory",
@@ -126,7 +126,7 @@ describe("GapDetectorService", () => {
         source: "gap-detect",
         occurrences: 7,
         confidence: "high",
-        provenance: { automationId: "gap-detect", noteId: "suggestions/automation-gaps" },
+        provenance: { automationId: "gap-detect", noteId: "automation-gaps" },
       });
     });
 

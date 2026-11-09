@@ -43,7 +43,7 @@ describe("Proposals API (e2e)", () => {
       text: "Automate deploy?",
       occurrences: 7,
       minOccurrences: 3,
-      provenance: { noteId: "suggestions/automation-gaps" },
+      provenance: { noteId: "automation-gaps" },
     });
     const agent = await proposals.upsert({
       source: "agent-factory",

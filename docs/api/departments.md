@@ -260,3 +260,5 @@ model, per the design doc).
   ONE parent/subtask read model, not a second implementation.
 
 <!-- Last reviewed 2026-10-23: still accurate after the verify-phase / project-checks removal (D-024). -->
+
+<!-- Last reviewed 2026-11-09: still accurate; the security findings note id is now flat (`security-findings`). -->

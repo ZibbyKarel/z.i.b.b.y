@@ -94,7 +94,7 @@ describe("ProposalsWidget", () => {
   });
 
   it.each([
-    [{ noteId: "patterns/suggestions" }, "/knowledge/vault?note=patterns%2Fsuggestions"],
+    [{ noteId: "patterns-suggestions" }, "/knowledge/vault?note=patterns-suggestions"],
     [{ agentId: "bob", approvalId: "ap1" }, "/workforce/agents/bob"],
     [{ approvalId: "ap1" }, "/governance/approvals"],
     [{ noteId: "n", agentId: "bob" }, "/knowledge/vault?note=n"],

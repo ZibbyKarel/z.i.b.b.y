@@ -29,7 +29,7 @@ only as a scheduled automation and is read back through the vault note it writes
 3. Each pattern becomes a proposal sentence: `Always allow "<action>" (approved N×
 in the past 30 days)` or the `deny` equivalent for rejected patterns.
 4. Non-empty proposal lists are written as `- [ ] …` bullets to the vault note
-   `patterns/suggestions` (`updateNote`, falling back to `createNote`).
+   `patterns-suggestions` (`updateNote`, falling back to `createNote`).
 5. `readProposals()` parses the `- [ ]` / `- [x]` bullet lines back out of the note
    body for the morning briefing.
 
@@ -44,7 +44,7 @@ Reading is the only side effect on the activity log; the vault write is idempote
 
 Each pattern is also upserted as a `pattern-extract` proposal
 (`ProposalsService.syncNoteLines`, dedupe key `action:decision`, provenance
-`{ automationId, noteId: "patterns/suggestions" }` — `automationId` is the firing
+`{ automationId, noteId: "patterns-suggestions" }` — `automationId` is the firing
 automation's id, passed by the scheduler). When writing the note, a proposal the
 operator dismissed is skipped and an edited one is written with its `editedText`.
 The note is rewritten whenever patterns exist, even if all were dismissed; when

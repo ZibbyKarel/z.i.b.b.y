@@ -117,3 +117,5 @@ A `briefing` automation target dispatches `generate()` each morning (before the
 operator's day starts); an automation's `prompt` field, if set, is threaded through
 as the `focus` steering the butler voice. See `docs/api/automations.md` for the
 scheduling mechanism itself.
+
+<!-- Last reviewed 2026-11-09: still accurate; vault note ids read here are flat (`patterns-suggestions`, `automation-gaps`). -->

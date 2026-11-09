@@ -11,7 +11,7 @@ const MIN_OCCURRENCES = 3;
 const MAX_PROPOSALS = 10;
 
 /** The vault note the proposals are written to (read by the briefing). */
-const NOTE_ID = "patterns/suggestions";
+const NOTE_ID = "patterns-suggestions";
 
 export interface ApprovalPattern {
   action: string;
@@ -33,7 +33,7 @@ export interface PatternExtractOptions {
 /**
  * Scans the past 30 days of approval-decision activity, finds recurring
  * action+decision pairs (≥ {@link MIN_OCCURRENCES} occurrences), and drafts
- * plain-English rule proposals into `vault/patterns/suggestions.md`. The
+ * plain-English rule proposals into `vault/patterns-suggestions.md`. The
  * proposals feed the morning briefing's "What I learned" section.
  *
  * Deterministic — no LLM call. Reading only; the vault write is idempotent

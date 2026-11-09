@@ -18,7 +18,7 @@ const PROPOSAL = {
   text: 'Always allow "deploy" (approved 3× in the past 30 days)',
   confidence: "low",
   occurrences: 3,
-  provenance: { automationId: "nightly-patterns", noteId: "patterns/suggestions" },
+  provenance: { automationId: "nightly-patterns", noteId: "patterns-suggestions" },
   createdAt: "2026-10-24T08:00:00.000Z",
   lastSeenAt: "2026-10-24T08:00:00.000Z",
   expiresAt: "2026-11-23T08:00:00.000Z",

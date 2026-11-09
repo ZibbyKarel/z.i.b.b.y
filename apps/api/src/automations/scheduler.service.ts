@@ -199,7 +199,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       }
       case "pattern-extract": {
         // M4 nightly job: scan 30 days of approval-decision activity, draft rule
-        // proposals into vault/patterns/suggestions.md; ref = `patterns:<count>`.
+        // proposals into vault/patterns-suggestions.md; ref = `patterns:<count>`.
         const { proposals } = await this.patterns.extract(new Date(), {
           automationId: automation.id,
         });
