@@ -27,7 +27,10 @@ import type { WorkflowRunnerService } from "../workflows/workflow-runner.service
 import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import type { WorkspaceService } from "../workspace/workspace.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
-import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import {
+  ScheduledTaskNotFoundError,
+  type ScheduledTasksStorageService,
+} from "./scheduled-tasks.storage.service";
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
@@ -1271,10 +1274,11 @@ describe("TaskRunsService", () => {
 
   describe("getChanges — the run's own diff", () => {
     const withWorkspace = { branch: "zibby/x", path: "/wt/x", baseRef: "base1" };
+    const wfRun = { ...pipeP, taskId: "task9", workspace: withWorkspace };
 
     it("diffs from the PR gate head sha when the task has one", async () => {
       const { service, workflowRunner, scheduled, workspace } = build();
-      workflowRunner.get.mockReturnValue({ ...pipeP, taskId: "task9", workspace: withWorkspace });
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
       scheduled.get.mockResolvedValue({ ...scheduledS, prFixCi: { headSha: "head9" } } as never);
       await expect(service.getChanges("delivery_3")).resolves.toEqual({
         diff: "d",
@@ -1285,12 +1289,57 @@ describe("TaskRunsService", () => {
         repoPath: acmeProject.path,
         branch: "zibby/x",
         from: "head9",
+        baseRef: "base1",
       });
     });
 
     it("falls back to the workspace baseRef without a PR gate", async () => {
       const { service, workflowRunner, workspace } = build();
-      workflowRunner.get.mockReturnValue({ ...pipeP, taskId: "task9", workspace: withWorkspace });
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      await service.getChanges("delivery_3");
+      expect(workspace.runChanges).toHaveBeenCalledWith(expect.objectContaining({ from: "base1" }));
+    });
+
+    it("resolves a historic run from disk when the in-memory get() throws", async () => {
+      const { service, workflowRunner, workspace } = build();
+      workflowRunner.get.mockImplementation(() => {
+        throw new Error("WorkflowRunNotFoundError");
+      });
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      await expect(service.getChanges("delivery_3")).resolves.toEqual({
+        diff: "d",
+        truncated: false,
+      });
+      expect(workspace.runChanges).toHaveBeenCalled();
+    });
+
+    it("is null for a workflow run driven by a goal (the goal shows the cumulative diff)", async () => {
+      const { service, workflowRunner, goalRunner, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      goalRunner.listAll.mockResolvedValue([
+        {
+          ...goalG,
+          iterations: [
+            { ...goalG.iterations[0]!, makerKind: "workflow", makerRunRef: "delivery_3" },
+          ],
+        },
+      ]);
+      await expect(service.getChanges("delivery_3")).resolves.toBeNull();
+      expect(workspace.runChanges).not.toHaveBeenCalled();
+    });
+
+    it("is null when the task lookup fails for a reason other than not-found", async () => {
+      const { service, workflowRunner, scheduled, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      scheduled.get.mockRejectedValue(new Error("disk on fire"));
+      await expect(service.getChanges("delivery_3")).resolves.toBeNull();
+      expect(workspace.runChanges).not.toHaveBeenCalled();
+    });
+
+    it("uses baseRef when the task is gone (not-found)", async () => {
+      const { service, workflowRunner, scheduled, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      scheduled.get.mockRejectedValue(new ScheduledTaskNotFoundError("task9"));
       await service.getChanges("delivery_3");
       expect(workspace.runChanges).toHaveBeenCalledWith(expect.objectContaining({ from: "base1" }));
     });

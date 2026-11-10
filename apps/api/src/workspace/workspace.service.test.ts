@@ -188,8 +188,19 @@ describe("WorkspaceService", () => {
       repoPath: repo,
       branch,
       from,
+      baseRef: from,
     });
     expect(gone?.diff).toContain("committed-b");
+    // PR-gate `from` (!== baseRef) with the worktree gone: the branch diff would be wrong.
+    expect(
+      await svc.runChanges({
+        worktreePath: "/nonexistent",
+        repoPath: repo,
+        branch,
+        from,
+        baseRef: "other-sha",
+      }),
+    ).toBeNull();
     expect(gone?.diff).not.toContain("uncommitted-line");
 
     expect(await svc.runChanges({ worktreePath: repo, from: "not-a-rev" })).toBeNull();

@@ -732,6 +732,8 @@ export class WorkspaceService {
     repoPath?: string;
     branch?: string;
     from: string;
+    /** The workspace's cut-point; the branch fallback only holds when `from` equals it. */
+    baseRef?: string;
   }): Promise<TaskRunChanges | null> {
     const live = opts.worktreePath
       ? await fs.stat(opts.worktreePath).then(
@@ -744,7 +746,9 @@ export class WorkspaceService {
     if (live && opts.worktreePath) {
       cwd = opts.worktreePath;
       args = ["diff", "--no-color", opts.from, "--"];
-    } else if (opts.repoPath && opts.branch) {
+    } else if (opts.repoPath && opts.branch && opts.from === opts.baseRef) {
+      // A PR-gate `from` (a head sha) never lands on the run's branch, so `from..branch` would
+      // be the PR reversed — only a fresh run (from === baseRef) can use this fallback.
       cwd = opts.repoPath;
       args = ["diff", "--no-color", opts.from, opts.branch, "--"];
     } else return null;

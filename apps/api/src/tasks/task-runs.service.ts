@@ -37,7 +37,10 @@ import { WorkflowsStorageService } from "../workflows/workflows.storage.service"
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
-import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import {
+  ScheduledTaskNotFoundError,
+  ScheduledTasksStorageService,
+} from "./scheduled-tasks.storage.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 import { taskTargetId } from "./task-target";
 
@@ -309,35 +312,43 @@ export class TaskRunsService {
    * Null when the run is unknown, has no workspace, or git can't produce a diff.
    */
   async getChanges(runId: string): Promise<TaskRunChanges | null> {
-    let run: AgentRun | WorkflowRun | GoalRun | undefined;
-    let repoPath: string | undefined;
-    try {
-      const kind = await this.kindOf(runId);
-      if (kind === "agent") run = this.agentRunner.get(runId);
-      else if (kind === "workflow") {
-        const w = this.workflowRunner.get(runId);
-        run = w;
-        repoPath = w?.projectPath;
-      } else {
-        const g = this.goalRunner.get(runId);
-        run = g;
-        repoPath = g?.projectPath;
-      }
-    } catch (error) {
-      if (error instanceof TaskRunNotFoundError) return null;
-      throw error;
-    }
+    // `listAll()` merges disk + memory — the runners' `get()` is memory-only and throws for
+    // a run past RETENTION_MS / an API restart, which is the common case here.
+    const [agents, workflows, goals] = await Promise.all([
+      this.agentRunner.listAll(),
+      this.workflowRunner.listAll(),
+      this.goalRunner.listAll(),
+    ]);
+    // A goal's child run shares the goal's cumulative workspace; the goal shows that diff.
+    const isGoalChild = goals.some((g) =>
+      g.iterations.some((it) => it.makerRunRef === runId || it.verifier.runRef === runId),
+    );
+    if (isGoalChild) return null;
+    const workflow = workflows.find((r) => r.workflowRunId === runId);
+    const goal = workflow ? undefined : goals.find((r) => r.goalRunId === runId);
+    const run: AgentRun | WorkflowRun | GoalRun | undefined =
+      workflow ?? goal ?? agents.find((r) => r.runId === runId);
+    const repoPath = workflow?.projectPath ?? goal?.projectPath;
     const ws = run?.workspace;
     if (!run || !ws) return null;
-    const task = run.taskId
-      ? await this.scheduled.get(run.taskId).catch(() => undefined)
-      : undefined;
-    const from =
-      task?.prAddressComments?.headSha ??
-      task?.prFixCi?.headSha ??
-      task?.prRebase?.headSha ??
-      ws.baseRef;
-    return this.workspace.runChanges({ worktreePath: ws.path, repoPath, branch: ws.branch, from });
+    let task: Awaited<ReturnType<ScheduledTasksStorageService["get"]>> | undefined;
+    if (run.taskId) {
+      try {
+        task = await this.scheduled.get(run.taskId);
+      } catch (error) {
+        // Task gone: nothing PR-gated to anchor on, baseRef is right. Anything else: unknown.
+        if (!(error instanceof ScheduledTaskNotFoundError)) return null;
+      }
+    }
+    const prHead =
+      task?.prAddressComments?.headSha ?? task?.prFixCi?.headSha ?? task?.prRebase?.headSha;
+    return this.workspace.runChanges({
+      worktreePath: ws.path,
+      repoPath,
+      branch: ws.branch,
+      from: prHead ?? ws.baseRef,
+      baseRef: ws.baseRef,
+    });
   }
 
   /**
