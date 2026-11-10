@@ -347,7 +347,7 @@ describe("PrAutomationService (todo-16)", () => {
     });
 
     it("addresses plain comments too (no CHANGES_REQUESTED)", async () => {
-      prs = [mine({ review: "commented" })];
+      prs = [mine({ review: "none" })];
       configs = { p1: { autoAddressComments: true } };
       await make().tick();
       expect(address.start).toHaveBeenCalledTimes(1);
