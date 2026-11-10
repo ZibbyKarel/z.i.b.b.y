@@ -87,6 +87,12 @@ export class TaskRunsController {
         return { status: 200, body: artifact };
       },
 
+      getTaskRunChanges: async ({ params: { runId } }) => {
+        const changes = await this.runs.getChanges(runId);
+        if (!changes) return { status: 404, body: { message: `No changes for run "${runId}"` } };
+        return { status: 200, body: changes };
+      },
+
       openTaskRunFolder: async ({ params: { runId }, body }) => {
         try {
           return { status: 200, body: await this.runs.openFolder(runId, body.artifact) };

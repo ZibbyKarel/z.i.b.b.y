@@ -228,6 +228,10 @@ export type TaskRun = z.infer<typeof TaskRunSchema>;
 export const TaskRunArtifactSchema = RunArtifactSchema;
 export type TaskRunArtifact = z.infer<typeof TaskRunArtifactSchema>;
 
+/** What one run changed: a unified diff (capped; `truncated` says it was cut). */
+export const TaskRunChangesSchema = z.object({ diff: z.string(), truncated: z.boolean() });
+export type TaskRunChanges = z.infer<typeof TaskRunChangesSchema>;
+
 /** Body accepted by `resumeTaskRun` — the operator's note for the resumed run. */
 export const ResumeTaskRunSchema = z.object({
   note: z.string().optional(),

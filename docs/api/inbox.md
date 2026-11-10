@@ -213,7 +213,8 @@ project's GitHub link, never taken from the client. Fetches
 project's resolved token and returns `{ diff, truncated }`. GitHub `406` (diff too
 large for GitHub) → `{ diff: "", truncated: true }`. A diff over 500,000 chars
 (`MAX_DIFF_BYTES`) is cut before the last line-start `diff --git` boundary under
-the cap and returned with `truncated: true`. The request times out after 15 s. Errors (non-406 GitHub failures throw
+the cap and returned with `truncated: true` (the capping is the shared `capUnifiedDiff` helper in
+`apps/api/src/shared/cap-unified-diff.ts`, behaviour unchanged). The request times out after 15 s. Errors (non-406 GitHub failures throw
 `GithubDiffError` carrying the upstream status): 404 unknown project or GitHub 404, 422 project has no
 GitHub link or GitHub 401/403, 502 any other GitHub failure.
 

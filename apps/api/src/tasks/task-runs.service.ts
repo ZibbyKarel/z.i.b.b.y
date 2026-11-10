@@ -15,6 +15,7 @@ import {
   type ScheduledTask,
   type SendRunMessageInput,
   type TaskRun,
+  type TaskRunChanges,
   type TaskRunSourcePr,
   type TaskTarget,
   type Workflow,
@@ -33,6 +34,7 @@ import {
   WorkflowRunnerService,
 } from "../workflows/workflow-runner.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -139,6 +141,7 @@ export class TaskRunsService {
     private readonly scheduled: ScheduledTasksStorageService,
     private readonly scheduler: TaskSchedulerService,
     private readonly approvals: ApprovalsService,
+    private readonly workspace: WorkspaceService,
     // Optional so Nest doesn't DI-resolve it — tests inject a stub so nothing launches.
     @Optional() private readonly opener: FolderOpener = openInFinder,
   ) {}
@@ -298,6 +301,43 @@ export class TaskRunsService {
     if (kind === "workflow") return this.workflowRunner.readArtifact(runId, name);
     if (kind === "goal") return this.goalRunner.readArtifact(runId, name);
     return null;
+  }
+
+  /**
+   * What this run itself changed: the diff from the PR gate's last head sha (the run
+   * addressing comments / fixing CI / rebasing) or, without one, from the run's start commit.
+   * Null when the run is unknown, has no workspace, or git can't produce a diff.
+   */
+  async getChanges(runId: string): Promise<TaskRunChanges | null> {
+    let run: AgentRun | WorkflowRun | GoalRun | undefined;
+    let repoPath: string | undefined;
+    try {
+      const kind = await this.kindOf(runId);
+      if (kind === "agent") run = this.agentRunner.get(runId);
+      else if (kind === "workflow") {
+        const w = this.workflowRunner.get(runId);
+        run = w;
+        repoPath = w?.projectPath;
+      } else {
+        const g = this.goalRunner.get(runId);
+        run = g;
+        repoPath = g?.projectPath;
+      }
+    } catch (error) {
+      if (error instanceof TaskRunNotFoundError) return null;
+      throw error;
+    }
+    const ws = run?.workspace;
+    if (!run || !ws) return null;
+    const task = run.taskId
+      ? await this.scheduled.get(run.taskId).catch(() => undefined)
+      : undefined;
+    const from =
+      task?.prAddressComments?.headSha ??
+      task?.prFixCi?.headSha ??
+      task?.prRebase?.headSha ??
+      ws.baseRef;
+    return this.workspace.runChanges({ worktreePath: ws.path, repoPath, branch: ws.branch, from });
   }
 
   /**

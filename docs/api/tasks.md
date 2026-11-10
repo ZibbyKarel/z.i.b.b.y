@@ -830,6 +830,20 @@ GET /api/tasks/runs/archive/counts?search=
             "archive is genuinely empty" vs. "this filter matched nothing" distinction
 ```
 
+### What a run changed (`/api/tasks/runs/:runId/changes`)
+
+```
+GET /api/tasks/runs/:runId/changes  → { diff: string, truncated: boolean }
+```
+
+The unified diff of what this one run changed, not the whole PR. `from` is the owning
+task's PR-gate `headSha` (`prAddressComments` ?? `prFixCi` ?? `prRebase`), else the run's
+`workspace.baseRef`. A live worktree is diffed against its working tree (a running run's
+uncommitted edits show); a removed worktree falls back to `from..branch` in the project
+repo (workflow/goal runs only; agent runs carry no `projectPath`). 404 when the run is
+unknown, has no `workspace`, or git cannot produce a diff (bad `from`, missing branch).
+The diff is capped at `MAX_DIFF_BYTES` (500k) at a file boundary; `truncated` says so.
+
 ## Task output (`output`)
 
 In the New Task dialog, the operator chooses **what happens to the finished work** —
