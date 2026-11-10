@@ -12,7 +12,7 @@
 10. [ ] detail Issue - sekci běhy a detaily zobrazíme nahoře hned pod hlavičkou issue
 11. [ ] Vytvoříme nový typ widgetu - Běhy Automatizací kde budeme zobrazovat, které autoamtizace právě běží, jaké čekají ve frontě (max 24hodin do budoucna). Design stejný jako u widgetu Běhy. čas na kartě bude ve formátu ve 24hod formátu. Při kliku na kartu běhu se zobrazí plachta s detailem automatizace a budu mít možnost ji spustit okamžitě. běhy automatizací se nepožítají do maximálního počtu běžících úloh.
 12. [ ] na detailu běhu u ID PR bude malá ikonka github/gitlab podle zdroje a u issue ID bude ikonka JIRA, smaž šipku u odkazů a odkazy budou na hover podtrzené
-13. [ ] v detailu běhu, pokud je jeho výstupem kod, bych potřeboval vidět změny, které se v tom běhu udělali (pozor né celé PR ale jen změny přidané v tom běhu)
+13. [x] v detailu běhu, pokud je jeho výstupem kod, bych potřeboval vidět změny, které se v tom běhu udělali (pozor né celé PR ale jen změny přidané v tom běhu) (main@6dc218658)
 14. [ ] stránky Práce -> Úlohy a Aktivita -> Běhy jsou prakticky totožné. Navrhuji stránku Úlohy zrušit a na stránce aktivita přidat do tabulky více informací, udělat ji sortofací a filtrovací. Hlavně filtry musejí být perzistentní v url aby sem mohl stránky pinnout a tabulka držela vyfiltrovaná a sortovaná ikdyž jdu do detailu běhu a zpět
 15. [ ] v apps desktop když se buildne tak nefunguje cmd+f hledání na stránce
 16. [ ] Při pustění ve zbuilděné desktop appce rebase větve pr-rebase_1794307789426 tak když dojel, viděl jsem běh ve widgetu běhy na dvou místech - jako že dojel úspěšně a podruhý jako že čeká na mě ke schválení
