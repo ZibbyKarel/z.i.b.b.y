@@ -14,7 +14,9 @@ import {
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
+import { PrDiff } from "../../inbox/components/PrDiff/PrDiff";
 import { useRunArtifactQuery } from "../queries/useRunArtifactQuery";
+import { useTaskRunChangesQuery } from "../queries/useTaskRunChangesQuery";
 import { useTaskRunFilesQuery } from "../queries/useTaskRunFilesQuery";
 import { type RunView, isMarkdownFilename, runOutputHref, runTitle } from "../run";
 import { MODE_TONE, type RunMode } from "../runDetailModel";
@@ -25,6 +27,8 @@ export enum RunOutputViewTestId {
   Pending = "run-output-pending",
   Open = "run-output-open",
   ContinueTask = "run-output-continue",
+  Changes = "run-output-changes",
+  ChangesTruncated = "run-output-changes-truncated",
 }
 
 export type RunOutputKind = "pr" | "markdown" | "folder";
@@ -101,6 +105,11 @@ export function RunOutputView({ run, mode, onOpenFolder, onContinueTask }: RunOu
     kind === "markdown" && workflow && !!run.outputArtifactName,
   );
   const { data: files } = useTaskRunFilesQuery(run.runId, kind === "folder" && workflow);
+
+  const { data: changes } = useTaskRunChangesQuery(
+    run.runId,
+    run.kind !== "scheduled" && run.status !== "queued",
+  );
 
   const diffFiles = run.diffstat?.files ?? run.prOutput?.files ?? [];
   const href = runOutputHref(run);
@@ -227,6 +236,22 @@ export function RunOutputView({ run, mode, onOpenFolder, onContinueTask }: RunOu
             when: "",
           }))}
         />
+      )}
+
+      {changes?.diff && (
+        <Stack data-testid={RunOutputViewTestId.Changes} gap="100">
+          <Typography type="subtitle">{t("output.changesTitle")}</Typography>
+          {changes.truncated && (
+            <Typography
+              data-testid={RunOutputViewTestId.ChangesTruncated}
+              type="labelSm"
+              variant="secondary"
+            >
+              {t("output.changesTruncated")}
+            </Typography>
+          )}
+          <PrDiff diff={changes.diff} />
+        </Stack>
       )}
     </Stack>
   );

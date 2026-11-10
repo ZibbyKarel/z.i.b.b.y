@@ -1448,6 +1448,8 @@
         "prTitle": "Pull request #{n}",
         "prMeta": "{state} · {files} souborů · +{add} −{del}",
         "folderMeta": "Složka úkolu · {n} souborů",
+        "changesTitle": "Změny v tomto běhu",
+        "changesTruncated": "Diff je příliš velký, zobrazena je jen část.",
         "openPr": "Otevřít PR ↗",
         "openOutput": "Otevřít výstup ↗",
         "openFolder": "Otevřít složku ↗",

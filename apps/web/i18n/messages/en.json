@@ -1448,6 +1448,8 @@
         "prTitle": "Pull request #{n}",
         "prMeta": "{state} · {files} files · +{add} −{del}",
         "folderMeta": "Task folder · {n} files",
+        "changesTitle": "Changes in this run",
+        "changesTruncated": "The diff is too large; showing only part of it.",
         "openPr": "Open PR ↗",
         "openOutput": "Open output ↗",
         "openFolder": "Open folder ↗",

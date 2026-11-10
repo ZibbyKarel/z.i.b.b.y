@@ -1,13 +1,15 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
 import userEvent from "@testing-library/user-event";
 import { DiffstatListTestId, FileTreeListTestId } from "@zibby/design-system";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RunView } from "../run";
 import { RunOutputView, RunOutputViewTestId, runOutputKind } from "./RunOutputView";
 
 vi.mock("../queries/useRunArtifactQuery", () => ({
   useRunArtifactQuery: () => ({ data: undefined }),
 }));
+const changesQuery = vi.hoisted(() => vi.fn());
+vi.mock("../queries/useTaskRunChangesQuery", () => ({ useTaskRunChangesQuery: changesQuery }));
 vi.mock("../queries/useTaskRunFilesQuery", () => ({
   useTaskRunFilesQuery: (_runId: string, enabled: boolean) => ({
     data: enabled
@@ -64,7 +66,39 @@ describe("runOutputKind", () => {
   });
 });
 
+describe("RunOutputView changes", () => {
+  const diff = "diff --git a/x.ts b/x.ts\n--- a/x.ts\n+++ b/x.ts\n@@ -1 +1 @@\n-a\n+b\n";
+  it("shows the changes section when the run has a diff", () => {
+    changesQuery.mockReturnValue({ data: { diff, truncated: false } });
+    render(<RunOutputView mode="done" onContinueTask={vi.fn()} run={prRun} />);
+    expect(screen.getByTestId(RunOutputViewTestId.Changes)).toHaveTextContent("Změny v tomto běhu");
+    expect(screen.queryByTestId(RunOutputViewTestId.ChangesTruncated)).not.toBeInTheDocument();
+  });
+  it.each([{ diff: "", truncated: false }, undefined])("hides it for %o", (data) => {
+    changesQuery.mockReturnValue({ data });
+    render(<RunOutputView mode="done" onContinueTask={vi.fn()} run={prRun} />);
+    expect(screen.queryByTestId(RunOutputViewTestId.Changes)).not.toBeInTheDocument();
+  });
+  it("flags a truncated diff", () => {
+    changesQuery.mockReturnValue({ data: { diff, truncated: true } });
+    render(<RunOutputView mode="done" onContinueTask={vi.fn()} run={prRun} />);
+    expect(screen.getByTestId(RunOutputViewTestId.ChangesTruncated)).toBeInTheDocument();
+  });
+  it("does not fetch for a queued run", () => {
+    changesQuery.mockReturnValue({ data: undefined });
+    render(
+      <RunOutputView
+        mode="running"
+        onContinueTask={vi.fn()}
+        run={{ ...prRun, status: "queued" }}
+      />,
+    );
+    expect(changesQuery).toHaveBeenCalledWith("delivery_42", false);
+  });
+});
+
 describe("RunOutputView", () => {
+  beforeEach(() => changesQuery.mockReturnValue({ data: undefined }));
   it("a done PR run shows the PR number title and one diff row per file", async () => {
     const onContinueTask = vi.fn();
     render(<RunOutputView mode="done" onContinueTask={onContinueTask} run={prRun} />);
