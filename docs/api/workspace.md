@@ -101,6 +101,20 @@ origin <branch>` then `gh pr create`. This is the actual outward, Tier-3
    directory. **Never deletes the branch** — it may carry the PR, and pruning
    branches is the operator's call, not the system's.
 
+- `apps/api/src/tasks/task-runs.service.ts` — `getChanges` calls `runChanges`
+  for `GET /api/tasks/runs/:runId/changes` (see [tasks.md](./tasks.md)).
+
+### `runChanges({ worktreePath?, repoPath?, branch?, from, baseRef? })`
+
+The unified diff of what a run changed since `from`. If `worktreePath` exists on
+disk, runs `git diff --no-color <from> --` in it (working tree vs `from`, so a
+running run's uncommitted edits show). Otherwise, with `repoPath` + `branch`, runs
+`git diff --no-color <from> <branch> --` in the project repo, but only when `from === baseRef`
+(a PR-gate head sha never lands on the branch, so it yields `null`). With neither, or on any
+git failure (bad `from`, missing branch), returns `null`. The result goes through
+`capUnifiedDiff`: over 500 000 chars it is cut at the last whole-file boundary and
+`truncated: true`.
+
 ## Endpoints
 
 None. `WorkspaceService` has no controller and no ts-rest contract — every

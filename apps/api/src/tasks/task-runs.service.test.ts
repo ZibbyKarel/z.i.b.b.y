@@ -6,6 +6,7 @@ import type {
   GoalRun,
   Project,
   ScheduledTask,
+  TaskRunChanges,
   Workflow,
   WorkflowRun,
 } from "@zibby/contracts";
@@ -24,8 +25,12 @@ import {
 } from "../workflows/workflow-runner.service";
 import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
 import type { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import type { WorkspaceService } from "../workspace/workspace.service";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
-import type { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import {
+  ScheduledTaskNotFoundError,
+  type ScheduledTasksStorageService,
+} from "./scheduled-tasks.storage.service";
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
@@ -176,6 +181,11 @@ function build() {
 
   const approvals = { list: vi.fn(async (): Promise<Approval[]> => []) };
 
+  const workspace = {
+    runChanges: vi.fn(
+      async (): Promise<TaskRunChanges | null> => ({ diff: "d", truncated: false }),
+    ),
+  };
   const opener = vi.fn(async () => {});
   const service = new TaskRunsService(
     agentRunner as unknown as AgentRunnerService,
@@ -188,6 +198,7 @@ function build() {
     scheduled as unknown as ScheduledTasksStorageService,
     scheduler as unknown as TaskSchedulerService,
     approvals as unknown as ApprovalsService,
+    workspace as unknown as WorkspaceService,
     opener,
   );
   return {
@@ -201,6 +212,7 @@ function build() {
     projectsStore,
     scheduled,
     scheduler,
+    workspace,
   };
 }
 
@@ -1257,6 +1269,86 @@ describe("TaskRunsService", () => {
       const counts = await service.getArchiveCounts({ search: "nothing-matches-this" });
       expect(counts.counts).toEqual({});
       expect(counts.total).toBe(2);
+    });
+  });
+
+  describe("getChanges — the run's own diff", () => {
+    const withWorkspace = { branch: "zibby/x", path: "/wt/x", baseRef: "base1" };
+    const wfRun = { ...pipeP, taskId: "task9", workspace: withWorkspace };
+
+    it("diffs from the PR gate head sha when the task has one", async () => {
+      const { service, workflowRunner, scheduled, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      scheduled.get.mockResolvedValue({ ...scheduledS, prFixCi: { headSha: "head9" } } as never);
+      await expect(service.getChanges("delivery_3")).resolves.toEqual({
+        diff: "d",
+        truncated: false,
+      });
+      expect(workspace.runChanges).toHaveBeenCalledWith({
+        worktreePath: "/wt/x",
+        repoPath: acmeProject.path,
+        branch: "zibby/x",
+        from: "head9",
+        baseRef: "base1",
+      });
+    });
+
+    it("falls back to the workspace baseRef without a PR gate", async () => {
+      const { service, workflowRunner, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      await service.getChanges("delivery_3");
+      expect(workspace.runChanges).toHaveBeenCalledWith(expect.objectContaining({ from: "base1" }));
+    });
+
+    it("resolves a historic run from disk when the in-memory get() throws", async () => {
+      const { service, workflowRunner, workspace } = build();
+      workflowRunner.get.mockImplementation(() => {
+        throw new Error("WorkflowRunNotFoundError");
+      });
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      await expect(service.getChanges("delivery_3")).resolves.toEqual({
+        diff: "d",
+        truncated: false,
+      });
+      expect(workspace.runChanges).toHaveBeenCalled();
+    });
+
+    it("is null for a workflow run driven by a goal (the goal shows the cumulative diff)", async () => {
+      const { service, workflowRunner, goalRunner, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      goalRunner.listAll.mockResolvedValue([
+        {
+          ...goalG,
+          iterations: [
+            { ...goalG.iterations[0]!, makerKind: "workflow", makerRunRef: "delivery_3" },
+          ],
+        },
+      ]);
+      await expect(service.getChanges("delivery_3")).resolves.toBeNull();
+      expect(workspace.runChanges).not.toHaveBeenCalled();
+    });
+
+    it("is null when the task lookup fails for a reason other than not-found", async () => {
+      const { service, workflowRunner, scheduled, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      scheduled.get.mockRejectedValue(new Error("disk on fire"));
+      await expect(service.getChanges("delivery_3")).resolves.toBeNull();
+      expect(workspace.runChanges).not.toHaveBeenCalled();
+    });
+
+    it("uses baseRef when the task is gone (not-found)", async () => {
+      const { service, workflowRunner, scheduled, workspace } = build();
+      workflowRunner.listAll.mockResolvedValue([wfRun]);
+      scheduled.get.mockRejectedValue(new ScheduledTaskNotFoundError("task9"));
+      await service.getChanges("delivery_3");
+      expect(workspace.runChanges).toHaveBeenCalledWith(expect.objectContaining({ from: "base1" }));
+    });
+
+    it("is null without a workspace, and for an unknown run", async () => {
+      const { service, workspace } = build();
+      await expect(service.getChanges("delivery_3")).resolves.toBeNull();
+      await expect(service.getChanges("nope")).resolves.toBeNull();
+      expect(workspace.runChanges).not.toHaveBeenCalled();
     });
   });
 });

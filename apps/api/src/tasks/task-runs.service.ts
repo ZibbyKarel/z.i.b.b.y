@@ -15,6 +15,7 @@ import {
   type ScheduledTask,
   type SendRunMessageInput,
   type TaskRun,
+  type TaskRunChanges,
   type TaskRunSourcePr,
   type TaskTarget,
   type Workflow,
@@ -33,9 +34,13 @@ import {
   WorkflowRunnerService,
 } from "../workflows/workflow-runner.service";
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
+import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
-import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
+import {
+  ScheduledTaskNotFoundError,
+  ScheduledTasksStorageService,
+} from "./scheduled-tasks.storage.service";
 import { TaskSchedulerService } from "./task-scheduler.service";
 import { taskTargetId } from "./task-target";
 
@@ -139,6 +144,7 @@ export class TaskRunsService {
     private readonly scheduled: ScheduledTasksStorageService,
     private readonly scheduler: TaskSchedulerService,
     private readonly approvals: ApprovalsService,
+    private readonly workspace: WorkspaceService,
     // Optional so Nest doesn't DI-resolve it — tests inject a stub so nothing launches.
     @Optional() private readonly opener: FolderOpener = openInFinder,
   ) {}
@@ -298,6 +304,51 @@ export class TaskRunsService {
     if (kind === "workflow") return this.workflowRunner.readArtifact(runId, name);
     if (kind === "goal") return this.goalRunner.readArtifact(runId, name);
     return null;
+  }
+
+  /**
+   * What this run itself changed: the diff from the PR gate's last head sha (the run
+   * addressing comments / fixing CI / rebasing) or, without one, from the run's start commit.
+   * Null when the run is unknown, has no workspace, or git can't produce a diff.
+   */
+  async getChanges(runId: string): Promise<TaskRunChanges | null> {
+    // `listAll()` merges disk + memory — the runners' `get()` is memory-only and throws for
+    // a run past RETENTION_MS / an API restart, which is the common case here.
+    const [agents, workflows, goals] = await Promise.all([
+      this.agentRunner.listAll(),
+      this.workflowRunner.listAll(),
+      this.goalRunner.listAll(),
+    ]);
+    // A goal's child run shares the goal's cumulative workspace; the goal shows that diff.
+    const isGoalChild = goals.some((g) =>
+      g.iterations.some((it) => it.makerRunRef === runId || it.verifier.runRef === runId),
+    );
+    if (isGoalChild) return null;
+    const workflow = workflows.find((r) => r.workflowRunId === runId);
+    const goal = workflow ? undefined : goals.find((r) => r.goalRunId === runId);
+    const run: AgentRun | WorkflowRun | GoalRun | undefined =
+      workflow ?? goal ?? agents.find((r) => r.runId === runId);
+    const repoPath = workflow?.projectPath ?? goal?.projectPath;
+    const ws = run?.workspace;
+    if (!run || !ws) return null;
+    let task: Awaited<ReturnType<ScheduledTasksStorageService["get"]>> | undefined;
+    if (run.taskId) {
+      try {
+        task = await this.scheduled.get(run.taskId);
+      } catch (error) {
+        // Task gone: nothing PR-gated to anchor on, baseRef is right. Anything else: unknown.
+        if (!(error instanceof ScheduledTaskNotFoundError)) return null;
+      }
+    }
+    const prHead =
+      task?.prAddressComments?.headSha ?? task?.prFixCi?.headSha ?? task?.prRebase?.headSha;
+    return this.workspace.runChanges({
+      worktreePath: ws.path,
+      repoPath,
+      branch: ws.branch,
+      from: prHead ?? ws.baseRef,
+      baseRef: ws.baseRef,
+    });
   }
 
   /**

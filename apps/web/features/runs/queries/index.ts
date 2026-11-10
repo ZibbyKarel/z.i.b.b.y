@@ -4,3 +4,4 @@ export { getRunArtifactQueryKey, useRunArtifactQuery } from "./useRunArtifactQue
 export { getStageRunLogQueryKey, useStageRunLogQuery } from "./useStageRunLogQuery";
 export { getTaskRunQueryKey, useTaskRunQuery } from "./useTaskRunQuery";
 export { getTaskRunFilesQueryKey, useTaskRunFilesQuery } from "./useTaskRunFilesQuery";
+export { getTaskRunChangesQueryKey, useTaskRunChangesQuery } from "./useTaskRunChangesQuery";

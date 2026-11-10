@@ -2,13 +2,14 @@ import { execFile } from "node:child_process";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Injectable, Optional } from "@nestjs/common";
-import type { DiffFile, Workspace } from "@zibby/contracts";
+import type { DiffFile, TaskRunChanges, Workspace } from "@zibby/contracts";
 import {
   GIT_NETWORK_TIMEOUT_MS,
   GIT_TIMEOUT_MS,
   exec,
   isGitRepo as isGitRepoAt,
 } from "../shared/git-exec";
+import { capUnifiedDiff } from "../shared/cap-unified-diff";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 
 /** Hard cap on a sanitized branch slug, leaving room under git's ref-name limits. */
@@ -718,5 +719,48 @@ export class WorkspaceService {
       deletions: files.reduce((sum, f) => sum + f.deletions, 0),
       files,
     };
+  }
+
+  /**
+   * The unified diff of what a run changed since `from`. A live worktree is diffed against
+   * its working tree (so a running run's uncommitted edits show); a removed one falls back
+   * to `from..branch` in the project repo. Any git failure (bad `from`, missing branch) or
+   * no place to look yields null.
+   */
+  async runChanges(opts: {
+    worktreePath?: string;
+    repoPath?: string;
+    branch?: string;
+    from: string;
+    /** The workspace's cut-point; the branch fallback only holds when `from` equals it. */
+    baseRef?: string;
+  }): Promise<TaskRunChanges | null> {
+    const live = opts.worktreePath
+      ? await fs.stat(opts.worktreePath).then(
+          () => true,
+          () => false,
+        )
+      : false;
+    let cwd: string;
+    let args: string[];
+    if (live && opts.worktreePath) {
+      cwd = opts.worktreePath;
+      args = ["diff", "--no-color", opts.from, "--"];
+    } else if (opts.repoPath && opts.branch && opts.from === opts.baseRef) {
+      // A PR-gate `from` (a head sha) never lands on the run's branch, so `from..branch` would
+      // be the PR reversed — only a fresh run (from === baseRef) can use this fallback.
+      cwd = opts.repoPath;
+      args = ["diff", "--no-color", opts.from, opts.branch, "--"];
+    } else return null;
+    try {
+      const { stdout } = await exec("git", args, {
+        cwd,
+        timeout: GIT_TIMEOUT_MS,
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      return capUnifiedDiff(stdout);
+    } catch {
+      return null;
+    }
   }
 }

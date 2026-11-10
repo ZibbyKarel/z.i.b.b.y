@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type { InboxPrDiff } from "@zibby/contracts";
+import { MAX_DIFF_BYTES, capUnifiedDiff } from "../shared/cap-unified-diff";
 import { CredentialsStore } from "../integrations/credentials.store";
 import { resolveGithubToken } from "../projects/project-pr.service";
 import { NoGithubLinkError } from "../projects/projects.errors";
@@ -8,10 +9,7 @@ import { ResolvedProjectService } from "../projects/resolved-project.service";
 
 const GITHUB_API = "https://api.github.com";
 
-/** GitHub refuses (406) diffs over its own limits; we also cap what we ship to the browser. */
-// ponytail: the whole body is read into memory before the cap is applied and the cap counts
-// UTF-16 chars, not bytes; upgrade = per-file collapse/virtualization in FileDiffView.
-export const MAX_DIFF_BYTES = 500_000;
+export { MAX_DIFF_BYTES };
 
 const GITHUB_TIMEOUT_MS = 15_000;
 
@@ -56,9 +54,6 @@ export class InboxPrDiffService {
     if (res.status === 406) return { diff: "", truncated: true };
     if (!res.ok) throw new GithubDiffError(res.status, link.repo, number);
     const text = await res.text();
-    if (text.length <= MAX_DIFF_BYTES) return { diff: text, truncated: false };
-    const nl = text.lastIndexOf("\ndiff --git", MAX_DIFF_BYTES - 1); // line-anchored: not "+diff --git" in a hunk
-    const cut = nl >= 0 ? nl + 1 : -1;
-    return { diff: text.slice(0, cut > 0 ? cut : MAX_DIFF_BYTES), truncated: true };
+    return capUnifiedDiff(text);
   }
 }

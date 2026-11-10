@@ -169,6 +169,44 @@ describe("WorkspaceService", () => {
     expect(await svc.diffStats(opts)).toMatchObject({ additions: 3, deletions: 0 });
   });
 
+  it("runChanges diffs from `from` incl. uncommitted edits; falls back to the branch; else null", async () => {
+    const from = await git(repo, "rev-parse", "HEAD");
+    await fs.writeFile(path.join(repo, "b.txt"), "committed-b\n", "utf8");
+    await git(repo, "add", "-A");
+    await git(repo, "commit", "-m", "B");
+    await fs.appendFile(path.join(repo, "README.md"), "uncommitted-line\n", "utf8");
+
+    const live = await svc.runChanges({ worktreePath: repo, from });
+    expect(live?.truncated).toBe(false);
+    expect(live?.diff).toContain("committed-b");
+    expect(live?.diff).toContain("uncommitted-line");
+    expect(live?.diff).not.toContain("+# fixture"); // initial content is context, not a change
+
+    const branch = await git(repo, "rev-parse", "--abbrev-ref", "HEAD");
+    const gone = await svc.runChanges({
+      worktreePath: "/nonexistent",
+      repoPath: repo,
+      branch,
+      from,
+      baseRef: from,
+    });
+    expect(gone?.diff).toContain("committed-b");
+    // PR-gate `from` (!== baseRef) with the worktree gone: the branch diff would be wrong.
+    expect(
+      await svc.runChanges({
+        worktreePath: "/nonexistent",
+        repoPath: repo,
+        branch,
+        from,
+        baseRef: "other-sha",
+      }),
+    ).toBeNull();
+    expect(gone?.diff).not.toContain("uncommitted-line");
+
+    expect(await svc.runChanges({ worktreePath: repo, from: "not-a-rev" })).toBeNull();
+    expect(await svc.runChanges({ from })).toBeNull();
+  });
+
   it("checkpoint commits a dirty worktree, returns the sha, and never touches main", async () => {
     const dir = path.join(runDir, "worktree");
     const ws = await svc.createWorktree({ projectPath: repo, runId: "r-cp", slug: "s", dir });

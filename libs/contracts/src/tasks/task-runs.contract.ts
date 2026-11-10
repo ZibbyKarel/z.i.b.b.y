@@ -13,6 +13,7 @@ import {
   RunFilesSchema,
   SendRunMessageSchema,
   TaskRunArtifactSchema,
+  TaskRunChangesSchema,
   TaskRunSchema,
 } from "./task-run.schema";
 
@@ -116,6 +117,18 @@ export const taskRunsContract = c.router(
         404: ErrorSchema,
       },
       summary: "Read a whitelisted run artifact (PR draft, diffstat, verdict, handoffs)",
+    },
+
+    getTaskRunChanges: {
+      method: "GET",
+      path: "/tasks/runs/:runId/changes",
+      pathParams: RunIdParam,
+      responses: {
+        200: TaskRunChangesSchema,
+        404: ErrorSchema,
+      },
+      summary:
+        "The unified diff of what this run changed (from its start commit), not the whole PR",
     },
 
     openTaskRunFolder: {

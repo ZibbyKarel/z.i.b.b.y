@@ -9,7 +9,9 @@ import {
   ScheduledTaskStatusSchema,
   TaskOutputSchema,
   TaskRoutingSchema,
+  TaskRunChangesSchema,
   TaskTargetSchema,
+  taskRunsContract,
   tasksContract,
 } from "../index";
 
@@ -501,5 +503,20 @@ describe("ScheduledTask.prFixCi", () => {
     expect(ScheduledTaskSchema.safeParse(ok).success).toBe(true);
     const bad = { ...base, prFixCi: { ...fix, fixedSha: "abc" } };
     expect(ScheduledTaskSchema.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe("taskRuns.getTaskRunChanges", () => {
+  it("is GET /tasks/runs/:runId/changes (under the /api prefix)", () => {
+    expect(taskRunsContract.getTaskRunChanges.method).toBe("GET");
+    expect(taskRunsContract.getTaskRunChanges.path).toBe("/api/tasks/runs/:runId/changes");
+  });
+
+  it("TaskRunChangesSchema requires diff and truncated", () => {
+    expect(TaskRunChangesSchema.parse({ diff: "", truncated: false })).toEqual({
+      diff: "",
+      truncated: false,
+    });
+    expect(() => TaskRunChangesSchema.parse({ diff: "" })).toThrow();
   });
 });
