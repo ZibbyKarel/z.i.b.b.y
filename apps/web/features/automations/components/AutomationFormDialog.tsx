@@ -18,6 +18,10 @@ export interface AutomationFormDialogProps {
    * mirroring CreateAutomationSchema.
    */
   onCreate: (body: Omit<Automation, "lastFiredAt" | "system">) => void;
+  /** Prefills the instruction (e.g. approving an automation proposal from its sample task). */
+  initialText?: string;
+  /** Prefills the target chip alongside {@link initialText}. */
+  initialTarget?: TaskTarget;
 }
 
 /** Trims the trailing/leading blanks off the FIRST non-empty line of the typed
@@ -42,7 +46,12 @@ function deriveName(text: string): string {
  * lives on the `/work/automations/:id` detail page ({@link ../DetailScreen}),
  * which still renders the older {@link AutomationFormFields}.
  */
-export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialogProps) {
+export function AutomationFormDialog({
+  onClose,
+  onCreate,
+  initialText,
+  initialTarget,
+}: AutomationFormDialogProps) {
   const t = useTranslations("automations");
   const form = useAutomationFormState();
 
@@ -90,6 +99,8 @@ export function AutomationFormDialog({ onClose, onCreate }: AutomationFormDialog
           showAttach
           chrome={false}
           disabled={!scheduleValid}
+          initialTarget={initialTarget}
+          initialText={initialText}
           onSubmit={save}
           placeholder={t("commandLinePlaceholder")}
           submitLabel={t("scheduleAction")}

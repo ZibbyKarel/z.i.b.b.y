@@ -18,8 +18,11 @@ export type ProposalSource = z.infer<typeof ProposalSourceSchema>;
 export const ProposalConfidenceSchema = z.enum(["low", "medium", "high"]);
 export type ProposalConfidence = z.infer<typeof ProposalConfidenceSchema>;
 
-/** `dismissed` is terminal — a producer rerun never re-opens it. */
-export const ProposalStatusSchema = z.enum(["open", "dismissed"]);
+/**
+ * `dismissed` and `approved` are terminal — a producer rerun never re-opens them.
+ * `approved` = the operator turned a `gap-detect` suggestion into an automation.
+ */
+export const ProposalStatusSchema = z.enum(["open", "dismissed", "approved"]);
 export type ProposalStatus = z.infer<typeof ProposalStatusSchema>;
 
 /** Where a proposal came from — every link optional, the object strict (Law 4 hygiene). */
@@ -29,6 +32,8 @@ export const ProposalProvenanceSchema = z
     noteId: z.string().optional(),
     approvalId: z.string().optional(),
     agentId: z.string().optional(),
+    /** `gap-detect`: the most recent task of the recurring group — prefills the automation. */
+    taskId: z.string().optional(),
   })
   .strict();
 export type ProposalProvenance = z.infer<typeof ProposalProvenanceSchema>;
@@ -55,9 +60,13 @@ export const ProposalSchema = z.object({
 });
 export type Proposal = z.infer<typeof ProposalSchema>;
 
-/** `PATCH /api/proposals/:id` body — dismiss, or replace the wording (1–500 chars after trim). */
+/**
+ * `PATCH /api/proposals/:id` body — dismiss, approve (a `gap-detect` proposal the operator
+ * just turned into an automation), or replace the wording (1–500 chars after trim).
+ */
 export const DecideProposalInputSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("dismiss") }),
+  z.object({ action: z.literal("approve") }),
   z.object({
     action: z.literal("edit"),
     text: z.string().trim().min(1).max(PROPOSAL_TEXT_MAX),

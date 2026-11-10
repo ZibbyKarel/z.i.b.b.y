@@ -19,8 +19,15 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { useNow } from "../../../hooks/useNow";
+import {
+  AutomationFormDialog,
+  type AutomationFormDialogProps,
+} from "../../automations/components/AutomationFormDialog";
+import { useCreateAutomationMutation } from "../../automations/mutations";
 import { useDecideProposalMutation } from "../../proposals/mutations";
 import { useProposalsQuery } from "../../proposals/queries";
+import { toClientTarget } from "../../tasks/task";
+import { useTaskQuery } from "../../tasks/queries";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
@@ -31,6 +38,7 @@ export enum ProposalsWidgetTestId {
   Expiry = "proposals-widget-expiry",
   Provenance = "proposals-widget-provenance",
   Dismiss = "proposals-widget-dismiss",
+  Approve = "proposals-widget-approve",
   Edit = "proposals-widget-edit",
   Editor = "proposals-widget-editor",
   Save = "proposals-widget-save",
@@ -73,8 +81,9 @@ export function proposalProvenance(
 
 /**
  * Proposals: suggestions the automations produced (pattern extraction, automation ideas, agent
- * factory) for the operator to review — dismiss, or edit the wording (not agent-factory ones,
- * whose candidate is edited on the agent page). Collapses to the header when nothing is open.
+ * factory) for the operator to review — dismiss, approve an automation idea (opens the create
+ * automation dialog prefilled from its sample task), or edit a pattern's wording (agent-factory
+ * candidates are edited on the agent page). Collapses to the header when nothing is open.
  */
 export function ProposalsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.proposals");
@@ -118,11 +127,17 @@ interface ProposalRowProps {
 function ProposalRow({ proposal, now }: ProposalRowProps) {
   const t = useTranslations("bridge.widgets.proposals");
   const decide = useDecideProposalMutation();
+  // Lives on the row, not the dialog: the dialog closes on submit, and a mutate-level
+  // `onSuccess` never fires once its component has unmounted.
+  const createAutomation = useCreateAutomationMutation();
   const shown = proposal.editedText ?? proposal.text;
   const [editing, setEditing] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [draft, setDraft] = useState(shown);
   const provenance = proposalProvenance(proposal.provenance, proposal.source);
-  const editable = proposal.source !== "agent-factory";
+  const approvable = proposal.source === "gap-detect";
+  const editable = proposal.source === "pattern-extract";
+  const dismissable = proposal.source !== "agent-factory";
   const trimmed = draft.trim();
 
   const dismiss = () => decide.mutate({ params: { id: proposal.id }, body: { action: "dismiss" } });
@@ -146,6 +161,18 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
         action={
           editing ? undefined : (
             <Stack align="center" direction="row" gap="50">
+              {approvable ? (
+                <Button
+                  aria-label={t("approveLabel", { text: shown })}
+                  data-testid={ProposalsWidgetTestId.Approve}
+                  disabled={decide.isPending}
+                  intent="ghost"
+                  onClick={() => setApproving(true)}
+                  size="sm"
+                >
+                  {t("approve")}
+                </Button>
+              ) : null}
               {editable ? (
                 <Button
                   aria-label={t("editLabel", { text: shown })}
@@ -157,7 +184,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
                   {t("edit")}
                 </Button>
               ) : null}
-              {editable ? (
+              {dismissable ? (
                 <Button
                   aria-label={t("dismissLabel", { text: shown })}
                   data-testid={ProposalsWidgetTestId.Dismiss}
@@ -241,16 +268,57 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
             </TextLink>
           ) : null}
         </BoardLine>
-        {decide.isError ? (
+        {decide.isError || createAutomation.isError ? (
           <Container padding={["50", "0"]}>
             <span data-testid={ProposalsWidgetTestId.RowError} role="alert">
               <BoardText kind="meta" tone="ink">
-                {decide.variables?.body.action === "edit" ? t("error") : t("actionError")}
+                {!createAutomation.isError && decide.variables?.body.action === "edit"
+                  ? t("error")
+                  : t("actionError")}
               </BoardText>
             </span>
           </Container>
         ) : null}
       </BoardRow>
+      {approving ? (
+        <ApproveProposalDialog
+          onClose={() => setApproving(false)}
+          onCreate={(body) =>
+            createAutomation.mutate(
+              { body },
+              {
+                onSuccess: () =>
+                  decide.mutate({ params: { id: proposal.id }, body: { action: "approve" } }),
+              },
+            )
+          }
+          taskId={proposal.provenance.taskId}
+        />
+      ) : null}
     </div>
+  );
+}
+
+interface ApproveProposalDialogProps {
+  /** The proposal's sample task — prefills what to run; absent → an empty dialog. */
+  taskId?: string;
+  onClose: () => void;
+  onCreate: AutomationFormDialogProps["onCreate"];
+}
+
+/** The create-automation dialog, prefilled from the recurring task once it has loaded. */
+function ApproveProposalDialog({ taskId, onClose, onCreate }: ApproveProposalDialogProps) {
+  const task = useTaskQuery(taskId);
+  // Wait for the sample task so CommandLine mounts with its text (it only reads it once);
+  // a missing/failed task still opens the dialog, just empty.
+  if (taskId && task.isPending) return null;
+  const sample = task.data;
+  return (
+    <AutomationFormDialog
+      initialTarget={sample?.target ? toClientTarget(sample.target) : undefined}
+      initialText={sample?.text}
+      onClose={onClose}
+      onCreate={onCreate}
+    />
   );
 }

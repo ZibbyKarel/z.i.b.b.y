@@ -24,13 +24,13 @@ function makeProposals(): ProposalsService {
   );
 }
 
-function taskCreated(summary: string, daysAgo = 1, i = 0): ActivityEntry {
+function taskCreated(summary: string, daysAgo = 1, i = 0, manual = true): ActivityEntry {
   return {
     id: `tc-${summary}-${daysAgo}-${i}`,
     at: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
     kind: "task-created",
     summary,
-    refs: {},
+    refs: { taskId: `task-${daysAgo}-${i}`, ...(manual ? { manual } : {}) },
   };
 }
 
@@ -62,6 +62,27 @@ function makeService(
 }
 
 describe("GapDetectorService", () => {
+  it("ignores tasks not created by hand (autopilot, inbox flows, automations)", async () => {
+    const { svc } = makeService([
+      taskCreated("Address review comments: acme#1", 1, 1, false),
+      taskCreated("Address review comments: acme#1", 2, 2, false),
+      taskCreated("Address review comments: acme#1", 3, 3, false),
+    ]);
+    expect((await svc.detect(new Date())).gaps).toHaveLength(0);
+  });
+
+  it("links the most recent task and expires a gap that stopped recurring", async () => {
+    const proposals = makeProposals();
+    const recurring = [1, 2, 3].map((d) => taskCreated("Standup", d, d));
+    // Activity is read oldest first.
+    await makeService([...recurring].reverse(), "", proposals).svc.detect(new Date());
+    const [open] = await proposals.list();
+    expect(open?.provenance.taskId).toBe("task-1-1");
+
+    await makeService([], "", proposals).svc.detect(new Date());
+    expect(await proposals.list()).toHaveLength(0);
+  });
+
   it("returns no gaps when there is no task-created activity", async () => {
     const { svc } = makeService([]);
     const result = await svc.detect(new Date());

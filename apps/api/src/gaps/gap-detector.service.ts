@@ -22,6 +22,8 @@ export interface AutomationGap {
   /** A representative original summary (first seen). */
   sample: string;
   count: number;
+  /** The most recent task of the group — the approve dialog prefills from it. */
+  taskId?: string;
 }
 
 export interface GapDetectResult {
@@ -69,30 +71,53 @@ export class GapDetectorService {
 
     const tally = new Map<string, AutomationGap>();
     for (const entry of entries) {
-      if (entry.kind !== "task-created") continue;
+      // Only hand-made tasks are a gap — an automation, channel, autopilot or inbox
+      // flow (review, address comments, rebase…) already runs without the operator.
+      if (entry.kind !== "task-created" || entry.refs.manual !== true) continue;
       const key = normalize(entry.summary);
       if (!key) continue;
+      const taskId = entry.refs.taskId;
       const existing = tally.get(key);
-      if (existing) existing.count += 1;
-      else tally.set(key, { pattern: key, sample: entry.summary.trim(), count: 1 });
+      if (existing) {
+        existing.count += 1;
+        if (taskId) existing.taskId = taskId;
+      } else {
+        tally.set(key, { pattern: key, sample: entry.summary.trim(), count: 1, taskId });
+      }
     }
 
     const gaps = [...tally.values()]
       .filter((g) => g.count >= MIN_OCCURRENCES)
       .sort((a, b) => b.count - a.count)
       .slice(0, MAX_GAPS);
-    const suggestions = await this.proposals.syncNoteLines(
-      "gap-detect",
-      gaps.map((g) => ({ key: g.pattern, text: toSuggestion(g), occurrences: g.count })),
-      {
-        minOccurrences: MIN_OCCURRENCES,
-        provenance: {
-          ...(opts.automationId ? { automationId: opts.automationId } : {}),
-          noteId: NOTE_ID,
+    const provenance = {
+      ...(opts.automationId ? { automationId: opts.automationId } : {}),
+      noteId: NOTE_ID,
+    };
+    const suggestions: string[] = [];
+    for (const g of gaps) {
+      const [line] = await this.proposals.syncNoteLines(
+        "gap-detect",
+        [{ key: g.pattern, text: toSuggestion(g), occurrences: g.count }],
+        {
+          minOccurrences: MIN_OCCURRENCES,
+          provenance: { ...provenance, ...(g.taskId ? { taskId: g.taskId } : {}) },
+          now,
         },
+      );
+      if (line !== undefined) suggestions.push(line);
+    }
+    await this.proposals
+      .expireUnseen(
+        "gap-detect",
+        gaps.map((g) => g.pattern),
         now,
-      },
-    );
+      )
+      .catch((err: unknown) => {
+        this.log.warn("failed to expire stale gap proposals", {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
 
     // Rewrite whenever gaps exist — even if every one was dismissed — so a
     // dismissed line leaves the note on this run.

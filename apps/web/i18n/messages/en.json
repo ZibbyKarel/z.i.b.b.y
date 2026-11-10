@@ -3415,6 +3415,8 @@
         "dismissDone": "Dismissed",
         "actionError": "The action could not be completed.",
         "dismissLabel": "Dismiss: {text}",
+        "approve": "Approve",
+        "approveLabel": "Approve and create automation: {text}",
         "edit": "Edit",
         "editLabel": "Edit: {text}",
         "editor": "Proposal text",
@@ -3470,7 +3472,7 @@
       },
       "proposals": {
         "label": "Proposals",
-        "desc": "Suggestions from automations to review — dismiss or edit the insight."
+        "desc": "Suggestions from automations to review — approve an automation, dismiss or edit the insight."
       },
       "budgets": {
         "label": "Budgets & limits",

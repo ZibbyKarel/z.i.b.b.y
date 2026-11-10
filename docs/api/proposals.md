@@ -1,4 +1,4 @@
-# System proposals — review, dismiss, edit (TODO 14)
+# System proposals — review, dismiss, approve, edit (TODO 14)
 
 Automations that "propose without acting" write one structured **proposal record**
 per suggestion, with provenance, confidence and expiry. The operator lists them,
@@ -11,17 +11,20 @@ Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
 
 ## Endpoints
 
-| Method | Path                 | Body                                                                                                                                       | Result                         |
-| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| GET    | `/api/proposals`     | —                                                                                                                                          | `200 Proposal[]`               |
-| PATCH  | `/api/proposals/:id` | `{ action: "dismiss" } \| { action: "edit", text }` (1–500 chars; whitespace runs, newlines included, collapse to one space, then trimmed) | `200 Proposal` / `404` / `409` |
+| Method | Path                 | Body                                                                                                                                                                | Result                         |
+| ------ | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| GET    | `/api/proposals`     | —                                                                                                                                                                   | `200 Proposal[]`               |
+| PATCH  | `/api/proposals/:id` | `{ action: "dismiss" } \| { action: "approve" } \| { action: "edit", text }` (1–500 chars; whitespace runs, newlines included, collapse to one space, then trimmed) | `200 Proposal` / `404` / `409` |
 
 - `GET` lists the **open, unexpired** proposals, sorted by confidence (high first),
   then `lastSeenAt` newest first. An `agent-factory` proposal whose approval was
   already decided on the approvals page (or no longer exists) is hidden too. One `list("pending")` read
   decides this. If that read fails, nothing is hidden.
+- `approve` is for `gap-detect` only: the operator just created an automation from
+  the suggestion (the Bridge widget's Approve → prefilled create-automation dialog).
 - `404`: unknown id. `409`: `edit` of an `agent-factory` proposal (edit the
-  candidate on its agent page), or any action on a dismissed proposal.
+  candidate on its agent page), `approve` of a non-`gap-detect` proposal, or any
+  action on an already decided (`dismissed`/`approved`) proposal.
 
 ## The record
 
@@ -33,9 +36,9 @@ Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
   editedText?: string;        // ≤ 500, the operator's wording — wins everywhere
   confidence: "low" | "medium" | "high";
   occurrences: number;        // evidence count the producer saw
-  provenance: { automationId?; noteId?; approvalId?; agentId? };
+  provenance: { automationId?; noteId?; approvalId?; agentId?; taskId? }; // taskId: gap-detect sample task
   createdAt; lastSeenAt; expiresAt: string; // ISO
-  status: "open" | "dismissed";
+  status: "open" | "dismissed" | "approved"; // dismissed/approved are terminal
   decidedAt?: string;
 }
 ```
@@ -47,7 +50,8 @@ Contract: `libs/contracts/src/proposals/` (`proposalsContract`, mounted as
 - **Upsert** (`ProposalsService.upsert`): a new id is created `open`; an existing one
   gets new `text`, `occurrences`, `confidence`, `lastSeenAt`, `expiresAt`,
   `provenance` and keeps `status`, `editedText`, `decidedAt`, `createdAt`. A
-  dismissed proposal is never re-opened.
+  dismissed or approved proposal is never re-opened. `expireUnseen(source, keys)`
+  sets `expiresAt = now` on open records of `source` the producer no longer reports.
 
 ## Store
 
@@ -89,8 +93,8 @@ updates the record.
 
 ## Activity
 
-Dismiss and edit record `proposal-decided` (group `approvals`), summary
-`"dismissed <source> proposal"` / `"edited <source> proposal"`, refs
-`{ itemId: <proposal id>, action: "dismiss" | "edit", noteId?, agentId?, approvalId?, automationId? }`.
+Dismiss, approve and edit record `proposal-decided` (group `approvals`), summary
+`"dismissed|approved|edited <source> proposal"`, refs
+`{ itemId: <proposal id>, action: "dismiss" | "approve" | "edit", noteId?, agentId?, approvalId?, automationId? }`.
 The producers record no run-completion activity of their own. A new agent-factory
 candidate shows up as `approval-requested` (refs.status `agent-proposal`).

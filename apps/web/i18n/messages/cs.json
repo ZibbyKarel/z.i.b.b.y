@@ -3415,6 +3415,8 @@
         "dismissDone": "Zamítnuto",
         "actionError": "Akci se nepodařilo provést.",
         "dismissLabel": "Zamítnout: {text}",
+        "approve": "Schválit",
+        "approveLabel": "Schválit a vytvořit automatizaci: {text}",
         "edit": "Upravit",
         "editLabel": "Upravit: {text}",
         "editor": "Text návrhu",
@@ -3470,7 +3472,7 @@
       },
       "proposals": {
         "label": "Návrhy",
-        "desc": "Návrhy z automatizací ke kontrole — zamítni nebo uprav poznatek."
+        "desc": "Návrhy z automatizací ke kontrole — schval automatizaci, zamítni nebo uprav poznatek."
       },
       "budgets": {
         "label": "Budgety a limity",

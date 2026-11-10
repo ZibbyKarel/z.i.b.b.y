@@ -33,6 +33,28 @@ vi.mock("../../proposals/mutations", () => ({
   }),
 }));
 
+const a = vi.hoisted(() => ({ create: vi.fn() }));
+vi.mock("../../automations/mutations", () => ({
+  useCreateAutomationMutation: () => ({ mutate: a.create, isError: false }),
+}));
+vi.mock("../../tasks/queries", () => ({
+  useTaskQuery: () => ({
+    isPending: false,
+    data: { text: "/zibby:standup-post", target: { kind: "workflow", id: "wf", name: "Wf" } },
+  }),
+}));
+vi.mock("../../automations/components/AutomationFormDialog", () => ({
+  AutomationFormDialog: (p: {
+    initialText?: string;
+    initialTarget?: { id?: string };
+    onCreate: (body: unknown) => void;
+  }) => (
+    <button onClick={() => p.onCreate({ id: "auto" })} type="button">
+      {`dialog:${p.initialText}:${p.initialTarget?.id}`}
+    </button>
+  ),
+}));
+
 const NOW = Date.parse("2026-10-24T12:00:00.000Z");
 const DAY = 86_400_000;
 const widget: BridgeWidget = { id: "w-p", type: "proposals", x: 0, y: 0, w: 4, h: 8 };
@@ -232,5 +254,19 @@ describe("ProposalsWidget", () => {
       "Žádné návrhy ke kontrole.",
     );
     expect(empty.onEmptyChange).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe("ProposalsWidget approve", () => {
+  it("a gap-detect row approves via a prefilled automation dialog, then marks it approved", () => {
+    d.proposals = [proposal("g", { source: "gap-detect", provenance: { taskId: "t1" } })];
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    expect(screen.queryByTestId(ProposalsWidgetTestId.Edit)).toBeNull();
+    fireEvent.click(screen.getByTestId(ProposalsWidgetTestId.Approve));
+    fireEvent.click(screen.getByText("dialog:/zibby:standup-post:wf"));
+    expect(a.create).toHaveBeenCalledWith({ body: { id: "auto" } }, expect.any(Object));
+    const opts = a.create.mock.calls[0]?.[1] as { onSuccess: () => void };
+    opts.onSuccess();
+    expect(d.mutate).toHaveBeenCalledWith({ params: { id: "g" }, body: { action: "approve" } });
   });
 });

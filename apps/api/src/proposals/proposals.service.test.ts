@@ -230,6 +230,15 @@ describe("ProposalsService", () => {
     );
   });
 
+  it("approve marks a gap-detect proposal approved, terminal and unlisted", async () => {
+    const p = await gap();
+    expect(await svc.decide(p.id, { action: "approve" })).toMatchObject({ status: "approved" });
+    expect(await svc.list()).toHaveLength(0);
+    await expect(svc.decide(p.id, { action: "dismiss" })).rejects.toBeInstanceOf(
+      ProposalConflictError,
+    );
+  });
+
   describe("agent-factory", () => {
     const agent = () =>
       svc.upsert({

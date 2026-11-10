@@ -908,10 +908,10 @@ ignores them):
 
 ## Activity records
 
-| Event             | When                                  |
-| ----------------- | ------------------------------------- |
-| `task-created`    | A task was created                    |
-| `task-dispatched` | A task was handed to a runner         |
-| `task-queued`     | A task was queued (no capacity)       |
-| `task-held`       | A task was parked for budget approval |
-| `task-outcome`    | A run finished, outcome written back  |
+| Event             | When                                                                                                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `task-created`    | A task was created (`refs.manual: true` when the operator made it by hand — the `background` dialog/composer path with source `operator`/`department`; read by the GapDetector) |
+| `task-dispatched` | A task was handed to a runner                                                                                                                                                   |
+| `task-queued`     | A task was queued (no capacity)                                                                                                                                                 |
+| `task-held`       | A task was parked for budget approval                                                                                                                                           |
+| `task-outcome`    | A run finished, outcome written back                                                                                                                                            |

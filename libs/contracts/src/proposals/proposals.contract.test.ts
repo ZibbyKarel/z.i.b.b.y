@@ -44,7 +44,7 @@ describe("ProposalSchema", () => {
       "agent-factory",
     ]);
     expect(ProposalConfidenceSchema.options).toEqual(["low", "medium", "high"]);
-    expect(ProposalStatusSchema.options).toEqual(["open", "dismissed"]);
+    expect(ProposalStatusSchema.options).toEqual(["open", "dismissed", "approved"]);
     expect(ProposalSchema.safeParse({ ...PROPOSAL, source: "security-scan" }).success).toBe(false);
   });
 
@@ -75,7 +75,7 @@ describe("DecideProposalInputSchema", () => {
     expect(
       DecideProposalInputSchema.safeParse({ action: "edit", text: "x".repeat(501) }).success,
     ).toBe(false);
-    expect(DecideProposalInputSchema.safeParse({ action: "approve" }).success).toBe(false);
+    expect(DecideProposalInputSchema.safeParse({ action: "approve" }).success).toBe(true);
   });
 });
 

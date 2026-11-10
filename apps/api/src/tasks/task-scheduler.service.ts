@@ -449,6 +449,10 @@ export class TaskSchedulerService
     // `@department` target legs here, everything else is the operator.
     resolvedInput.source =
       input.source ?? (rawTarget?.kind === "department" ? "department" : "operator");
+    // Only the interactive dialog/composer path (`background`) is the operator's own
+    // hand-made task; server flows (inbox, autopilot, roadmap, retries) pass `false`.
+    const manual =
+      background && (resolvedInput.source === "operator" || resolvedInput.source === "department");
     const project = trustedProjectId
       ? await this.projects.get(trustedProjectId).catch((): Project | null => null)
       : matchProject(await this.projects.list().catch((): Project[] => []), {
@@ -474,6 +478,7 @@ export class TaskSchedulerService
           taskId: task.id,
           status: "scheduled",
           ...(project ? { projectId: project.id } : {}),
+          ...(manual ? { manual } : {}),
         },
       });
       if (background && titleAuto) this.refineTitle(task.id, input.text);
@@ -485,7 +490,11 @@ export class TaskSchedulerService
     void this.activity.record({
       kind: "task-created",
       summary: `task created${input.title ? `: ${input.title}` : ""}`,
-      refs: { taskId, ...(project ? { projectId: project.id } : {}) },
+      refs: {
+        taskId,
+        ...(project ? { projectId: project.id } : {}),
+        ...(manual ? { manual } : {}),
+      },
     });
     return this.attemptCreate(taskId, resolvedInput, project, now, target, background, titleAuto);
   }

@@ -181,6 +181,12 @@ export const ActivityRefsSchema = z
      * unattributed (e.g. the orchestrator fallback) or the store read failed.
      */
     department: DepartmentIdSchema.optional(),
+    /**
+     * `task-created`: the operator created the task by hand (the New Task dialog /
+     * composer / a quick action) — not an automation, channel, autopilot or inbox
+     * flow. `GapDetectorService` only counts these as recurring manual work.
+     */
+    manual: z.boolean().optional(),
   })
   .strict();
 export type ActivityRefs = z.infer<typeof ActivityRefsSchema>;

@@ -8,7 +8,7 @@ const c = initContract();
 /**
  * System proposals (TODO 14) — the structured records `pattern-extract`,
  * `gap-detect` and `agent-factory` write. Producers own creation; the operator
- * only reviews: list the open ones, dismiss or edit one. Producers respect the
+ * only reviews: list the open ones, dismiss, approve or edit one. Producers respect the
  * decision on their next run.
  */
 export const proposalsContract = c.router(
@@ -26,10 +26,10 @@ export const proposalsContract = c.router(
       responses: {
         200: ProposalSchema,
         404: ErrorSchema,
-        /** Edit of an agent-factory proposal, or any action on a dismissed one. */
+        /** Edit of an agent-factory proposal, approve of a non-gap-detect one, or any action on a decided one. */
         409: ErrorSchema,
       },
-      summary: "Dismiss a proposal or edit its wording",
+      summary: "Dismiss, approve or edit a proposal",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

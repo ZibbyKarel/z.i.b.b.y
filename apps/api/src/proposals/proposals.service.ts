@@ -142,14 +142,14 @@ export class ProposalsService {
         });
         return null;
       });
-      if (record?.status === "dismissed") continue;
+      if (record && record.status !== "open") continue;
       lines.push(record ? proposalDisplayText(record) : item.text);
     }
     return lines;
   }
 
   /**
-   * Of the existing note bullet `lines`, those that are NOT a dismissed proposal of
+   * Of the existing note bullet `lines`, those that are NOT a dismissed/approved proposal of
    * `source` (matched on the producer text or the operator's edited wording). Used
    * when a producer has nothing qualifying but must still drop dismissed lines.
    * Fail-open: a store failure keeps every line.
@@ -158,11 +158,33 @@ export class ProposalsService {
     const dismissed = await this.decisions(source).catch(() => new Map<string, Proposal>());
     const hidden = new Set<string>();
     for (const p of dismissed.values()) {
-      if (p.status !== "dismissed") continue;
+      if (p.status === "open") continue;
       hidden.add(p.text);
       if (p.editedText) hidden.add(p.editedText);
     }
     return lines.filter((l) => !hidden.has(l));
+  }
+
+  /**
+   * Expire every OPEN `source` proposal whose key the producer no longer reports
+   * (e.g. a gap that stopped recurring, or one now handled by autopilot), so it
+   * leaves the list on this run instead of lingering for {@link PROPOSAL_TTL_DAYS}.
+   */
+  async expireUnseen(
+    source: ProposalSource,
+    keys: string[],
+    now: Date = new Date(),
+  ): Promise<void> {
+    const keep = new Set(keys.map((k) => proposalId(source, k)));
+    const nowIso = now.toISOString();
+    await this.store.mutate((all) => ({
+      next: all.map((p) =>
+        p.source === source && p.status === "open" && !keep.has(p.id) && p.expiresAt > nowIso
+          ? { ...p, expiresAt: nowIso }
+          : p,
+      ),
+      result: undefined,
+    }));
   }
 
   /** Every stored record of `source` (any status, expired included), keyed by id. */
@@ -211,9 +233,13 @@ export class ProposalsService {
       if (!latest) throw new ProposalNotFoundError(id);
       assertDecidable(latest, input);
       const record: Proposal =
-        input.action === "dismiss"
-          ? { ...latest, status: "dismissed", decidedAt }
-          : { ...latest, editedText, decidedAt };
+        input.action === "edit"
+          ? { ...latest, editedText, decidedAt }
+          : {
+              ...latest,
+              status: input.action === "dismiss" ? "dismissed" : "approved",
+              decidedAt,
+            };
       return { next: all.map((p) => (p.id === id ? record : p)), result: record };
     });
 
@@ -230,7 +256,7 @@ export class ProposalsService {
       });
     }
 
-    const verb = input.action === "dismiss" ? "dismissed" : "edited";
+    const verb = { dismiss: "dismissed", approve: "approved", edit: "edited" }[input.action];
     void this.activity.record({
       kind: "proposal-decided",
       summary: `${verb} ${decided.source} proposal`,
@@ -278,8 +304,13 @@ export class ProposalsService {
 }
 
 function assertDecidable(p: Proposal, input: DecideProposalInput): void {
-  if (p.status === "dismissed") {
-    throw new ProposalConflictError(`Proposal "${p.id}" is already dismissed`);
+  if (p.status !== "open") {
+    throw new ProposalConflictError(`Proposal "${p.id}" is already ${p.status}`);
+  }
+  if (input.action === "approve" && p.source !== "gap-detect") {
+    throw new ProposalConflictError(
+      `Proposal "${p.id}" is a ${p.source} proposal — only gap-detect ones become automations`,
+    );
   }
   if (input.action === "edit" && p.source === "agent-factory") {
     throw new ProposalConflictError(
