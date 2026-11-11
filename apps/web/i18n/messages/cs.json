@@ -3074,6 +3074,7 @@
       "actions": {
         "reviewLevelsAria": "Další úrovně code-review",
         "reviewFailed": "Code-review se nepodařilo spustit.",
+        "reviewRefused": "Code-review odmítnuto: {reason}",
         "auto": "auto",
         "reviewState": {
           "running": "Review běží",

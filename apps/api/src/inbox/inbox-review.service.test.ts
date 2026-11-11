@@ -7,6 +7,7 @@ import { NoGithubLinkError, ProjectNotFoundError } from "../projects/projects.er
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import {
   InboxReviewService,
+  ReviewOutOfScopeError,
   ReviewRepoMismatchError,
   reviewTaskText,
 } from "./inbox-review.service";
@@ -416,5 +417,68 @@ describe("InboxReviewService", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
     await service.discard("task_r1");
     expect((await storage.get("task_r1")).prReview?.state).toBe("discarded");
+  });
+
+  describe("review scope: only files owned by my teams (CODEOWNERS)", () => {
+    const routes = (codeowners: string | null, files: string[]) =>
+      vi.fn(async (input: string | URL | Request) => {
+        const url = new URL(String(input));
+        const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+        if (url.pathname === "/repos/acme/app/pulls/7")
+          return json({ head: { sha: "a".repeat(40) }, base: { ref: "develop" } });
+        if (url.pathname === "/repos/acme/app/pulls/7/files")
+          return json(files.map((filename) => ({ filename, additions: 1, deletions: 0 })));
+        if (url.pathname === "/user") return json({ login: "me" });
+        if (url.pathname === "/user/teams")
+          return json([{ slug: "web", organization: { login: "acme" } }]);
+        if (url.pathname === "/repos/acme/app/contents/.github/CODEOWNERS" && codeowners !== null) {
+          expect(url.searchParams.get("ref")).toBe("develop");
+          return new Response(codeowners, { status: 200 });
+        }
+        return new Response("", { status: 404 });
+      });
+
+    it("briefs every phase with only my teams' files", async () => {
+      fetchImpl.mockImplementation(
+        routes("* @acme/core\n/web/ @acme/web\n", ["web/a.ts", "api/b.ts", "web/c.ts"]),
+      );
+      await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+      const [input] = createTask.mock.calls[0] ?? [];
+      expect(input.text).toContain("Review scope");
+      expect(input.text).toContain("  - `web/a.ts`\n  - `web/c.ts`");
+      expect(input.text).not.toContain("`api/b.ts`");
+      expect(input.text).toContain("1 other changed file");
+      expect(input.text).toContain("`@acme/web`");
+      expect(input.text).toContain(".github/CODEOWNERS@develop");
+    });
+
+    it("no CODEOWNERS → reviews everything, no scope section", async () => {
+      fetchImpl.mockImplementation(routes(null, ["web/a.ts"]));
+      await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+      const [input] = createTask.mock.calls[0] ?? [];
+      expect(input.text).not.toContain("Review scope");
+    });
+
+    it("none of the files are mine → refuses with ReviewOutOfScopeError, no task", async () => {
+      fetchImpl.mockImplementation(routes("* @acme/core\n", ["api/b.ts"]));
+      await expect(
+        service.start({ projectId: "acme", repo: "acme/app", number: 7 }),
+      ).rejects.toThrow(ReviewOutOfScopeError);
+      expect(createTask).not.toHaveBeenCalled();
+    });
+
+    it("keeps the brief within the task text limit for a huge scope", async () => {
+      const many = Array.from({ length: 2000 }, (_, i) => `web/file-${i}.ts`);
+      fetchImpl.mockImplementation(routes("* @acme/core\n/web/ @acme/web\n", [...many, "x.ts"]));
+      await service.start({
+        projectId: "acme",
+        repo: "acme/app",
+        number: 7,
+        title: "t".repeat(300),
+      });
+      const [input] = createTask.mock.calls[0] ?? [];
+      expect(input.text.length).toBeLessThanOrEqual(8000);
+      expect(input.text).toMatch(/and \d+ more in-scope files/);
+    });
   });
 });

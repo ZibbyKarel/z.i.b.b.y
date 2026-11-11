@@ -7,6 +7,7 @@ import type {
 } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { ReviewOutOfScopeError } from "./inbox-review.service";
 import { PR_AUTOMATION_MAX_STARTS_PER_TICK, PrAutomationService } from "./pr-automation.service";
 
 const fakeLogger = {
@@ -194,6 +195,28 @@ describe("PrAutomationService (todo-16)", () => {
         summary: "auto review (tested) acme/app#7",
         refs: { projectId: "p1", taskId: "task_1", itemId: "acme/app#7" },
       });
+    });
+
+    it("review-scope: a PR with none of my teams' files is skipped once per head — recorded, not counted", async () => {
+      review.start.mockRejectedValue(
+        new ReviewOutOfScopeError("acme/app", 7, {
+          kind: "none",
+          files: 2,
+          source: "CODEOWNERS@main",
+        }),
+      );
+      const svc = make();
+      expect(await svc.tick()).toEqual({ started: 0 });
+      expect(activity.record).toHaveBeenCalledWith({
+        kind: "pr-review-skipped",
+        summary: expect.stringContaining(
+          "auto review skipped acme/app#7: None of the 2 changed files",
+        ),
+        refs: { projectId: "p1", itemId: "acme/app#7" },
+      });
+      await svc.tick();
+      expect(review.start).toHaveBeenCalledTimes(1);
+      expect(activity.record).toHaveBeenCalledTimes(1);
     });
 
     it("does nothing when the effective autoReview is off (the global default)", async () => {

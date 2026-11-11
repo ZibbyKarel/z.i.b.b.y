@@ -18,7 +18,7 @@ import { SystemConfigStore } from "../system/system-config.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TeamsStorageService } from "../teams/teams.storage.service";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
-import { InboxReviewService } from "./inbox-review.service";
+import { InboxReviewService, ReviewOutOfScopeError } from "./inbox-review.service";
 import { InboxService, isDeadTask } from "./inbox.service";
 import { selectReviewLevel } from "./select-review-level";
 
@@ -59,6 +59,11 @@ export class PrAutomationService
   implements OnModuleInit, OnModuleDestroy
 {
   private unsubscribe: (() => void) | null = null;
+  /**
+   * review-scope: `repo#n@head` already skipped as out of my teams' scope — not re-checked every tick.
+   * ponytail: in memory, so a restart re-checks (and re-records) each such head once.
+   */
+  private readonly outOfScope = new Set<string>();
   protected readonly log: ScopedLogger;
   protected readonly watcherId = "pr-automation" as const;
 
@@ -147,9 +152,13 @@ export class PrAutomationService
           autoReview: resolved.some((c) => c.autoReview),
           autoAddressComments: resolved.some((c) => c.autoAddressComments),
         };
-        if (effective.autoReview && wantsReview(pr) && isFresh(pr, reviewRuns)) {
-          await this.startReview(pr, places);
-          started++;
+        if (
+          effective.autoReview &&
+          wantsReview(pr) &&
+          isFresh(pr, reviewRuns) &&
+          !this.outOfScope.has(headKey(pr))
+        ) {
+          if (await this.startReview(pr, places)) started++;
         } else if (
           effective.autoAddressComments &&
           wantsAddressing(pr) &&
@@ -189,7 +198,8 @@ export class PrAutomationService
     return resolved.some((c) => c?.autoReview === true || c?.autoAddressComments === true);
   }
 
-  private async startReview(pr: InboxPr, at: AutopilotLocation[]): Promise<void> {
+  /** False when the review was skipped: none of the PR's files is owned by the operator's teams. */
+  private async startReview(pr: InboxPr, at: AutopilotLocation[]): Promise<boolean> {
     const byContent: PrReviewLevel = await this.reviews
       .listPrFiles(pr.projectId, pr.repo, pr.number)
       .then(selectReviewLevel)
@@ -206,11 +216,28 @@ export class PrAutomationService
     // sets it only for same-repo heads) is capped at `thorough`, which only reads the code.
     const level: PrReviewLevel =
       !pr.headRef && (byContent === "tested" || byContent === "browser") ? "thorough" : byContent;
-    const { taskId } = await this.reviews.start(
-      { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title, level },
-      { auto: true, headSha: pr.headSha, autopilotAt: at },
-    );
+    let taskId: string;
+    try {
+      ({ taskId } = await this.reviews.start(
+        { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title, level },
+        { auto: true, headSha: pr.headSha, autopilotAt: at },
+      ));
+    } catch (error) {
+      if (!(error instanceof ReviewOutOfScopeError)) throw error;
+      this.outOfScope.add(headKey(pr));
+      this.log.info("pr automation: review skipped — not my teams' files", {
+        repo: pr.repo,
+        number: pr.number,
+      });
+      void this.activity.record({
+        kind: "pr-review-skipped",
+        summary: `auto review skipped ${pr.repo}#${pr.number}: ${error.message}`.slice(0, 300),
+        refs: { projectId: pr.projectId, itemId: `${pr.repo}#${pr.number}` },
+      });
+      return false;
+    }
     this.record(pr, taskId, `auto review (${level}) ${pr.repo}#${pr.number}`);
+    return true;
   }
 
   private async startAddressing(pr: InboxPr, at: AutopilotLocation[]): Promise<void> {
@@ -251,6 +278,9 @@ export function teamsOfPr(pr: InboxPr, teams: readonly Team[]): string[] {
     .filter((t) => t.slug && owners.some((o) => teamSlugMatches(o, t.slug ?? "")))
     .map((t) => t.id);
 }
+
+const headKey = (pr: InboxPr): string =>
+  `${pr.repo.toLowerCase()}#${pr.number}@${pr.headSha ?? ""}`;
 
 function wantsReview(pr: InboxPr): boolean {
   return pr.bucket === "to-review" && !pr.draft;
