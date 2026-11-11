@@ -12,7 +12,7 @@ import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { prependActivityEntry } from "../activity/queries/useActivityFeedInfiniteQuery";
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
 import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
-import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
+import { getInboxPrsQueryKey, getInboxRootKey } from "../inbox/queries/useInboxPrsQuery";
 import { getChannelItemsQueryKey } from "../integrations/queries/useChannelItemsQuery";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -172,6 +172,11 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         void qc.invalidateQueries({ queryKey: taskRunsRootKey });
         void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
         void qc.invalidateQueries({ queryKey: getTaskDetailRootKey() });
+        // todo-2: a PR gate (review post, comment fixes + replies, rebase / CI push) changed the
+        // PR — refetch the list and any open PR detail (threads, diff) now that it landed.
+        if (parsed.kind?.startsWith("pr-")) {
+          void qc.invalidateQueries({ queryKey: getInboxRootKey() });
+        }
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).

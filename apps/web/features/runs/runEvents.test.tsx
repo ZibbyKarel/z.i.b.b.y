@@ -5,7 +5,7 @@ import { installEventSourceMock } from "../../test/eventSourceMock";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
 import { getWorkflowRunQueryKey } from "../workflows/queries/keys";
 import { getInboxItemsQueryKey } from "../inbox/queries/useInboxItemsQuery";
-import { getInboxPrsQueryKey } from "../inbox/queries/useInboxPrsQuery";
+import { getInboxPrsQueryKey, getInboxRootKey } from "../inbox/queries/useInboxPrsQuery";
 import { getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
@@ -131,6 +131,27 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getScheduledTasksQueryKey() });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getTaskDetailRootKey() });
+  });
+
+  // todo-2: a PR gate decision changes the PR's chip, checks, threads — the whole inbox family
+  // (list, threads, diff) refetches once the post / push actually happened.
+  it("a settled pr-* decision refreshes the whole inbox family", () => {
+    act(() => {
+      mock.last().emit({
+        scope: "approvals",
+        approvalId: "a1",
+        kind: "pr-address-comments",
+        status: "approved",
+      });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxRootKey() });
+  });
+
+  it("a settled non-PR decision leaves the inbox alone", () => {
+    act(() => {
+      mock.last().emit({ scope: "approvals", approvalId: "a1", kind: "agent", status: "approved" });
+    });
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxRootKey() });
   });
 
   it("a stream reopening after a drop refetches everything; the first open does not", () => {

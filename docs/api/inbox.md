@@ -243,6 +243,15 @@ existing `POST /api/projects/:id/prs/:number/merge` with `{ method: "squash",
 deleteBranch: true }` (see `docs/api/projects.md`); the web invalidates the inbox PR
 query. Agents still can't merge (`floor-pr.merge: deny`).
 
+## Refresh after a PR gate decision (todo-2)
+
+Deciding a `pr-review` / `pr-address-comments` / `pr-rebase` / `pr-fix-ci` approval
+refreshes the whole `["inbox"]` query family (the PR list and an open PR's threads /
+diff), not only the list: right after the decision, again 5 s later (GitHub read lag),
+and when `/api/events` carries the `approvals` scope for that `pr-*` kind. That event
+is emitted once the post / push / thread replies actually finished, so a decision taken
+anywhere (web, autopilot, operator channel) shows up without a reload.
+
 ## State (`/api/inbox/state`)
 
 `.zibby/data/inbox-state.json` (override `INBOX_STATE_FILE`), gitignored —
