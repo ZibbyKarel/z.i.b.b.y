@@ -21,4 +21,4 @@
 19. [ ] Stránka Pravidla -> Schválení mi přijde že by měla být spíše jako Aktivita -> Schválení
 20. [x] Tlačíko "Zpracovat do úkolu" na detailu issue by nemělo být vidět vždy, kdy k Issue není žádný běh (main@271f59d05)
 21. [x] Widget Issues - smažeme border okolo karty issue pokud je ve stavu "čeká na tebe" a necháme jen stavový border-left (main@271f59d05)
-22. [ ] Musíme upravit workflows, která se pouští pro code-review tak aby se kontrolovali jen soubory, které patří týmum, ve kterých jsem členem.
+22. [x] Musíme upravit workflows, která se pouští pro code-review tak aby se kontrolovali jen soubory, které patří týmum, ve kterých jsem členem. (main@9ea6b4078)
