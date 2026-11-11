@@ -81,6 +81,17 @@ function toolTone(status: ChatToolEvent["status"]): DotTone {
   return "run";
 }
 
+/**
+ * todo-3: the tool calls worth showing. A `create_task` dispatch is the turn's outcome and always
+ * stays; every other call is just progress — while streaming only the latest one shows (proof
+ * that something is happening), and a settled turn drops them all.
+ */
+export function visibleToolEvents(events: ChatToolEvent[], streaming: boolean): ChatToolEvent[] {
+  const isDispatch = (e: ChatToolEvent) => e.name === "create_task";
+  const latest = streaming ? events.filter((e) => !isDispatch(e)).at(-1) : undefined;
+  return events.filter((e) => isDispatch(e) || e === latest);
+}
+
 function ToolEventRow({ event }: { event: ChatToolEvent }) {
   // A dispatch that has produced a run (`runRef` known — the `ok` phase of the
   // two-phase create_task event, Fáze 14.2) renders the live run card instead of
@@ -205,6 +216,7 @@ export function ChatMessage({
   // Manual read-aloud (Phase 120) + CREATE TASK — only on a settled assistant turn,
   // never the live-streaming bubble (its text isn't final yet) or a user turn.
   const showActions = !isUser && !streaming && text.trim().length > 0;
+  const shownToolEvents = visibleToolEvents(toolEvents ?? [], Boolean(streaming));
 
   return (
     <Stack
@@ -288,9 +300,9 @@ export function ChatMessage({
         </ChatBubble>
       )}
 
-      {toolEvents && toolEvents.length > 0 && (
+      {shownToolEvents.length > 0 && (
         <Stack direction="col" gap="50">
-          {toolEvents.map((event, i) => (
+          {shownToolEvents.map((event, i) => (
             <ToolEventRow event={event} key={`${event.name}-${i}`} />
           ))}
         </Stack>

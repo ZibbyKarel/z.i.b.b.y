@@ -310,6 +310,7 @@ describe("ChatMessage", () => {
   it("renders a tool event without an href as plain text (no link)", () => {
     renderWithProviders(
       <ChatMessage
+        streaming
         role="assistant"
         text="Pracuji…"
         toolEvents={[{ name: "search", status: "started" }]}
@@ -317,6 +318,40 @@ describe("ChatMessage", () => {
     );
     expect(screen.queryByTestId(ChatMessageTestId.ToolEventLink)).not.toBeInTheDocument();
     expect(screen.getByTestId(ChatMessageTestId.ToolEvent)).toHaveTextContent("search");
+  });
+
+  it("todo-3: while streaming only the latest plain tool call shows; dispatches stay", () => {
+    renderWithProviders(
+      <ChatMessage
+        streaming
+        role="assistant"
+        text=""
+        toolEvents={[
+          { name: "Read", status: "ok" },
+          { name: "create_task", status: "started", summary: "Spouštím úkol…" },
+          { name: "Grep", status: "ok" },
+          { name: "Bash", status: "ok" },
+        ]}
+      />,
+    );
+    const rows = screen.getAllByTestId(ChatMessageTestId.ToolEvent);
+    expect(rows.map((r) => r.textContent)).toEqual(["Spouštím úkol…", "Bash"]);
+  });
+
+  it("todo-3: a settled turn drops its plain tool calls and keeps the dispatches", () => {
+    renderWithProviders(
+      <ChatMessage
+        role="assistant"
+        text="Hotovo."
+        toolEvents={[
+          { name: "Read", status: "ok" },
+          { name: "create_task", status: "ok", summary: "Spustil jsem úkol.", href: "/x" },
+          { name: "Bash", status: "ok" },
+        ]}
+      />,
+    );
+    const rows = screen.getAllByTestId(ChatMessageTestId.ToolEvent);
+    expect(rows.map((r) => r.textContent)).toEqual(["Spustil jsem úkol."]);
   });
 
   describe("read aloud (Phase 120)", () => {
