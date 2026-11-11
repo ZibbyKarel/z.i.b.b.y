@@ -4,6 +4,7 @@ import {
   type RunView,
   approvalForRun,
   findSelectedRun,
+  isPausableRun,
   isResumableRun,
   isStoppableRun,
   runOutputHref,
@@ -201,6 +202,24 @@ describe("parked workflow actions", () => {
 
   it("a workflow awaiting approval can be stopped", () => {
     expect(isStoppableRun({ kind: "workflow", status: "awaiting-approval" })).toBe(true);
-    expect(isStoppableRun({ kind: "agent", status: "awaiting-approval" })).toBe(false);
+    // RunnerCore.cancel denies a held agent intent and lands the run interrupted.
+    expect(isStoppableRun({ kind: "agent", status: "awaiting-approval" })).toBe(true);
+  });
+
+  it("a paused workflow and a limit-paused agent/workflow can be stopped; a limit-paused goal cannot", () => {
+    expect(isStoppableRun({ kind: "workflow", status: "paused" })).toBe(true);
+    expect(isStoppableRun({ kind: "agent", status: "paused-limit" })).toBe(true);
+    expect(isStoppableRun({ kind: "workflow", status: "paused-limit" })).toBe(true);
+    expect(isStoppableRun({ kind: "goal", status: "paused-limit" })).toBe(false);
+  });
+
+  it("only a workflow with a stage boundary ahead can be paused", () => {
+    expect(isPausableRun({ kind: "workflow", status: "running" })).toBe(true);
+    expect(isPausableRun({ kind: "workflow", status: "running", pauseRequested: true })).toBe(
+      false,
+    );
+    expect(isPausableRun({ kind: "workflow", status: "awaiting-approval" })).toBe(true);
+    expect(isPausableRun({ kind: "agent", status: "running" })).toBe(false);
+    expect(isPausableRun({ kind: "workflow", status: "done" })).toBe(false);
   });
 });

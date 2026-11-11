@@ -2618,6 +2618,16 @@ describe("operator pause (D-PAUSE)", () => {
     expect(run.parkedReason).toBeUndefined();
   });
 
+  it("stop a limit-paused run: lands interrupted, never auto-resumes", async () => {
+    const run = runOf();
+    run.status = "paused-limit";
+    run.resumeAt = Date.now() + 60_000;
+    await h.service.stop(WORKFLOW_RUN_ID);
+    expect(run.status).toBe("interrupted");
+    expect(run.resumeAt).toBeNull();
+    expect(h.service.listLimitPaused()).toHaveLength(0);
+  });
+
   it("a stopped paused run drops its gate cursor", async () => {
     await h.service.onModuleInit();
     const run = runOf();

@@ -1034,7 +1034,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * same {@link RunnerCore.cancel} the agent stop already uses) and flag the run so
    * `drive()` lands it `interrupted` on the kill's next turn, instead of retrying or
    * parking. Only a run that is `running` with a live stage owns a process to kill —
-   * anything else (parked, paused-limit, already terminal) throws
+   * anything else (already terminal) throws
    * {@link WorkflowRunNotStoppableError}. Fires the kill and returns immediately; the
    * kill's exit reconciles asynchronously (mirrors the agent stop's own timing).
    */
@@ -1072,6 +1072,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       delete run.parkedReason;
       delete run.parked;
       delete run.pendingGate; // a stale cursor would rewind a later in-place resume
+      await this.writeAggregate(run);
+      return;
+    }
+    // A limit-paused run waits on the usage window with no live child: stopping it
+    // lands it `interrupted` so the limit tick never auto-resumes it.
+    if (run?.status === "paused-limit") {
+      for (const s of run.stageRuns) {
+        if (s.status === "paused-limit")
+          await this.core.discardPausedLimit(s.runId).catch(() => {});
+      }
+      run.status = "interrupted";
+      run.resumeAt = null;
       await this.writeAggregate(run);
       return;
     }

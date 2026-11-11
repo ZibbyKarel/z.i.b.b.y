@@ -53,16 +53,31 @@ export function isCancellableRun(run: Pick<RunView, "kind" | "status">): boolean
   return run.kind === "scheduled" && WAITING_STATES.has(run.status);
 }
 
-/** Whether the Stop action applies to `run` at all — a stoppable kind, currently running. */
+/** Whether the Stop action applies to `run` at all — a stoppable kind with something to stop. */
 export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
-  // A parked workflow has no process — stop cancels it (→ interrupted). An approval gate
-  // (`awaiting-approval`) is a parked workflow whose stage child is still held open.
-  return (
-    (run.status === "running" ||
-      ((run.status === "parked" || run.status === "awaiting-approval") &&
-        run.kind === "workflow")) &&
-    STOPPABLE_KINDS.has(run.kind)
-  );
+  if (!STOPPABLE_KINDS.has(run.kind)) return false;
+  switch (run.status) {
+    case "running":
+      return true;
+    // Held on an approval: a workflow's stage child, or an agent's held intent (cancel denies it).
+    case "awaiting-approval":
+      return run.kind !== "goal";
+    // A parked/paused workflow has no process — stop cancels it (→ interrupted).
+    case "parked":
+    case "paused":
+      return run.kind === "workflow";
+    // Waiting on the usage window — stop drops the auto-resume (goals have no such path yet).
+    case "paused-limit":
+      return run.kind !== "goal";
+    default:
+      return false;
+  }
+}
+
+/** Whether Pause applies: only a workflow parks, at a stage boundary still ahead of it. */
+export function isPausableRun(run: Pick<RunView, "kind" | "status" | "pauseRequested">): boolean {
+  if (run.kind !== "workflow" || run.pauseRequested) return false;
+  return run.status === "running" || run.status === "awaiting-approval";
 }
 
 /**

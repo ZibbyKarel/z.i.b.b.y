@@ -718,6 +718,12 @@ so does a workflow run that is not running. RESUME on a `paused` run re-enters i
 place; RESUME while it is still pausing just withdraws the request. `paused` is not
 an archived state.
 
+**Stop.** `POST /tasks/runs/:runId/stop` also takes a run waiting on the usage window
+(`paused-limit`, agent or workflow): it lands `interrupted` and is never auto-resumed.
+A goal run is stoppable only while `running`. The run detail keeps PAUSE / STOP
+reachable in every state that has them (a button, else the ··· menu); STOP on a
+still-queued task cancels it out of the queue.
+
 **Operator messages.** `POST /tasks/runs/:runId/messages { text, to = "all" }` queues
 a message for a workflow run that is not finished. There is no live channel into a
 running claude child, so it is delivered when the next agent stage starts (to `all`,

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { type RunView, isCancellableRun } from "../run";
+import { type RunView, isCancellableRun, isPausableRun, isStoppableRun } from "../run";
 import type { RunMode } from "../runDetailModel";
 import type { ResumeRunOptions } from "../useRunActions";
 
@@ -94,7 +94,12 @@ export function RunDetailActions({
       case "paused":
         return [{ id: "resume", primary: true, onClick: () => onResume() }, stop];
       case "question":
-        return [stop];
+        return workflow ? [pause, stop] : [stop];
+      case "waiting":
+        // A queued task never started: STOP cancels it out of the queue.
+        return isCancellableRun(run) ? [stop] : [];
+      case "limit":
+        return isStoppableRun(run) ? [stop] : [];
       case "parked":
       case "stopped":
       case "error":
@@ -121,6 +126,9 @@ export function RunDetailActions({
   })();
 
   const cancellable = isCancellableRun(run);
+  // PAUSE / STOP stay reachable in every state that has them: what isn't a button sits in ···.
+  const shown = new Set(actions.map((a) => a.id));
+  const postRunGate = mode === "approval" && Boolean(run.taskOutcome);
   const deletable = ["stopped", "error", "done", "waiting", "limit"].includes(mode);
   const moreItems: MenuButtonItem[] = [];
   if (run.taskId) {
@@ -142,6 +150,23 @@ export function RunDetailActions({
       id: "openFolder",
       label: t("detail.more.openFolder"),
       onSelect: onOpenFolder,
+    });
+  if (!postRunGate && !shown.has("pause") && !shown.has("pausing") && isPausableRun(run))
+    moreItems.push({
+      id: "pause",
+      label: t("detail.action.pause"),
+      icon: "pause",
+      disabled: pending,
+      onSelect: onPause,
+    });
+  if (!postRunGate && !shown.has("stop") && (isStoppableRun(run) || cancellable))
+    moreItems.push({
+      id: "stop",
+      label: t("detail.action.stop"),
+      icon: "stop",
+      danger: true,
+      disabled: pending,
+      onSelect: () => setConfirm("stop"),
     });
   moreItems.push({
     id: "copyId",

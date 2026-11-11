@@ -4,8 +4,9 @@ import type { RunView } from "./run";
 
 type MutateOptions = { onSuccess?: (res: { body: { runId: string } }) => void };
 
-const { stop, pause, resume, resumed, fake } = vi.hoisted(() => ({
+const { stop, pause, resume, cancel, resumed, fake } = vi.hoisted(() => ({
   stop: vi.fn(),
+  cancel: vi.fn(),
   pause: vi.fn(),
   resume: vi.fn(),
   resumed: { runId: "run_1" },
@@ -25,7 +26,7 @@ vi.mock("./mutations", () => ({
   useDeleteAgentRunMutation: fake(vi.fn()),
   useDeleteWorkflowRunMutation: fake(vi.fn()),
 }));
-vi.mock("../tasks", () => ({ useCancelScheduledTaskMutation: fake(vi.fn()) }));
+vi.mock("../tasks", () => ({ useCancelScheduledTaskMutation: fake(cancel) }));
 
 import { useRunActions } from "./useRunActions";
 
@@ -71,5 +72,21 @@ describe("useRunActions", () => {
   it("does not pause an agent run", () => {
     actions().pause(run({ kind: "agent" }));
     expect(pause).not.toHaveBeenCalled();
+  });
+
+  it("pauses a workflow parked on an approval (it has a stage boundary ahead)", () => {
+    actions().pause(run({ status: "awaiting-approval" }));
+    expect(pause).toHaveBeenCalledOnce();
+  });
+
+  it("stop cancels a still-queued task out of the queue", () => {
+    actions().stop(run({ kind: "scheduled", status: "queued" }));
+    expect(cancel).toHaveBeenCalledWith({ params: { id: "run_1" } });
+    expect(stop).not.toHaveBeenCalled();
+  });
+
+  it("stops a limit-paused agent run", () => {
+    actions().stop(run({ kind: "agent", status: "paused-limit" }));
+    expect(stop).toHaveBeenCalledWith({ params: { runId: "run_1" }, body: {} });
   });
 });

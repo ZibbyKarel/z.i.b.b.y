@@ -1,7 +1,7 @@
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { MenuButtonTestId } from "@zibby/design-system";
+import { IconTestId, MenuButtonTestId } from "@zibby/design-system";
 import type { RunView } from "../run";
 import type { RunMode } from "../runDetailModel";
 import { RunDetailActions, RunDetailActionsTestId } from "./RunDetailActions";
@@ -59,14 +59,17 @@ describe("RunDetailActions", () => {
     ["paused", {}, ["resume", "stop"]],
     ["approval", {}, ["pause", "stop"]],
     ["approval", { kind: "agent" }, ["stop"]],
-    ["question", {}, ["stop"]],
+    ["question", {}, ["pause", "stop"]],
+    ["question", { kind: "agent" }, ["stop"]],
     ["parked", {}, ["rerunFresh", "continueSession"]],
     ["stopped", {}, ["rerunFresh", "continueSession"]],
     ["error", { kind: "agent", sessionId: "s1" }, ["rerunFresh", "continueSession"]],
     ["error", { kind: "agent" }, ["rerunFresh"]],
     ["done", {}, ["rerun", "continueTask"]],
-    ["waiting", {}, []],
-    ["limit", {}, []],
+    ["waiting", { kind: "scheduled", status: "queued" }, ["stop"]],
+    ["waiting", { kind: "scheduled", status: "pending" }, []],
+    ["limit", { status: "paused-limit" }, ["stop"]],
+    ["limit", { kind: "goal", status: "paused-limit" }, []],
   ])("%s %o → %o", (mode, run, expected) => {
     renderActions(mode, run);
     expect(actionIds()).toEqual(expected);
@@ -97,6 +100,25 @@ describe("RunDetailActions", () => {
     expect(screen.getByTestId(`${MenuButtonTestId.Item}-openFolder`)).toBeInTheDocument();
     expect(screen.getByTestId(`${MenuButtonTestId.Item}-copyId`)).toBeInTheDocument();
     expect(screen.getByTestId(`${MenuButtonTestId.Item}-delete`)).toBeInTheDocument();
+  });
+
+  it("a parked workflow's ··· menu offers STOP (with its icon), confirmed before onStop", async () => {
+    const { onStop } = renderActions("parked", { status: "parked" });
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    const item = screen.getByTestId(`${MenuButtonTestId.Item}-stop`);
+    expect(within(item).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "stop");
+    await userEvent.click(item);
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Zastavit" }),
+    );
+    expect(onStop).toHaveBeenCalledOnce();
+  });
+
+  it("the ··· menu does not repeat pause/stop already shown as buttons", async () => {
+    renderActions("running");
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    expect(screen.queryByTestId(`${MenuButtonTestId.Item}-stop`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`${MenuButtonTestId.Item}-pause`)).not.toBeInTheDocument();
   });
 
   it("no delete while running", async () => {

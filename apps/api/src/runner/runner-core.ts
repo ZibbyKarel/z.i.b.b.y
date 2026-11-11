@@ -599,6 +599,10 @@ export class RunnerCore<R extends BaseRun> {
       // is NOT reclassified as `paused-limit` and auto-respawned (the watch-out).
       handle.interrupting = true;
       killGroup(handle.run.pgid ?? handle.run.pid);
+    } else if (handle.run.status === "paused-limit") {
+      // No live child — waiting on the usage window. Stop = never auto-resume it
+      // (`discardPausedLimit` flips the status synchronously, persists async).
+      void this.discardPausedLimit(runId);
     }
     this.logger?.info("run cancelled", { runId, status: handle.run.status });
     return handle.run;

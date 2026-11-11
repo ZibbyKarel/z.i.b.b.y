@@ -1103,6 +1103,45 @@ describe("RunnerCore", () => {
     ).rejects.toThrow();
   });
 
+  it("cancel() on a paused-limit run lands it interrupted and drops its pending spec", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 3600;
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (d) => d ?? 1,
+    );
+    await core.init();
+    const cwd = path.join(dir, "limit_cancel");
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "limc",
+      command: NODE,
+      args: limitOnceScript(cwd, epoch),
+      cwd,
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "paused-limit");
+    await waitForPendingSpec(run.runId);
+    expect(core.cancel(run.runId).status).toBe("interrupted");
+    // The spec is removed asynchronously after the synchronous status flip.
+    const pending = path.join(dir, `${run.runId}.pending.json`);
+    for (let i = 0; i < 100; i++) {
+      if (
+        !(await fs.access(pending).then(
+          () => true,
+          () => false,
+        ))
+      )
+        break;
+      await sleep(20);
+    }
+    await expect(fs.readFile(pending, "utf8")).rejects.toThrow();
+  });
+
   it("a paused-limit run with a pending spec survives a restart (init)", async () => {
     const epoch = Math.floor(Date.now() / 1000) + 3600;
     const core = new RunnerCore(

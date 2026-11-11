@@ -6,7 +6,13 @@ import {
   useResumeTaskRunMutation,
   useStopTaskRunMutation,
 } from "./mutations";
-import { type RunView, isResumableRun, isStoppableRun } from "./run";
+import {
+  type RunView,
+  isCancellableRun,
+  isPausableRun,
+  isResumableRun,
+  isStoppableRun,
+} from "./run";
 
 export interface ResumeRunOptions {
   /** continue (default): `--resume` session / continue in place. fresh: a new task from the original inputs. */
@@ -18,9 +24,10 @@ export interface ResumeRunOptions {
 }
 
 export interface RunActions {
+  /** Stop a live/parked/limit-paused run, or cancel a still-queued task; else no-op. */
   stop: (run: RunView) => void;
   stopping: boolean;
-  /** Pause a running workflow at its next stage boundary; other kinds/states no-op. */
+  /** Pause a workflow at its next stage boundary (`isPausableRun`); other kinds/states no-op. */
   pause: (run: RunView) => void;
   pausing: boolean;
   /**
@@ -60,11 +67,12 @@ export function useRunActions(
 
   const stop = (run: RunView) => {
     if (isStoppableRun(run)) stopRun.mutate({ params: { runId: run.runId }, body: {} });
+    // A never-dispatched task has no process: stopping it cancels it out of the queue.
+    else if (isCancellableRun(run)) cancelTask.mutate({ params: { id: run.runId } });
   };
 
   const pause = (run: RunView) => {
-    if (run.kind === "workflow" && run.status === "running")
-      pauseRun.mutate({ params: { runId: run.runId }, body: {} });
+    if (isPausableRun(run)) pauseRun.mutate({ params: { runId: run.runId }, body: {} });
   };
 
   const resume = (run: RunView, opts: ResumeRunOptions = {}) => {
