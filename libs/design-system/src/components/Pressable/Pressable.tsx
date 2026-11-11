@@ -30,6 +30,8 @@ export interface PressableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElem
   /** Tints the pressable as a status-tone pill (hover fill, `aria-expanded`
    *  fill, tone-colored focus ring) instead of the plain reset-only look. */
   chipTone?: PressableChipTone;
+  /** `"hover"` underlines the label text on hover — an inline text link's affordance. */
+  underline?: "hover";
 }
 
 /**
@@ -37,12 +39,14 @@ export interface PressableProps extends Omit<ButtonHTMLAttributes<HTMLButtonElem
  * icons, rows). Resets native chrome and keeps only a focus ring, unless
  * `chipTone` opts into the status-pill look instead.
  */
-export function Pressable({ type = "button", ref, chipTone, ...rest }: PressableProps) {
+export function Pressable({ type = "button", ref, chipTone, underline, ...rest }: PressableProps) {
   return (
     <button
       className={cn(
         "cursor-pointer border-none bg-transparent p-0 text-inherit [text-align:inherit] rounded-sm",
         chipTone ? chipToneClass[chipTone] : focusRing,
+        // Descendant rule too: decoration does not propagate into inline-flex children.
+        underline && "underline-offset-2 hover:underline [&:hover_*]:underline",
       )}
       data-testid={PressableTestId.Root}
       ref={ref}

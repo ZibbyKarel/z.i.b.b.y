@@ -65,6 +65,9 @@ import { sparkles } from "./sparkles";
 import { menu } from "./menu";
 import { filter } from "./filter";
 import { upgrade } from "./upgrade";
+import { github } from "./github";
+import { gitlab } from "./gitlab";
+import { jira } from "./jira";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -133,6 +136,9 @@ export const iconNames = [
   "menu",
   "filter",
   "upgrade",
+  "github",
+  "gitlab",
+  "jira",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -204,4 +210,7 @@ export const paths: Record<IconName, ReactNode> = {
   menu,
   filter,
   upgrade,
+  github,
+  gitlab,
+  jira,
 };

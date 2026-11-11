@@ -1,7 +1,12 @@
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
-import { CopyableTextTestId, MetricStripTestId, StatePillTestId } from "@zibby/design-system";
+import {
+  CopyableTextTestId,
+  IconTestId,
+  MetricStripTestId,
+  StatePillTestId,
+} from "@zibby/design-system";
 import type { RunView } from "../run";
 import type { RunMetric } from "../runDetailModel";
 import { RunDetailHeader, RunDetailHeaderTestId } from "./RunDetailHeader";
@@ -125,6 +130,30 @@ describe("RunDetailHeader", () => {
       );
     });
 
+    it("carries a GitHub icon, no arrow, and underlines on hover", () => {
+      renderHeader({ sourcePr });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourcePrLink);
+      expect(within(link).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "github");
+      expect(link).not.toHaveTextContent("→");
+      expect(link.className).toContain("hover:underline");
+    });
+
+    it("carries a GitLab icon for a GitLab merge request", () => {
+      renderHeader({
+        sourcePr: { ...sourcePr, url: "https://gitlab.example.com/acme/api/-/merge_requests/7" },
+        prOutput: {
+          url: "https://gitlab.example.com/acme/api/-/merge_requests/9",
+          additions: 1,
+          deletions: 0,
+        },
+      });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourcePrLink);
+      expect(within(link).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "gitlab");
+      const out = screen.getByTestId(RunDetailHeaderTestId.OutputPrLink);
+      expect(within(out).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "gitlab");
+      expect(out).toHaveTextContent("#9");
+    });
+
     it("is also rendered in the compact (sheet) header", () => {
       renderHeader({ sourcePr }, true);
       expect(screen.getByTestId(RunDetailHeaderTestId.SourcePrLink)).toBeInTheDocument();
@@ -145,10 +174,31 @@ describe("RunDetailHeader", () => {
       expect(push).toHaveBeenLastCalledWith("/dashboard/inbox/issues/p1/jira-cz-524");
     });
 
+    it("shows a Jira icon for a Jira key and a neutral glyph otherwise, never an arrow", () => {
+      renderHeader({ projectId: "p1", roadmapItemId: "jira-cz-524", roadmapItemLabel: "CZ-524" });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourceIssueLink);
+      expect(within(link).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "jira");
+      expect(link).not.toHaveTextContent("→");
+    });
+
+    it("shows the neutral glyph for a non-Jira issue", () => {
+      renderHeader({ projectId: "p1", roadmapItemId: "m1", roadmapItemLabel: "Login form" });
+      const link = screen.getByTestId(RunDetailHeaderTestId.SourceIssueLink);
+      expect(within(link).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "checkpoint");
+    });
+
     it("is absent without a roadmap item", () => {
       renderHeader({ projectId: "p1" });
       expect(screen.queryByTestId(RunDetailHeaderTestId.SourceIssueLink)).not.toBeInTheDocument();
     });
+  });
+
+  it("drops the arrow from the task link and underlines it on hover", () => {
+    renderHeader();
+    const link = screen.getByTestId(RunDetailHeaderTestId.TaskLink);
+    expect(link).toHaveTextContent("T-1");
+    expect(link).not.toHaveTextContent("→");
+    expect(link.className).toContain("hover:underline");
   });
 
   it("opens the source PR / issue / output PR in place via the callbacks", async () => {

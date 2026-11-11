@@ -5,6 +5,8 @@ import {
   Container,
   CopyableText,
   Dropdown,
+  Icon,
+  type IconName,
   MetricStrip,
   Pressable,
   Progress,
@@ -67,6 +69,28 @@ function Sep() {
   );
 }
 
+/** GitLab merge requests live on a `gitlab` host or under `/-/merge_requests/`; everything else is GitHub. */
+function prIcon(url: string): IconName {
+  return /gitlab|\/-\/merge_requests\//i.test(url) ? "gitlab" : "github";
+}
+
+/** The run carries no issue source kind — a Jira-shaped key (`CZ-524`) gets the Jira mark. */
+function issueIcon(label: string): IconName {
+  return /^[A-Z][A-Z0-9]*-\d+$/.test(label) ? "jira" : "checkpoint";
+}
+
+/** A header link's label: optional leading icon + mono text. */
+function LinkLabel({ icon, text }: { icon?: IconName; text: string }) {
+  return (
+    <Stack inline align="center" direction="row" gap="50">
+      {icon && <Icon name={icon} size="xs" />}
+      <Typography as="span" type="code">
+        {text}
+      </Typography>
+    </Stack>
+  );
+}
+
 /** Pick a project for a project-less run; renders nothing on an empty registry. */
 function AssignProject({ runId }: { runId: string }) {
   const t = useTranslations("runs.detail");
@@ -115,7 +139,10 @@ export function RunDetailHeader({
     onOpenPr ? onOpenPr(url) : router.push(prListHref(url) as Route);
   // An implementation run's own PR (the source PR is the one a review-type run acts on).
   const outputPr = run.prOutput && run.prOutput.url !== sourcePr?.url ? run.prOutput : undefined;
-  const outputPrRef = outputPr ? `#${outputPr.url.match(/\/pull\/(\d+)/)?.[1] ?? "PR"}` : "";
+  const outputPrRef = outputPr
+    ? `#${outputPr.url.match(/\/(?:pull|merge_requests)\/(\d+)/)?.[1] ?? "PR"}`
+    : "";
+  const issueLabel = run.roadmapItemLabel ?? run.roadmapItemId ?? "";
 
   return (
     <Stack data-testid={RunDetailHeaderTestId.Root} gap="0">
@@ -127,6 +154,7 @@ export function RunDetailHeader({
                 <Pressable
                   data-testid={RunDetailHeaderTestId.Back}
                   onClick={() => router.push("/activity/runs")}
+                  underline="hover"
                 >
                   <Typography as="span" type="labelSm" variant="secondary">
                     {t("detail.backToRuns")}
@@ -148,10 +176,9 @@ export function RunDetailHeader({
                     <Pressable
                       data-testid={RunDetailHeaderTestId.TaskLink}
                       onClick={() => router.push(`/work/tasks/${taskId}`)}
+                      underline="hover"
                     >
-                      <Typography as="span" type="code">
-                        {`${taskId} →`}
-                      </Typography>
+                      <LinkLabel text={taskId} />
                     </Pressable>
                   </>
                 )}
@@ -172,6 +199,7 @@ export function RunDetailHeader({
                 <Pressable
                   data-testid={RunDetailHeaderTestId.AgentLink}
                   onClick={() => router.push(`/workforce/agents/${agent.id}`)}
+                  underline="hover"
                 >
                   <Stack inline align="center" direction="row" gap="75">
                     <AgentBadge {...symbolOf(agent.id)} size="xs" state={agent.state} />
@@ -195,6 +223,7 @@ export function RunDetailHeader({
                   <Pressable
                     data-testid={RunDetailHeaderTestId.ProjectLink}
                     onClick={() => router.push(`/projects/${projectId}`)}
+                    underline="hover"
                   >
                     <Typography as="span" type="label" variant="secondary">
                       {run.project || projectId}
@@ -211,10 +240,9 @@ export function RunDetailHeader({
                     aria-label={t("detail.sourcePr", { ref: sourcePrRef })}
                     data-testid={RunDetailHeaderTestId.SourcePrLink}
                     onClick={() => openPr(sourcePr.url)}
+                    underline="hover"
                   >
-                    <Typography as="span" type="code">
-                      {`${sourcePrRef} →`}
-                    </Typography>
+                    <LinkLabel icon={prIcon(sourcePr.url)} text={sourcePrRef} />
                   </Pressable>
                 </>
               )}
@@ -225,10 +253,9 @@ export function RunDetailHeader({
                     aria-label={t("detail.outputPr", { ref: outputPrRef })}
                     data-testid={RunDetailHeaderTestId.OutputPrLink}
                     onClick={() => openPr(outputPr.url)}
+                    underline="hover"
                   >
-                    <Typography as="span" type="code">
-                      {`${outputPrRef} →`}
-                    </Typography>
+                    <LinkLabel icon={prIcon(outputPr.url)} text={outputPrRef} />
                   </Pressable>
                 </>
               )}
@@ -237,7 +264,7 @@ export function RunDetailHeader({
                   <Sep />
                   <Pressable
                     aria-label={t("detail.sourceIssue", {
-                      ref: run.roadmapItemLabel ?? run.roadmapItemId,
+                      ref: issueLabel,
                     })}
                     data-testid={RunDetailHeaderTestId.SourceIssueLink}
                     onClick={() =>
@@ -247,10 +274,9 @@ export function RunDetailHeader({
                             `/dashboard/inbox/issues/${projectId}/${run.roadmapItemId}` as Route,
                           )
                     }
+                    underline="hover"
                   >
-                    <Typography as="span" type="code">
-                      {`${run.roadmapItemLabel ?? run.roadmapItemId} →`}
-                    </Typography>
+                    <LinkLabel icon={issueIcon(issueLabel)} text={issueLabel} />
                   </Pressable>
                 </>
               )}

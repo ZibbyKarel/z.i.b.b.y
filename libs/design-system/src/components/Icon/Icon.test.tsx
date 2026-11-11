@@ -20,6 +20,13 @@ describe("Icon", () => {
     expect(screen.getByTestId(IconTestId.Root).getAttribute("aria-hidden")).toBe("true");
   });
 
+  it("names its glyph and fills brand marks with currentColor", () => {
+    render(<Icon name="gitlab" />);
+    const svg = screen.getByTestId(IconTestId.Root);
+    expect(svg.getAttribute("data-icon")).toBe("gitlab");
+    expect(svg.querySelector("path")?.getAttribute("fill")).toBe("currentColor");
+  });
+
   it("applies a semantic tone colour class", () => {
     render(<Icon name="ok" tone="bad" />);
     expect(screen.getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-bad");

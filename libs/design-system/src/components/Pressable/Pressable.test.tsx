@@ -29,4 +29,11 @@ describe("Pressable", () => {
     expect(el.className).toContain("rounded-full");
     expect(el.className).toContain("aria-expanded:bg-run/15");
   });
+
+  it("underlines its text on hover only when asked", () => {
+    const { rerender } = render(<Pressable>x</Pressable>);
+    expect(screen.getByTestId(PressableTestId.Root).className).not.toContain("hover:underline");
+    rerender(<Pressable underline="hover">x</Pressable>);
+    expect(screen.getByTestId(PressableTestId.Root).className).toContain("hover:underline");
+  });
 });

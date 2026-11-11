@@ -62,6 +62,7 @@ export function Icon({ name, size = "md", stroke = "default", tone, ref, ...prop
     <svg
       aria-hidden="true"
       className={cn("block shrink-0", tone && toneClass[tone])}
+      data-icon={name}
       data-testid={IconTestId.Root}
       fill="none"
       height={px}
