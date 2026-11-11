@@ -50,5 +50,8 @@ describe("SECTIONS sub-menus", () => {
       "inventory",
     ]);
     expect(SECTIONS.find((s) => s.id === "system")?.href).toBe("/system/settings/general");
+    // todo-14: the Tasks list is gone (merged into Activity → Runs).
+    expect(ids("work")).toEqual(["goals", "workflows", "automations"]);
+    expect(SECTIONS.find((s) => s.id === "work")?.href).toBe("/work/goals");
   });
 });

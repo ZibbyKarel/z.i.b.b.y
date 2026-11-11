@@ -300,10 +300,24 @@ export const NO_DEPARTMENT = "none" as const;
  * `<startedAt>|<runId>` cursor of the previous page's oldest run; `departments` is a
  * comma-separated list of department ids (or {@link NO_DEPARTMENT}) — omitted/empty
  * means "all departments"; `limit` is clamped to [1, 100].
+ *
+ * todo-14 (the merged Activity → Runs table): `statuses` is a comma-separated
+ * {@link TaskRunStatusSchema} list replacing the default archived set; `project` narrows
+ * to one `projectId`; `kind` to one {@link RunKindSchema}. `sort` + `dir` order the whole
+ * matched set server-side — with `sort` given, `before`/`nextCursor` become an offset
+ * cursor (`@<n>`) instead of the keyset one.
  */
+export const ArchiveSortSchema = z.enum(["started", "title", "state", "duration", "cost"]);
+export type ArchiveSort = z.infer<typeof ArchiveSortSchema>;
+
 export const ArchivePageQuerySchema = z.object({
   search: z.string().optional(),
   departments: z.string().optional(),
+  statuses: z.string().optional(),
+  project: z.string().optional(),
+  kind: RunKindSchema.optional(),
+  sort: ArchiveSortSchema.optional(),
+  dir: z.enum(["asc", "desc"]).optional(),
   before: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
@@ -323,6 +337,8 @@ export type ArchivePage = z.infer<typeof ArchivePageSchema>;
 /** Query for `GET /api/tasks/runs/archive/counts` — search-scoped, department-independent. */
 export const ArchiveCountsQuerySchema = z.object({
   search: z.string().optional(),
+  /** todo-14: same meaning as on the page query — the set `total` and the counts cover. */
+  statuses: z.string().optional(),
 });
 export type ArchiveCountsQuery = z.infer<typeof ArchiveCountsQuerySchema>;
 

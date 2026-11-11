@@ -1258,6 +1258,57 @@ describe("TaskRunsService", () => {
       expect(both.items.map((r) => r.runId).sort()).toEqual(["a_done_1", "dev_1"]);
     });
 
+    it("todo-14: `statuses` widens the feed past the archived set", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA, runningA, pausedA]);
+      const page = await service.listArchivedTaskRuns({
+        statuses: ["running", "done"],
+        kind: "agent",
+      });
+      expect(page.items.map((r) => r.runId)).toEqual(["a_running_5", "a_done_1"]);
+      const counts = await service.getArchiveCounts({ statuses: ["paused-limit"] });
+      expect(counts.total).toBe(1);
+    });
+
+    it("todo-14: filters by projectId and kind", async () => {
+      const { service, agentRunner, workflowRunner } = build();
+      agentRunner.listAll.mockResolvedValue([doneA]);
+      workflowRunner.listAll.mockResolvedValue([devRun]);
+      const wf = await service.listArchivedTaskRuns({ kind: "workflow" });
+      expect(wf.items.map((r) => r.runId)).toEqual(["dev_1"]);
+      const none = await service.listArchivedTaskRuns({ project: "no-such-project" });
+      expect(none.items).toEqual([]);
+    });
+
+    it("todo-14: `sort` orders the whole set and pages with an offset cursor", async () => {
+      const { service, agentRunner } = build();
+      agentRunner.listAll.mockResolvedValue([
+        { ...doneA, costUsd: 2 },
+        { ...errorA, costUsd: 5 },
+        { ...interruptedA, costUsd: 1 },
+      ]);
+      const p1 = await service.listArchivedTaskRuns({ sort: "cost", dir: "desc", limit: 2 });
+      expect(p1.items.map((r) => r.runId)).toEqual(["a_error_2", "a_done_1"]);
+      expect(p1.nextCursor).toBe("@2");
+      const p2 = await service.listArchivedTaskRuns({
+        sort: "cost",
+        dir: "desc",
+        limit: 2,
+        before: p1.nextCursor!,
+      });
+      expect(p2.items.map((r) => r.runId)).toEqual(["a_interrupted_3"]);
+      expect(p2.nextCursor).toBeNull();
+      const byTitle = await service.listArchivedTaskRuns({ sort: "title", dir: "asc" });
+      expect(byTitle.items.map((r) => r.runId)).toEqual([
+        "a_interrupted_3",
+        "a_error_2",
+        "a_done_1",
+      ]);
+      // A garbage offset cursor starts from the top rather than throwing.
+      const bad = await service.listArchivedTaskRuns({ sort: "title", before: "@nope" });
+      expect(bad.items).toHaveLength(3);
+    });
+
     it("counts archived runs per department (search-scoped) plus the unsearched total", async () => {
       const { service, agentRunner, workflowRunner, workflowsStore } = build();
       agentRunner.listAll.mockResolvedValue([doneA, runningA]);

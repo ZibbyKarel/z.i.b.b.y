@@ -23,7 +23,6 @@
     "knowledge": "Znalosti",
     "subtab": {
       "work": {
-        "tasks": "Úkoly",
         "goals": "Cíle",
         "workflows": "Workflows",
         "automations": "Automatizace"
@@ -383,21 +382,6 @@
       "department": "Oddělení",
       "state": "Stav",
       "source": "Zdroj"
-    },
-    "list": {
-      "title": "Nadřazené úkoly",
-      "column": {
-        "id": "ID",
-        "task": "Úkol",
-        "route": "Průběh řetězce",
-        "state": "Stav",
-        "source": "Zdroj",
-        "age": "Stáří"
-      },
-      "emptyTitle": "Žádné úkoly",
-      "emptyBody": "Žádný úkol neodpovídá zvoleným filtrům.",
-      "loadMore": "Načíst další",
-      "loadingMore": "Načítám…"
     },
     "detail": {
       "back": "← Zpět na úkoly",
@@ -2400,25 +2384,33 @@
     }
   },
   "archive": {
-    "title": "Archiv úloh",
+    "title": "Běhy",
     "subtitle": "Vše, co ZIBBY dokončil napříč odděleními",
-    "searchPlaceholder": "Hledat v archivu…",
-    "searchAriaLabel": "Hledat v archivu",
+    "searchPlaceholder": "Hledat v bězích…",
+    "searchAriaLabel": "Hledat v bězích",
     "noDepartment": "Bez oddělení",
     "filter": {
       "all": "Všechna oddělení",
       "multiple": "{n} oddělení",
       "noDepartment": "Bez oddělení",
-      "department": "Oddělení"
+      "department": "Oddělení",
+      "allStates": "Vše",
+      "project": "Projekt",
+      "allProjects": "Všechny projekty",
+      "kind": "Druh",
+      "allKinds": "Všechny druhy"
     },
     "emptyFilter": "Nic nenalezeno.",
-    "emptyTitle": "Archiv je zatím prázdný",
-    "emptyDescription": "Jakmile ZIBBY něco dokončí, objeví se to tady.",
+    "emptyTitle": "Zatím žádné běhy",
+    "emptyDescription": "Jakmile ZIBBY něco spustí, objeví se to tady.",
     "selectHint": "Vyber úlohu vlevo pro zobrazení detailu.",
     "column": {
       "task": "Úkol",
       "state": "Stav",
-      "duration": "Délka"
+      "duration": "Délka",
+      "processor": "Zpracovatel",
+      "started": "Spuštěno",
+      "cost": "Cena"
     },
     "loadMore": "Načíst další",
     "loadingMore": "Načítám…"

@@ -132,7 +132,7 @@ describe("AppShell", () => {
 
   it.each([
     ["/projects/cms4/integrations", "/projects"],
-    ["/work/tasks", "/work/tasks"],
+    ["/work/goals", "/work/goals"],
   ])("marks the owning sub-nav tab current on %s", (path, href) => {
     mockPath = path;
     try {
@@ -224,7 +224,7 @@ describe("AppShell top menu sections", () => {
 });
 
 describe("AppShell phone layout", () => {
-  const renderPhone = (path = "/work/tasks") => {
+  const renderPhone = (path = "/work/goals") => {
     mockPhone = true;
     mockPath = path;
     return renderWithProviders(
@@ -254,7 +254,7 @@ describe("AppShell phone layout", () => {
   it("opens the section tree with the active section expanded", async () => {
     renderPhone();
     await userEvent.click(screen.getByTestId(MobileMenuTestId.Trigger));
-    expect(screen.getByTestId(`${MobileMenuTestId.Item}-/work/tasks`)).toHaveAttribute(
+    expect(screen.getByTestId(`${MobileMenuTestId.Item}-/work/goals`)).toHaveAttribute(
       "aria-current",
       "page",
     );

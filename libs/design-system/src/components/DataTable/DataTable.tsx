@@ -22,6 +22,14 @@ export interface DataTableColumn<T> {
   width: ColumnWidth;
   align?: "left" | "center" | "right";
   render?: (row: T) => ReactNode;
+  /** The header becomes a sort button (needs `onSortChange` on the table). */
+  sortable?: boolean;
+}
+
+/** The table's current sort — controlled; the caller sorts `rows` (or the server does). */
+export interface DataTableSort {
+  key: string;
+  dir: "asc" | "desc";
 }
 
 export enum DataTableTestId {
@@ -37,6 +45,8 @@ export enum DataTableTestId {
   Empty = "data-table-empty",
   Loading = "data-table-loading",
   RowLink = "data-table-row-link",
+  /** A sortable header's button, suffixed with its column `key`. */
+  SortButton = "data-table-sort-button",
 }
 
 export interface DataTableProps<T> {
@@ -49,8 +59,17 @@ export interface DataTableProps<T> {
   empty?: ReactNode;
   loading?: boolean;
   stickyHeader?: boolean;
+  /** Current sort, marked on its header (`aria-sort`) with an arrow. */
+  sort?: DataTableSort;
+  /** A sortable header was clicked — the caller decides the next direction. */
+  onSortChange?: (key: string) => void;
+  /** Nesting level of a row (0 = top); indents its first cell — e.g. stacked PRs. */
+  getRowDepth?: (row: T) => number;
   ref?: Ref<HTMLTableElement>;
 }
+
+/** Indent per nesting level of a row's first cell (`getRowDepth`), capped at 4 levels. */
+const depthPad = ["", "pl-[34px]", "pl-[54px]", "pl-[74px]", "pl-[94px]"] as const;
 
 const alignClass: Record<NonNullable<DataTableColumn<unknown>["align"]>, string> = {
   left: "text-left",
@@ -80,6 +99,9 @@ export function DataTable<T>({
   empty,
   loading,
   stickyHeader,
+  sort,
+  onSortChange,
+  getRowDepth,
   ref,
 }: DataTableProps<T>) {
   // On a phone the columns keep a readable width and the table scrolls sideways in
@@ -104,19 +126,49 @@ export function DataTable<T>({
           data-testid={DataTableTestId.Header}
         >
           <tr className="border-b border-border">
-            {columns.map((col) => (
-              <th
-                className={cn(
-                  "px-[14px] py-[9px] font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
-                  alignClass[col.align ?? "left"],
-                )}
-                data-testid={`${DataTableTestId.HeaderCell}-${col.key}`}
-                key={col.key}
-                scope="col"
-              >
-                {col.label}
-              </th>
-            ))}
+            {columns.map((col) => {
+              const sortable = col.sortable && onSortChange;
+              const active = sort?.key === col.key ? sort.dir : undefined;
+              return (
+                <th
+                  aria-sort={
+                    sortable
+                      ? active === "asc"
+                        ? "ascending"
+                        : active === "desc"
+                          ? "descending"
+                          : "none"
+                      : undefined
+                  }
+                  className={cn(
+                    "px-[14px] py-[9px] font-sans font-semibold uppercase tracking-wider text-[10px] text-foreground-faint",
+                    alignClass[col.align ?? "left"],
+                  )}
+                  data-testid={`${DataTableTestId.HeaderCell}-${col.key}`}
+                  key={col.key}
+                  scope="col"
+                >
+                  {sortable ? (
+                    <button
+                      className={cn(
+                        "inline-flex cursor-pointer items-center gap-[4px] uppercase tracking-wider hover:text-foreground",
+                        active && "text-foreground",
+                      )}
+                      data-testid={`${DataTableTestId.SortButton}-${col.key}`}
+                      onClick={() => onSortChange(col.key)}
+                      type="button"
+                    >
+                      {col.label}
+                      <span aria-hidden="true">
+                        {active === "asc" ? "↑" : active === "desc" ? "↓" : "↕"}
+                      </span>
+                    </button>
+                  ) : (
+                    col.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody data-testid={DataTableTestId.Body}>
@@ -149,6 +201,7 @@ export function DataTable<T>({
               const rowKey = getRowKey(row);
               const href = rowHref?.(row);
               const clickable = Boolean(onRowClick) && !href;
+              const depth = Math.min(getRowDepth?.(row) ?? 0, depthPad.length - 1);
               return (
                 <tr
                   className={cn(
@@ -177,7 +230,9 @@ export function DataTable<T>({
                       className={cn(
                         "relative min-w-0 px-[14px] py-[10px] text-sm text-foreground",
                         alignClass[col.align ?? "left"],
+                        i === 0 && depth > 0 && depthPad[depth],
                       )}
+                      data-depth={i === 0 && depth > 0 ? depth : undefined}
                       data-testid={`${DataTableTestId.Cell}-${rowKey}-${col.key}`}
                       key={col.key}
                     >

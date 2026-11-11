@@ -7,11 +7,14 @@ import { ActivityRunsScreen } from "./ActivityRunsScreen";
 
 const push = vi.fn();
 const replace = vi.fn();
-let stateParam = "";
+let search = "";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace }),
   usePathname: () => "/activity/runs",
-  useSearchParams: () => new URLSearchParams(stateParam ? { state: stateParam } : {}),
+  useSearchParams: () => new URLSearchParams(search),
+}));
+vi.mock("../../projects", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "p1", name: "Portal" }] }),
 }));
 
 const { hooks } = vi.hoisted(() => ({
@@ -26,19 +29,23 @@ const { hooks } = vi.hoisted(() => ({
   },
 }));
 const fetchNextPage = vi.fn();
+const runsQuery = vi.fn();
 const refetchItems = vi.fn();
 const refetchCounts = vi.fn();
 
 vi.mock("../queries", () => ({
-  useArchiveRunsInfiniteQuery: () => ({
-    data: hooks.items,
-    isPending: hooks.itemsPending,
-    isError: hooks.itemsError,
-    refetch: refetchItems,
-    fetchNextPage,
-    hasNextPage: false,
-    isFetchingNextPage: false,
-  }),
+  useArchiveRunsInfiniteQuery: (filter: unknown) => (
+    runsQuery(filter),
+    {
+      data: hooks.items,
+      isPending: hooks.itemsPending,
+      isError: hooks.itemsError,
+      refetch: refetchItems,
+      fetchNextPage,
+      hasNextPage: false,
+      isFetchingNextPage: false,
+    }
+  ),
   useArchiveCountsQuery: () => ({
     data: { total: hooks.total, counts: hooks.counts },
     isPending: hooks.countsPending,
@@ -73,7 +80,8 @@ describe("ActivityRunsScreen (ZB-07)", () => {
     hooks.counts = {};
     push.mockClear();
     replace.mockClear();
-    stateParam = "";
+    search = "";
+    runsQuery.mockClear();
     fetchNextPage.mockClear();
   });
 
@@ -101,26 +109,51 @@ describe("ActivityRunsScreen (ZB-07)", () => {
     expect(push).toHaveBeenCalledWith("/activity/runs/r_42");
   });
 
-  it("filters rows by the state segmented control", () => {
-    hooks.items = [
-      run({ runId: "r_done", status: "done" }),
-      run({ runId: "r_err", status: "error", title: "Broken run" }),
-    ];
-    hooks.total = 2;
+  it("todo-14: sends every URL filter + sort to the server query", () => {
+    search = "q=deploy&state=running&project=p1&kind=workflow&department=dev&sort=cost&dir=asc";
     render(<ActivityRunsScreen />);
-    expect(screen.getByText("Ship the release")).toBeInTheDocument();
-    expect(screen.getByText("Broken run")).toBeInTheDocument();
+    expect(runsQuery).toHaveBeenLastCalledWith({
+      search: "deploy",
+      departments: ["dev"],
+      statuses: ["running"],
+      project: "p1",
+      kind: "workflow",
+      sort: "cost",
+      dir: "asc",
+    });
   });
 
-  it("presets the state filter from ?state=", () => {
-    stateParam = "error";
-    hooks.items = [
-      run({ runId: "r_done", status: "done" }),
-      run({ runId: "r_err", status: "error", title: "Broken run" }),
-    ];
-    hooks.total = 2;
+  it("todo-14: without a state filter it asks for every status (live runs too)", () => {
     render(<ActivityRunsScreen />);
-    expect(screen.queryByText("Ship the release")).toBeNull();
-    expect(screen.getByText("Broken run")).toBeInTheDocument();
+    const filter = runsQuery.mock.lastCall?.[0] as { statuses: string[] };
+    expect(filter.statuses).toEqual(expect.arrayContaining(["running", "done", "queued"]));
+  });
+
+  it("todo-14: a header click writes the sort into the URL, keeping other params", () => {
+    search = "state=done";
+    hooks.items = [run()];
+    hooks.total = 1;
+    render(<ActivityRunsScreen />);
+    expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-started`)).toHaveAttribute(
+      "aria-sort",
+      "descending",
+    );
+    fireEvent.click(screen.getByTestId(`${DataTableTestId.SortButton}-cost`));
+    expect(replace).toHaveBeenCalledWith("/activity/runs?state=done&sort=cost&dir=desc");
+  });
+
+  it("todo-14: a state pick writes ?state= and keeps the sort", () => {
+    search = "sort=title&dir=asc";
+    render(<ActivityRunsScreen />);
+    fireEvent.click(screen.getByText("Chyba"));
+    expect(replace).toHaveBeenCalledWith("/activity/runs?sort=title&dir=asc&state=error");
+  });
+
+  it("shows the run's processor and cost", () => {
+    hooks.items = [run({ costUsd: 1.5, processor: { kind: "agent", id: "c", name: "Kodér" } })];
+    hooks.total = 1;
+    render(<ActivityRunsScreen />);
+    expect(screen.getByTestId(`${DataTableTestId.Cell}-r_1-processor`)).toHaveTextContent("Kodér");
+    expect(screen.getByTestId(`${DataTableTestId.Cell}-r_1-cost`)).toHaveTextContent("$1.50");
   });
 });

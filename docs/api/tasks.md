@@ -822,10 +822,17 @@ GET /api/tasks/runs/archive?search=&departments=&before=&limit=
   before       opaque `<startedAt>|<runId>` cursor from the previous page's
                `nextCursor` — keyset pagination, not offset-based
   limit        clamped to [1, 100], default 40
+  statuses     (todo-14) comma-separated TaskRunStatus list replacing the archived set —
+               the Activity → Runs table passes every status so live runs list too
+  project      (todo-14) one projectId
+  kind         (todo-14) agent | workflow | goal | scheduled
+  sort, dir    (todo-14) started | title | state | duration | cost, asc | desc (default
+               desc). With `sort` the cursor is an offset (`@<n>`), not the keyset one;
+               an unfinished run's duration counts up to now
 
   → { items: TaskRun[], nextCursor: string | null }   nextCursor is null once exhausted
 
-GET /api/tasks/runs/archive/counts?search=
+GET /api/tasks/runs/archive/counts?search=&statuses=   (statuses as above, todo-14)
   → { counts: Record<string, number>, total: number }
     counts: per-department-id (or "none") count among archived + search-matched runs,
             computed BEFORE any department selection (picking one department in the UI

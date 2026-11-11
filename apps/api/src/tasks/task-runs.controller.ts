@@ -17,6 +17,12 @@ import {
  * to a 404; a stop/resume the run's kind doesn't support (or a non-parked resume) to
  * a 409. The service resolves the owning runner from a bare `runId`.
  */
+/** A comma-separated query value as a list; empty/absent → undefined ("no filter"). */
+function splitList(value: string | undefined): string[] | undefined {
+  const list = value?.split(",").filter(Boolean);
+  return list?.length ? list : undefined;
+}
+
 @Controller()
 export class TaskRunsController {
   constructor(private readonly runs: TaskRunsService) {}
@@ -26,19 +32,26 @@ export class TaskRunsController {
     return tsRestHandler(taskRunsContract, {
       listTaskRuns: async () => ({ status: 200, body: await this.runs.listTaskRuns() }),
 
-      listArchivedTaskRuns: async ({ query: { search, departments, before, limit } }) => ({
+      listArchivedTaskRuns: async ({
+        query: { search, departments, statuses, project, kind, sort, dir, before, limit },
+      }) => ({
         status: 200,
         body: await this.runs.listArchivedTaskRuns({
           search,
-          departments: departments ? departments.split(",").filter(Boolean) : undefined,
+          departments: splitList(departments),
+          statuses: splitList(statuses),
+          project,
+          kind,
+          sort,
+          dir,
           before,
           limit,
         }),
       }),
 
-      getArchivedTaskRunCounts: async ({ query: { search } }) => ({
+      getArchivedTaskRunCounts: async ({ query: { search, statuses } }) => ({
         status: 200,
-        body: await this.runs.getArchiveCounts({ search }),
+        body: await this.runs.getArchiveCounts({ search, statuses: splitList(statuses) }),
       }),
 
       getTaskRun: async ({ params: { runId } }) => {

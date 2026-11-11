@@ -5,7 +5,7 @@ import { expect, test } from "@playwright/test";
  * (`design/ZibbyCorp/Information Architecture.dc.html`): the operator submits a
  * task on `/work/tasks/new` with an explicit department entry (the COO
  * classifier override, prefilled via `?entry=`), the parent task is created, and
- * it appears in `/work/tasks`.
+ * its detail page shows it.
  *
  * NOT covered here, and why: a department's workflow actually running the task
  * needs a real `claude` agent run, and this sandbox has no working `claude` CLI.
@@ -29,10 +29,10 @@ test("new task with an explicit department entry: the task appears in Tasks", as
   // `onSuccess`) — the durable outcome, not a transient toast. `(?!new)` matters:
   // the create page itself is `/work/tasks/new`, so a bare `.+` matches before the
   // POST returns (it can take several seconds while stage 2 ranks the department's
-  // roster) and the list below would load without the task.
+  // roster).
   await expect(page).toHaveURL(/\/work\/tasks\/(?!new)[^/?]+$/, { timeout: 30000 });
 
-  // The task is listed in `/work/tasks` by its title.
-  await page.goto("/work/tasks");
-  await expect(page.getByText(title, { exact: false })).toBeVisible({ timeout: 20000 });
+  // The task detail shows it by its title (todo-14 removed the `/work/tasks` list — it now
+  // redirects to `/activity/runs`, which lists runs, and this sandbox cannot run one).
+  await expect(page.getByText(title, { exact: false }).first()).toBeVisible({ timeout: 20000 });
 });

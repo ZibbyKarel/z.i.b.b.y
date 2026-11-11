@@ -18,21 +18,31 @@ import {
 import { useTranslations } from "next-intl";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { type ArchiveSort, RunKindSchema } from "@zibby/contracts";
 import { useEffect, useRef, useState } from "react";
 import { type DepartmentLookup } from "../../departments/departmentLookup";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
-import { formatDuration } from "../../../utils/time";
+import { formatCostUsd } from "../../../utils/cost";
+import { compactAgo, formatDuration } from "../../../utils/time";
+import { useProjectsQuery } from "../../projects";
 import { useOwnerDepartmentMaps } from "../../departments/useOwnerDepartment";
-import { RUN_STATUS_GROUPS, type RunStatusGroupKey } from "../../runs/statusGroups";
+import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
 import { type RunView, runTitle } from "../../runs/run";
 import {
   type ArchiveDepartmentFilterId,
   NO_DEPARTMENT,
   archiveDepartmentFilterId,
 } from "../archiveGroups";
+import {
+  type RunsListFilters,
+  nextSort,
+  parseRunsListFilters,
+  statusesForState,
+  writeRunsListFilters,
+} from "../runsListFilters";
 import { useArchiveCountsQuery, useArchiveRunsInfiniteQuery } from "../queries";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -61,15 +71,12 @@ function statusGroup(status: RunView["status"]) {
   return RUN_STATUS_GROUPS.find((g) => g.statuses.includes(status));
 }
 
-function statusGroupKey(status: RunView["status"]): RunStatusGroupKey | undefined {
-  return statusGroup(status)?.key;
-}
-
 /**
- * `/activity/runs` (ZB-07) — every archived run (D9's `ARCHIVED_STATES`), the
- * ex-`/activity/runs` search + department filter promoted to a `DataTable` with a state
- * `SegmentedControl` and infinite scroll; row click opens `/activity/runs/[runId]`
- * (moved from this screen's own master/detail split).
+ * `/activity/runs` (ZB-07, todo-14) — every run, live and finished (todo-14 merged the
+ * old `/work/tasks` list into it). Filters (search, state group, department, project,
+ * kind) and the sort column all live in the URL (`runsListFilters`) and run server-side,
+ * so the table survives a trip to a run detail and back and can be pinned. Infinite
+ * scroll; row click opens `/activity/runs/[runId]`.
  */
 export function ActivityRunsScreen() {
   const t = useTranslations("archive");
@@ -77,40 +84,55 @@ export function ActivityRunsScreen() {
   const tRuns = useTranslations("runs");
   const router = useRouter();
   const ownerMaps = useOwnerDepartmentMaps();
-
-  const [query, setQuery] = useState("");
-  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
-  const [department, setDepartment] = useState<ArchiveDepartmentFilterId | "">("");
-  // The state filter lives in `?state=<group>` (the org map's Zibby avatar links here).
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const stateParam = searchParams.get("state");
-  const state: RunStatusGroupKey | typeof ALL_STATE =
-    RUN_STATUS_GROUPS.find((g) => g.key === stateParam)?.key ?? ALL_STATE;
-  function setState(next: string) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === ALL_STATE) params.delete("state");
-    else params.set("state", next);
-    const qs = params.toString();
-    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
-  }
+  const [now] = useState(() => Date.now());
+  const { data: projects = [] } = useProjectsQuery();
 
-  const departmentFilter = department ? [department] : [];
+  const filters = parseRunsListFilters(searchParams);
+  const setFilters = (patch: Partial<RunsListFilters>) => {
+    const qs = writeRunsListFilters(searchParams, { ...filters, ...patch }).toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+  };
+
+  // The search box types locally; the debounced value is what lands in `?q=`.
+  const [query, setQuery] = useState(filters.q);
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS);
+  // Write only when the debounced text itself changed, so an outside `?q=` change (a
+  // pinned link, back/forward) is not overwritten by a stale debounce.
+  const lastDebounced = useRef(debouncedQuery);
+  useEffect(() => {
+    if (debouncedQuery === lastDebounced.current) return;
+    lastDebounced.current = debouncedQuery;
+    const next = { ...parseRunsListFilters(searchParams), q: debouncedQuery };
+    const qs = writeRunsListFilters(searchParams, next).toString();
+    router.replace((qs ? `${pathname}?${qs}` : pathname) as Route);
+  }, [debouncedQuery, searchParams, pathname, router]);
+
+  const statuses = statusesForState(filters.state);
   const {
-    data: items = [],
+    data: rows = [],
     isPending: itemsPending,
     isError: itemsError,
     refetch: refetchItems,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useArchiveRunsInfiniteQuery({ search: debouncedQuery, departments: departmentFilter });
+  } = useArchiveRunsInfiniteQuery({
+    search: filters.q,
+    departments: filters.department ? [filters.department] : [],
+    statuses,
+    project: filters.project || undefined,
+    kind: filters.kind || undefined,
+    sort: filters.sort || undefined,
+    dir: filters.dir || undefined,
+  });
   const {
     data: archiveCounts,
     isPending: countsPending,
     isError: countsError,
     refetch: refetchCounts,
-  } = useArchiveCountsQuery(debouncedQuery);
+  } = useArchiveCountsQuery(filters.q, statuses);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -127,13 +149,13 @@ export function ActivityRunsScreen() {
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   const archivedTotal = archiveCounts?.total ?? 0;
-  const rows =
-    state === ALL_STATE ? items : items.filter((r) => statusGroupKey(r.status) === state);
-
   const stateItems: SegmentedControlItem[] = [
-    { value: ALL_STATE, label: t("filter.all") },
+    { value: ALL_STATE, label: t("filter.allStates") },
     ...RUN_STATUS_GROUPS.map((g) => ({ value: g.key, label: tRuns(`group.${g.key}`) })),
   ];
+  const hasFilters = Boolean(
+    filters.department || filters.project || filters.kind || filters.state,
+  );
 
   const isPending = itemsPending || countsPending;
   const isError = itemsError || countsError;
@@ -143,6 +165,7 @@ export function ActivityRunsScreen() {
       key: "title",
       label: t("column.task"),
       width: "flex",
+      sortable: true,
       render: (row) => (
         <Stack gap="25">
           <Typography truncate type="note">
@@ -160,9 +183,25 @@ export function ActivityRunsScreen() {
       ),
     },
     {
+      key: "processor",
+      label: t("column.processor"),
+      width: "lg",
+      render: (row) => (
+        <Stack gap="25">
+          <Typography truncate type="note">
+            {row.processor?.name ?? row.owner}
+          </Typography>
+          <Typography mono size="2xs" type="note" variant="tertiary">
+            {tRuns(`kind.${row.kind}`)}
+          </Typography>
+        </Stack>
+      ),
+    },
+    {
       key: "state",
       label: t("column.state"),
-      width: "sm",
+      width: "md",
+      sortable: true,
       render: (row) => {
         const group = statusGroup(row.status);
         return (
@@ -174,13 +213,38 @@ export function ActivityRunsScreen() {
       },
     },
     {
+      key: "started",
+      label: t("column.started"),
+      width: "sm",
+      align: "right",
+      sortable: true,
+      render: (row) => (
+        <Typography mono size="2xs" type="note" variant="tertiary">
+          {compactAgo(row.startedAt, now)}
+        </Typography>
+      ),
+    },
+    {
       key: "duration",
       label: t("column.duration"),
       width: "sm",
       align: "right",
+      sortable: true,
       render: (row) => (
         <Typography mono size="2xs" type="note" variant="tertiary">
           {durationLabel(row)}
+        </Typography>
+      ),
+    },
+    {
+      key: "cost",
+      label: t("column.cost"),
+      width: "sm",
+      align: "right",
+      sortable: true,
+      render: (row) => (
+        <Typography mono size="2xs" type="note" variant="tertiary">
+          {row.costUsd != null ? formatCostUsd(row.costUsd) : ""}
         </Typography>
       ),
     },
@@ -202,22 +266,48 @@ export function ActivityRunsScreen() {
           </Container>
         </Stack>
 
-        <FilterBar onClear={department ? () => setDepartment("") : undefined}>
+        <FilterBar
+          onClear={
+            hasFilters
+              ? () => setFilters({ department: "", project: "", kind: "", state: "" })
+              : undefined
+          }
+        >
           <SelectField
             label={t("filter.department")}
-            onValueChange={(v) => setDepartment(v as ArchiveDepartmentFilterId | "")}
+            onValueChange={(v) => setFilters({ department: v })}
             options={[
               { value: "", label: t("filter.all") },
               { value: NO_DEPARTMENT, label: t("noDepartment") },
               ...departments.list.map((d) => ({ value: d.id, label: d.name })),
             ]}
-            value={department}
+            value={filters.department}
+          />
+          <SelectField
+            label={t("filter.project")}
+            onValueChange={(v) => setFilters({ project: v })}
+            options={[
+              { value: "", label: t("filter.allProjects") },
+              ...projects.map((p) => ({ value: p.id, label: p.name })),
+            ]}
+            value={filters.project}
+          />
+          <SelectField
+            label={t("filter.kind")}
+            onValueChange={(v) => setFilters({ kind: v as RunsListFilters["kind"] })}
+            options={[
+              { value: "", label: t("filter.allKinds") },
+              ...RunKindSchema.options.map((k) => ({ value: k, label: tRuns(`kind.${k}`) })),
+            ]}
+            value={filters.kind}
           />
           <SegmentedControl
             ariaLabel={t("column.state")}
             items={stateItems}
-            onChange={setState}
-            value={state}
+            onChange={(v) =>
+              setFilters({ state: v === ALL_STATE ? "" : (v as RunsListFilters["state"]) })
+            }
+            value={filters.state || ALL_STATE}
           />
         </FilterBar>
 
@@ -242,7 +332,9 @@ export function ActivityRunsScreen() {
               }
               getRowKey={(row) => row.runId}
               onRowClick={(row) => router.push(`/activity/runs/${row.runId}` as Route)}
+              onSortChange={(key) => setFilters(nextSort(filters, key as ArchiveSort))}
               rows={rows}
+              sort={{ key: filters.sort || "started", dir: filters.dir || "desc" }}
             />
             {hasNextPage && (
               <Button

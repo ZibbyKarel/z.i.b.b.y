@@ -54,12 +54,12 @@ test("AI and Settings sub-menus list their items; no header cog", async ({ page 
 });
 
 test("the sub-nav lists the active section's tabs and offers + New task", async ({ page }) => {
-  await page.goto("/work/tasks");
+  await page.goto("/work/goals");
 
   const subnav = page.getByTestId("subnav-root");
   await expect(subnav).toBeVisible();
-  // `work`'s sub-tabs: tasks, goals, workflows, automations.
-  await expect(subnav).toContainText("Tasks");
+  // `work`'s sub-tabs: goals, workflows, automations (todo-14 merged Tasks into Activity → Runs).
+  await expect(subnav).toContainText("Goals");
   await expect(subnav).toContainText("Workflows");
   await expect(subnav).toContainText("Automations");
 

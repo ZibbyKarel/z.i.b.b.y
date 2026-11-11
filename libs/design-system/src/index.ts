@@ -469,6 +469,7 @@ export { DataTable, DataTableTestId } from "./components/DataTable/DataTable";
 export type {
   ColumnWidth,
   DataTableColumn,
+  DataTableSort,
   DataTableProps,
 } from "./components/DataTable/DataTable";
 

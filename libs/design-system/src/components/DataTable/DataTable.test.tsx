@@ -21,6 +21,68 @@ const COLUMNS: DataTableColumn<Row>[] = [
 ];
 
 describe("DataTable", () => {
+  it("renders a sort button on sortable columns only and reports the clicked key", async () => {
+    const onSortChange = vi.fn();
+    const columns: DataTableColumn<Row>[] = [
+      { key: "name", label: "Name", width: "flex", sortable: true },
+      { key: "status", label: "Status", width: "sm" },
+    ];
+    render(
+      <DataTable
+        columns={columns}
+        getRowKey={(r) => r.id}
+        onSortChange={onSortChange}
+        rows={ROWS}
+        sort={{ key: "name", dir: "asc" }}
+      />,
+    );
+    expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-name`)).toHaveAttribute(
+      "aria-sort",
+      "ascending",
+    );
+    expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-status`)).not.toHaveAttribute(
+      "aria-sort",
+    );
+    expect(screen.queryByTestId(`${DataTableTestId.SortButton}-status`)).toBeNull();
+    await userEvent.click(screen.getByTestId(`${DataTableTestId.SortButton}-name`));
+    expect(onSortChange).toHaveBeenCalledWith("name");
+  });
+
+  it("marks an unsorted sortable column as aria-sort none", () => {
+    const columns: DataTableColumn<Row>[] = [
+      { key: "name", label: "Name", width: "flex", sortable: true },
+    ];
+    render(
+      <DataTable
+        columns={columns}
+        getRowKey={(r) => r.id}
+        onSortChange={() => {}}
+        rows={ROWS}
+        sort={{ key: "other", dir: "desc" }}
+      />,
+    );
+    expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-name`)).toHaveAttribute(
+      "aria-sort",
+      "none",
+    );
+  });
+
+  it("indents a row's first cell by its depth", () => {
+    render(
+      <DataTable
+        columns={COLUMNS}
+        getRowDepth={(r) => (r.id === "r2" ? 2 : 0)}
+        getRowKey={(r) => r.id}
+        rows={ROWS}
+      />,
+    );
+    expect(screen.getByTestId(`${DataTableTestId.Cell}-r2-name`)).toHaveAttribute(
+      "data-depth",
+      "2",
+    );
+    expect(screen.getByTestId(`${DataTableTestId.Cell}-r1-name`)).not.toHaveAttribute("data-depth");
+  });
+
   it("renders a header cell per column and a row per item using the default cell renderer", () => {
     render(<DataTable columns={COLUMNS} getRowKey={(r) => r.id} rows={ROWS} />);
     expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-name`)).toHaveTextContent("Name");

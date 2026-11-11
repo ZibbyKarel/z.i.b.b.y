@@ -1,5 +1,5 @@
 import type { InfiniteData } from "@tanstack/react-query";
-import type { ArchivePage, TaskRun } from "@zibby/contracts";
+import type { ArchivePage, ArchiveSort, RunKind, TaskRun } from "@zibby/contracts";
 import { apiClient } from "../../../state/api";
 
 /** ts-rest wraps every page in the `{ status, body }` envelope. */
@@ -12,12 +12,30 @@ export interface ArchiveRunsFilter {
   search: string;
   /** Department ids (or `NO_DEPARTMENT`) to narrow to; empty means "all departments". */
   departments: readonly string[];
+  /** todo-14: statuses to list (empty = the server's archived default). */
+  statuses?: readonly string[];
+  project?: string;
+  kind?: RunKind;
+  sort?: ArchiveSort;
+  dir?: "asc" | "desc";
 }
 
 /** Cache key for one archive filter combination — changing `search` or `departments`
  * naturally starts a fresh paginated query (a new key discards the old pages). */
-export function getArchiveRunsQueryKey({ search, departments }: ArchiveRunsFilter) {
-  return ["taskRuns", "archive", "list", search, [...departments].sort().join(",")] as const;
+export function getArchiveRunsQueryKey(filter: ArchiveRunsFilter) {
+  const { search, departments, statuses = [], project, kind, sort, dir } = filter;
+  return [
+    "taskRuns",
+    "archive",
+    "list",
+    search,
+    [...departments].sort().join(","),
+    [...statuses].sort().join(","),
+    project ?? "",
+    kind ?? "",
+    sort ?? "",
+    dir ?? "",
+  ] as const;
 }
 
 /** Flatten the loaded pages into one newest-first, runId-deduped run list. */
@@ -42,14 +60,20 @@ function selectArchiveRuns(data: InfiniteData<ArchivePageResponse>): TaskRun[] {
  * so they reach every archived run, not just whatever page has already loaded —
  * mirrors `useActivityFeedInfiniteQuery`'s cursor-walk shape.
  */
-export function useArchiveRunsInfiniteQuery({ search, departments }: ArchiveRunsFilter) {
+export function useArchiveRunsInfiniteQuery(filter: ArchiveRunsFilter) {
+  const { search, departments, statuses = [], project, kind, sort, dir } = filter;
   return apiClient.taskRuns.listArchivedTaskRuns.useInfiniteQuery<TaskRun[], string | undefined>({
-    queryKey: getArchiveRunsQueryKey({ search, departments }),
+    queryKey: getArchiveRunsQueryKey(filter),
     queryData: ({ pageParam }) => ({
       query: {
         limit: PAGE_SIZE,
         ...(search ? { search } : {}),
         ...(departments.length ? { departments: departments.join(",") } : {}),
+        ...(statuses.length ? { statuses: statuses.join(",") } : {}),
+        ...(project ? { project } : {}),
+        ...(kind ? { kind } : {}),
+        ...(sort ? { sort } : {}),
+        ...(dir ? { dir } : {}),
         ...(pageParam ? { before: pageParam } : {}),
       },
     }),

@@ -1,5 +1,6 @@
-import { TasksListScreen } from "../../../../features/tasks/screens/TasksListScreen";
+import { redirect } from "next/navigation";
 
+/** todo-14: the Tasks list merged into Activity → Runs; old links and pins land there. */
 export default function WorkTasksPage() {
-  return <TasksListScreen />;
+  redirect("/activity/runs");
 }

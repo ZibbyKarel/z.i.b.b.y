@@ -2,8 +2,8 @@ import { apiClient } from "../../../state/api";
 import { selectApiResponseBody } from "../../../state/selectApiResponseBody";
 
 /** Cache key for the archive's department counts, scoped by (debounced) search. */
-export function getArchiveCountsQueryKey(search: string) {
-  return ["taskRuns", "archive", "counts", search] as const;
+export function getArchiveCountsQueryKey(search: string, statuses: readonly string[] = []) {
+  return ["taskRuns", "archive", "counts", search, [...statuses].sort().join(",")] as const;
 }
 
 /**
@@ -12,10 +12,15 @@ export function getArchiveCountsQueryKey(search: string) {
  * empty" check. Independent of the department selection itself, same as the
  * (now-removed) client-side `computeDepartmentCounts` it replaces.
  */
-export function useArchiveCountsQuery(search: string) {
+export function useArchiveCountsQuery(search: string, statuses: readonly string[] = []) {
   return apiClient.taskRuns.getArchivedTaskRunCounts.useQuery({
-    queryKey: getArchiveCountsQueryKey(search),
-    queryData: { query: search ? { search } : {} },
+    queryKey: getArchiveCountsQueryKey(search, statuses),
+    queryData: {
+      query: {
+        ...(search ? { search } : {}),
+        ...(statuses.length ? { statuses: statuses.join(",") } : {}),
+      },
+    },
     select: selectApiResponseBody,
   });
 }

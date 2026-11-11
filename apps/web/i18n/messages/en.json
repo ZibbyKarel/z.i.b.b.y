@@ -23,7 +23,6 @@
     "knowledge": "Knowledge",
     "subtab": {
       "work": {
-        "tasks": "Tasks",
         "goals": "Goals",
         "workflows": "Workflows",
         "automations": "Automations"
@@ -383,21 +382,6 @@
       "department": "Department",
       "state": "State",
       "source": "Source"
-    },
-    "list": {
-      "title": "Parent tasks",
-      "column": {
-        "id": "ID",
-        "task": "Task",
-        "route": "Chain progress",
-        "state": "State",
-        "source": "Source",
-        "age": "Age"
-      },
-      "emptyTitle": "No tasks",
-      "emptyBody": "No tasks match these filters.",
-      "loadMore": "Load more",
-      "loadingMore": "Loading…"
     },
     "detail": {
       "back": "← Back to tasks",
@@ -2400,25 +2384,33 @@
     }
   },
   "archive": {
-    "title": "Task archive",
+    "title": "Runs",
     "subtitle": "Everything ZIBBY finished, across every department",
-    "searchPlaceholder": "Search the archive…",
-    "searchAriaLabel": "Search the archive",
+    "searchPlaceholder": "Search runs…",
+    "searchAriaLabel": "Search runs",
     "noDepartment": "No department",
     "filter": {
       "all": "All departments",
       "multiple": "{n} departments",
       "noDepartment": "No department",
-      "department": "Department"
+      "department": "Department",
+      "allStates": "All",
+      "project": "Project",
+      "allProjects": "All projects",
+      "kind": "Kind",
+      "allKinds": "All kinds"
     },
     "emptyFilter": "Nothing found.",
-    "emptyTitle": "The archive is still empty",
-    "emptyDescription": "Once ZIBBY finishes something, it will show up here.",
+    "emptyTitle": "No runs yet",
+    "emptyDescription": "Once ZIBBY starts something, it shows up here.",
     "selectHint": "Select a task on the left to see its detail.",
     "column": {
       "task": "Task",
       "state": "State",
-      "duration": "Duration"
+      "duration": "Duration",
+      "processor": "Processor",
+      "started": "Started",
+      "cost": "Cost"
     },
     "loadMore": "Load more",
     "loadingMore": "Loading…"

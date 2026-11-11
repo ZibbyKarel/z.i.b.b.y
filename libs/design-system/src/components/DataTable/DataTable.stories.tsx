@@ -48,3 +48,18 @@ export const Overview: Story = {
 export const Playground: Story = {
   render: () => <DataTable columns={COLUMNS} getRowKey={(r) => r.id} rows={ROWS} />,
 };
+
+export const SortableAndNested: Story = {
+  render: () => (
+    <div className="max-w-3xl p-8">
+      <DataTable
+        columns={COLUMNS.map((c) => ({ ...c, sortable: c.key !== "code" }))}
+        getRowDepth={(r) => (r.id === "r2" ? 1 : r.id === "r3" ? 2 : 0)}
+        getRowKey={(r) => r.id}
+        onSortChange={() => {}}
+        rows={ROWS}
+        sort={{ key: "name", dir: "asc" }}
+      />
+    </div>
+  ),
+};

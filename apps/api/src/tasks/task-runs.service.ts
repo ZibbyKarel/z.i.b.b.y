@@ -6,6 +6,7 @@ import {
   type AgentRun,
   type ArchiveCounts,
   type ArchivePage,
+  type ArchiveSort,
   type GoalRun,
   type Processor,
   type ResumeTaskRunInput,
@@ -36,7 +37,7 @@ import {
 import { WorkflowsStorageService } from "../workflows/workflows.storage.service";
 import { WorkspaceService } from "../workspace/workspace.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
-import { archiveDepartmentId, isArchived, matchesArchiveSearch } from "./archive";
+import { archiveDepartmentId, isArchived, matchesArchiveSearch, runTitle } from "./archive";
 import {
   ScheduledTaskNotFoundError,
   ScheduledTasksStorageService,
@@ -204,20 +205,41 @@ export class TaskRunsService {
   async listArchivedTaskRuns(opts: {
     search?: string;
     departments?: readonly string[];
+    /** todo-14: replaces the default archived set. */
+    statuses?: readonly string[];
+    project?: string;
+    kind?: TaskRun["kind"];
+    sort?: ArchiveSort;
+    dir?: "asc" | "desc";
     before?: string;
     limit?: number;
   }): Promise<ArchivePage> {
     const { runs, childRunIds, workflowDefsById } = await this.collect();
     const departmentSet = opts.departments?.length ? new Set(opts.departments) : null;
+    const inScope = statusScope(opts.statuses);
     const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100);
     const cursor = opts.before;
 
     const matched = runs
       .filter((r) => !childRunIds.has(r.runId))
-      .filter((r) => isArchived(r.status))
+      .filter((r) => inScope(r.status))
       .filter((r) => matchesArchiveSearch(r, opts.search ?? ""))
       .filter((r) => !departmentSet || departmentSet.has(archiveDepartmentId(r, workflowDefsById)))
+      .filter((r) => !opts.project || r.projectId === opts.project)
+      .filter((r) => !opts.kind || r.kind === opts.kind)
       .sort(byNewestRun);
+
+    if (opts.sort) {
+      // ponytail: offset cursor — a run landing mid-walk can shift a row across pages;
+      // fine for an operator table, keyset per sort key if it ever matters.
+      const sorted = sortArchive(matched, opts.sort, opts.dir ?? "desc", Date.now());
+      const offset = cursor?.startsWith("@") ? Number(cursor.slice(1)) || 0 : 0;
+      const end = offset + limit;
+      return {
+        items: sorted.slice(offset, end),
+        nextCursor: end < sorted.length ? `@${end}` : null,
+      };
+    }
 
     const remaining = cursor ? matched.filter((r) => archiveSortKey(r) < cursor) : matched;
     const collected = remaining.slice(0, limit + 1);
@@ -234,9 +256,13 @@ export class TaskRunsService {
    * option's count) plus the unsearched total, for the archive page's department
    * filter and its "archive is genuinely empty" check.
    */
-  async getArchiveCounts(opts: { search?: string }): Promise<ArchiveCounts> {
+  async getArchiveCounts(opts: {
+    search?: string;
+    statuses?: readonly string[];
+  }): Promise<ArchiveCounts> {
     const { runs, childRunIds, workflowDefsById } = await this.collect();
-    const archived = runs.filter((r) => !childRunIds.has(r.runId) && isArchived(r.status));
+    const inScope = statusScope(opts.statuses);
+    const archived = runs.filter((r) => !childRunIds.has(r.runId) && inScope(r.status));
     const counts: Record<string, number> = {};
     for (const r of archived) {
       if (!matchesArchiveSearch(r, opts.search ?? "")) continue;
@@ -736,6 +762,37 @@ function processorFor(kind: RunKind, owner: string, names: NameMaps): Processor 
  * boundary. Lexicographic comparison works directly since `startedAt` is ISO 8601. */
 function archiveSortKey(run: TaskRun): string {
   return `${run.startedAt}|${run.runId}`;
+}
+
+/** todo-14: the status predicate of an archive query — the given list, else the archived set. */
+function statusScope(statuses?: readonly string[]): (status: TaskRun["status"]) => boolean {
+  if (!statuses?.length) return isArchived;
+  const set = new Set(statuses);
+  return (status) => set.has(status);
+}
+
+/** Wall-clock run length in ms; an unfinished run counts up to `now`. */
+function runDurationMs(run: TaskRun, now: number): number {
+  const end = run.taskOutcomeFinishedAt ? Date.parse(run.taskOutcomeFinishedAt) : now;
+  return end - Date.parse(run.startedAt);
+}
+
+/** todo-14: the archive sorted by one column; ties keep the newest-first order (stable sort). */
+function sortArchive(
+  runs: readonly TaskRun[],
+  sort: ArchiveSort,
+  dir: "asc" | "desc",
+  now: number,
+): TaskRun[] {
+  const cmp: (a: TaskRun, b: TaskRun) => number = {
+    started: (a: TaskRun, b: TaskRun) => archiveSortKey(a).localeCompare(archiveSortKey(b)),
+    title: (a: TaskRun, b: TaskRun) => runTitle(a).localeCompare(runTitle(b)),
+    state: (a: TaskRun, b: TaskRun) => a.status.localeCompare(b.status),
+    duration: (a: TaskRun, b: TaskRun) => runDurationMs(a, now) - runDurationMs(b, now),
+    cost: (a: TaskRun, b: TaskRun) => (a.costUsd ?? 0) - (b.costUsd ?? 0),
+  }[sort];
+  const sign = dir === "asc" ? 1 : -1;
+  return [...runs].sort((a, b) => sign * cmp(a, b));
 }
 
 /** Newest-first comparator for the archive feed, by {@link archiveSortKey}. */
