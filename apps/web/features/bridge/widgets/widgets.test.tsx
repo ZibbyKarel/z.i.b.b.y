@@ -212,6 +212,9 @@ describe("IssuesWidget", () => {
     expect(rows[0]).toHaveAttribute("data-rk", "w-issues:p1/a"); // last changed first
     expect(rows[0]).toHaveTextContent("ZB-a");
     expect(rows[0]).toHaveTextContent("Ty · 1h");
+    // "Waiting for you" keeps only the status border-left, no ring around the card (todo-21).
+    expect(rows[0]).not.toHaveClass("shadow-[inset_0_0_0_1px_var(--color-ink)]");
+    expect(rows[0]!.className).toContain("border-l-[color:var(--color-state-block)]");
     expect(screen.getByTestId(RowGroupHeaderTestId.Title)).toHaveTextContent("Checkout");
 
     await userEvent.click(rows[0] as HTMLElement);

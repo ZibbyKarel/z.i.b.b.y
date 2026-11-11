@@ -145,7 +145,6 @@ export function IssuesWidget({
               : g.rows.map((r) => (
                   <BoardRow
                     key={r.key}
-                    needsYou={!!r.needsYou}
                     onClick={() =>
                       onOpen({
                         kind: "issue",
