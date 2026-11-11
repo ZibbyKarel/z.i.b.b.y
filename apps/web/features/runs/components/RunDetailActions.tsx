@@ -5,7 +5,13 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ConfirmDeleteDialog } from "../../../components/ConfirmDeleteDialog/ConfirmDeleteDialog";
-import { type RunView, isCancellableRun, isPausableRun, isStoppableRun } from "../run";
+import {
+  type RunView,
+  isCancellableRun,
+  isHandoverableRun,
+  isPausableRun,
+  isStoppableRun,
+} from "../run";
 import type { RunMode } from "../runDetailModel";
 import type { ResumeRunOptions } from "../useRunActions";
 
@@ -171,8 +177,8 @@ export function RunDetailActions({
       disabled: pending,
       onSelect: () => setConfirm("stop"),
     });
-  // A live run (or a task still waiting to dispatch) would double the work — the API refuses it too.
-  if (onHandover && !["running", "pending", "queued", "scheduled"].includes(run.status))
+  // Same refusals as the API: never live, and a self-resuming run only when stoppable.
+  if (onHandover && isHandoverableRun(run))
     moreItems.push({
       id: "handover",
       label: t("detail.more.handover"),

@@ -1,9 +1,17 @@
 "use client";
 
 import type { HandoverTaskRunInput } from "@zibby/contracts";
-import { Button, Dialog, SelectField, Stack, TextAreaField } from "@zibby/design-system";
+import {
+  Button,
+  Dialog,
+  SelectField,
+  Stack,
+  TextAreaField,
+  Typography,
+} from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { apiErrorMessage } from "../../../state/apiErrorMessage";
 import { useAgentsQuery } from "../../agents";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useWorkflowsQuery } from "../../workflows";
@@ -13,6 +21,7 @@ import type { RunView } from "../run";
 export enum HandoverRunDialogTestId {
   Note = "handover-run-note",
   Submit = "handover-run-submit",
+  Error = "handover-run-error",
 }
 
 export interface HandoverRunDialogProps {
@@ -39,6 +48,7 @@ export function HandoverRunDialog({ run, open, onClose, onHandedOver }: Handover
   const handover = useHandoverTaskRunMutation();
   const [value, setValue] = useState("");
   const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   const targets: HandoverTarget[] = [
     ...workflows.map((w) => ({ kind: "workflow" as const, id: w.id, name: w.name })),
@@ -51,9 +61,13 @@ export function HandoverRunDialog({ run, open, onClose, onHandedOver }: Handover
   const submit = () => {
     if (!target) return;
     const trimmed = note.trim();
+    setError(null);
     handover.mutate(
       { params: { runId: run.runId }, body: { target, ...(trimmed && { note: trimmed }) } },
-      { onSuccess: (res) => onHandedOver(res.body.runId) },
+      {
+        onSuccess: (res) => onHandedOver(res.body.runId),
+        onError: (err) => setError(apiErrorMessage(err) ?? t("failed")),
+      },
     );
   };
 
@@ -100,6 +114,11 @@ export function HandoverRunDialog({ run, open, onClose, onHandedOver }: Handover
           onChange={(e) => setNote(e.target.value)}
           value={note}
         />
+        {error && (
+          <Typography data-testid={HandoverRunDialogTestId.Error} type="label" variant="secondary">
+            {error}
+          </Typography>
+        )}
       </Stack>
     </Dialog>
   );

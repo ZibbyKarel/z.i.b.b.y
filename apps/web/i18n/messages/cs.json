@@ -1497,6 +1497,7 @@
         "title": "Předat úlohu",
         "description": "Nový cíl dostane původní zadání, odkaz na složku tohoto běhu a jeho artefakty (PR, větev, soubor).",
         "target": "Cíl",
+        "failed": "Předání se nepovedlo. Zkus to znovu.",
         "targetPlaceholder": "Vyber agenta, workflow nebo oddělení",
         "note": "Doplňující popis",
         "noteHint": "Volitelné — co má nový cíl udělat jinak nebo dokončit.",

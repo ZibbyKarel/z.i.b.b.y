@@ -1497,6 +1497,7 @@
         "title": "Hand over task",
         "description": "The new target gets the original goal, a link to this run's folder and its artifacts (PR, branch, file).",
         "target": "Target",
+        "failed": "The handover failed. Try again.",
         "targetPlaceholder": "Pick an agent, workflow or department",
         "note": "Additional description",
         "noteHint": "Optional — what the new target should do differently or finish.",

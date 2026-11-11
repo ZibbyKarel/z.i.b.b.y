@@ -728,12 +728,19 @@ still-queued task cancels it out of the queue.
 chosen agent / workflow / department (e.g. a misrouted `development-patch` run that
 burnt its retries → `delivery`). The original goal (task text, else the run prompt)
 is followed by a handover section: the original run id, its folder, its PR url, its
-branch (the new run is told to `git reset --hard <branch>` in its own worktree so it
-continues the commits instead of redoing them), its output file and outcome summary,
-and the operator note; the goal is truncated so the section survives the 8000-char
-cap. Paths, attachments, tool grants, output choice and project carry over. The new
-run opens its own PR through its normal output (it never pushes onto the original PR
-branch); the original run is untouched.
+branch, its output file and outcome summary, and the operator note; the goal is
+truncated so the section survives the 8000-char cap. Paths, attachments, tool grants,
+output choice and project carry over. When the original branch still resolves
+(checked in the original worktree), the task stores it as `baseBranch` (server-set,
+never accepted from a client) and the new run's worktree is cut from it
+(`git worktree add -b <new> <dir> refs/heads/<branch>`), so the commits are continued
+on a new branch; the text only says so. No git command is put in the text. An
+unresolved branch starts from the usual base and the text says that. The new run opens
+its own PR through its normal output (it never pushes onto the original PR branch).
+A run that would resume on its own (`paused-limit`, `awaiting-approval`, `parked`,
+`paused`) is stopped first, so it can't finish too; if it can't be stopped (a goal),
+the handover is refused (409), as it is for a live or not-yet-dispatched run. 422 / 503
+mirror `createTask` (empty catalog or department roster / claude unavailable).
 
 **Operator messages.** `POST /tasks/runs/:runId/messages { text, to = "all" }` queues
 a message for a workflow run that is not finished. There is no live channel into a

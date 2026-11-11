@@ -67,7 +67,12 @@ import { taskTargetId } from "./task-target";
 import { isPrimaryInstance } from "../shared/instance-role";
 
 /** A create input with its attachment set resolved once (Task 6 — resolve, then thread). */
-type CreateTaskInputResolved = CreateTaskInput & { attachments: Attachment[] };
+/**
+ * A create input as server-side callers may pass it: the public contract plus
+ * `baseBranch` (todo-8 handover — the zod contract strips it from any client body).
+ */
+export type ServerCreateTaskInput = CreateTaskInput & { baseBranch?: string };
+type CreateTaskInputResolved = ServerCreateTaskInput & { attachments: Attachment[] };
 
 /** A dispatch that started a run. */
 type Dispatched = { runRef: string; target: TaskTarget; classification?: ClassificationTrace };
@@ -359,7 +364,7 @@ export class TaskSchedulerService
    * is server-derived, never client-asserted).
    */
   async createTask(
-    input: CreateTaskInput,
+    input: ServerCreateTaskInput,
     now: number = Date.now(),
     trustedProjectId?: string,
     /**
@@ -405,7 +410,7 @@ export class TaskSchedulerService
   }
 
   private async createTaskInner(
-    input: CreateTaskInput,
+    input: ServerCreateTaskInput,
     now: number,
     trustedProjectId: string | undefined,
     explicitTarget: TaskTarget | undefined,
@@ -674,7 +679,7 @@ export class TaskSchedulerService
    * description via the Haiku namer, falling back to a deterministic slice when the
    * namer is unavailable or rejects (it never blocks task creation).
    */
-  private async ensureTitle(input: CreateTaskInput): Promise<CreateTaskInput> {
+  private async ensureTitle(input: ServerCreateTaskInput): Promise<ServerCreateTaskInput> {
     if (input.title?.trim()) return input;
     const derived =
       (await this.namer.name(input.text).catch(() => null)) ?? deriveTitleFallback(input.text);
@@ -686,7 +691,7 @@ export class TaskSchedulerService
    * stand-in until {@link refineTitle} swaps in the Haiku name. A provided title is
    * kept untouched.
    */
-  private withFallbackTitle(input: CreateTaskInput): CreateTaskInput {
+  private withFallbackTitle(input: ServerCreateTaskInput): ServerCreateTaskInput {
     if (input.title?.trim()) return input;
     return { ...input, title: deriveTitleFallback(input.text) };
   }
@@ -987,6 +992,7 @@ export class TaskSchedulerService
       input.toolGrants,
       undefined,
       input.immediate,
+      input.baseBranch,
     );
     if (!dispatched) throw new EmptyCatalogError();
     if (isQueued(dispatched)) {
@@ -1058,6 +1064,7 @@ export class TaskSchedulerService
             task.toolGrants,
             undefined,
             task.immediate,
+            task.baseBranch,
           );
           if (!dispatched) {
             await this.failPending(
@@ -1175,6 +1182,7 @@ export class TaskSchedulerService
         task.toolGrants,
         task.classification,
         task.immediate,
+        task.baseBranch,
       ));
     if (!dispatched) {
       await this.storage.markFailed(task.id, "No agents or workflows available to route to");
@@ -1393,6 +1401,8 @@ export class TaskSchedulerService
     priorClassification?: ClassificationTrace,
     /** Quick-action "run immediately": skip the run-slot cap (see {@link takeRunSlot}). */
     immediate?: boolean,
+    /** todo-8 handover: cut the run's worktree from this existing local branch. */
+    baseBranch?: string,
   ): Promise<Dispatched | QueuedDispatch | null> {
     // Build the run-attachments reference ONCE: an absolute dir (from storage) plus
     // the filenames, or undefined when the task carries no attachment set.
@@ -1470,6 +1480,8 @@ export class TaskSchedulerService
             undefined,
             runAttachments,
             toolGrants,
+            // Only when set, so every non-handover call keeps its exact arity.
+            ...(baseBranch ? ([baseBranch] as const) : ([] as const)),
           ),
         (r) => r.runId,
         (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),
@@ -1495,6 +1507,8 @@ export class TaskSchedulerService
             text,
             undefined,
             runAttachments,
+            // Only when set, so every non-handover call keeps its exact arity.
+            ...(baseBranch ? ([baseBranch] as const) : ([] as const)),
           ),
         (r) => r.workflowRunId,
         (r) =>
@@ -1551,6 +1565,7 @@ export class TaskSchedulerService
           matchedTerms,
           projectId ?? "",
           runAttachments,
+          ...(baseBranch ? ([baseBranch] as const) : ([] as const)),
         ),
       (r) => r.runId,
       (r) => TERMINAL_AGENT.has(this.liveStatus(() => this.agentRunner.get(r.runId), r)),

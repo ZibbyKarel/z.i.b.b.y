@@ -42,6 +42,20 @@ describe("HandoverRunDialog", () => {
     ]);
   });
 
+  it("shows the API's refusal when the handover fails", async () => {
+    mutate.mockImplementation((_vars, opts?: { onError?: (e: unknown) => void }) =>
+      opts?.onError?.({ status: 409, body: { message: "cannot be handed over" } }),
+    );
+    const { onHandedOver } = renderDialog();
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    await userEvent.click(screen.getAllByTestId(DropdownTestId.Option)[0]!);
+    await userEvent.click(screen.getByTestId(HandoverRunDialogTestId.Submit));
+    expect(screen.getByTestId(HandoverRunDialogTestId.Error)).toHaveTextContent(
+      "cannot be handed over",
+    );
+    expect(onHandedOver).not.toHaveBeenCalled();
+  });
+
   it("submits nothing until a target is picked", () => {
     renderDialog();
     expect(screen.getByTestId(HandoverRunDialogTestId.Submit)).toBeDisabled();

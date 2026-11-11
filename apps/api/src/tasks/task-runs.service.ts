@@ -105,7 +105,7 @@ export class TaskRunNotMessageableError extends Error {
 /** A live run (or a task still waiting to dispatch) cannot be handed over — stop/cancel it first. */
 export class TaskRunNotHandoverableError extends Error {
   constructor(runId: string) {
-    super(`Task run "${runId}" cannot be handed over while it is live (stop or cancel it first)`);
+    super(`Task run "${runId}" cannot be handed over (live, not yet dispatched, or not stoppable)`);
     this.name = "TaskRunNotHandoverableError";
   }
 }
@@ -114,6 +114,8 @@ export class TaskRunNotHandoverableError extends Error {
 const TASK_TEXT_MAX = 8000;
 /** Statuses with a live process or a dispatch still ahead — handing those over would double the work. */
 const NOT_HANDOVERABLE = new Set(["running", "pending", "queued", "scheduled"]);
+/** States a run leaves on its own (limit tick, approval, resume) — stopped before a handover. */
+const STOP_BEFORE_HANDOVER = new Set(["paused-limit", "awaiting-approval", "parked", "paused"]);
 
 /** Definition id → human name, per processor kind. */
 interface NameMaps {
@@ -593,9 +595,11 @@ export class TaskRunsService {
    * explicit target (classifier skipped), through the normal create path so budget/
    * staffing/approval gates apply. Its text is the original goal plus a handover
    * section naming the original run, its folder and artifacts (PR, branch, output
-   * file, outcome) and the operator's note; the run is told to build on the original
-   * branch when there is one. The original run is left as it is (history). A live run
-   * or a not-yet-dispatched task → {@link TaskRunNotHandoverableError}.
+   * file, outcome) and the operator's note. When the original branch still resolves,
+   * the new run's worktree is cut from it server-side (`baseBranch`) so the work is
+   * continued, never via a git command in the text. A run that would resume on its own
+   * is stopped first (no double work / two PRs); an unstoppable one, a live run or a
+   * not-yet-dispatched task → {@link TaskRunNotHandoverableError}.
    */
   async handover(runId: string, input: HandoverTaskRunInput): Promise<TaskRun> {
     const run = await this.getTaskRun(runId);
@@ -616,15 +620,22 @@ export class TaskRunsService {
       workflow ?? goals.find((r) => r.goalRunId === runId) ?? agents.find((r) => r.runId === runId);
     const folder = workflow ? await this.workflowRunner.runFolder(runId) : raw?.cwd;
     const branch = raw?.workspace?.branch;
+    // The original worktree shares the project's refs; a pruned one reads as unresolved.
+    const baseBranch =
+      branch && raw?.workspace && (await this.workspace.branchExists(raw.workspace.path, branch))
+        ? branch
+        : undefined;
 
     const lines = [
       "---",
       `Handed over from run ${runId} (${run.processor?.name ?? run.owner}, ${run.status}). Finish the task the original run did not.`,
       folder ? `Original run folder (read its files for context): ${folder}` : null,
       run.prOutput ? `Original PR: ${run.prOutput.url}` : null,
-      branch
-        ? `Original branch: ${branch} — your worktree shares the repository; start from it (\`git reset --hard ${branch}\` before your first change) so the original work is continued, not redone.`
-        : null,
+      baseBranch
+        ? `Original branch: your worktree already starts from ${baseBranch}; continue the original work, don't redo it.`
+        : branch
+          ? `Original branch: ${branch} — it could not be resolved, so your worktree starts from the default base; reuse the original run folder for context.`
+          : null,
       run.outputArtifactName
         ? `Original output file: ${run.outputArtifactName} (in the run folder)`
         : null,
@@ -636,6 +647,12 @@ export class TaskRunsService {
     // The handover section must survive the cap; the goal is what gets cut.
     const room = TASK_TEXT_MAX - handoverText.length - 2;
     const goalText = goal.length > room ? `${goal.slice(0, Math.max(0, room - 1))}…` : goal;
+    if (STOP_BEFORE_HANDOVER.has(run.status)) {
+      await this.stop(runId).catch((error: unknown) => {
+        if (error instanceof TaskRunNotStoppableError) throw new TaskRunNotHandoverableError(runId);
+        throw error;
+      });
+    }
     const result = await this.scheduler.createTask(
       {
         title: task?.title || run.taskTitle || undefined,
@@ -645,6 +662,7 @@ export class TaskRunsService {
         toolGrants: task?.toolGrants,
         output: task?.output,
         target: input.target,
+        ...(baseBranch ? { baseBranch } : {}),
       },
       undefined,
       task?.projectId ?? run.projectId,

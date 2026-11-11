@@ -462,6 +462,8 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
      * first phase's input. Absent for every other caller.
      */
     attachments?: RunAttachments,
+    /** todo-8 handover: cut the run's worktree from this existing local branch. */
+    baseBranch?: string,
   ): Promise<WorkflowRun> {
     // Throws WorkflowNotFoundError / InvalidWorkflowIdError when unknown → 404.
     const workflow = await this.workflows.get(workflowId);
@@ -581,6 +583,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
             runId: workflowRunId,
             slug: workflowId,
             ...(input ? { taskText: input } : {}),
+            ...(baseBranch ? { baseBranch } : {}),
             // Phase 12.7: worktree OUTSIDE the repo/data tree (only artifacts stay under root).
             dir: await prepareWorktreeDir(workflowRunId),
           });

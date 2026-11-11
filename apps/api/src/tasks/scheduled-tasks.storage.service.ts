@@ -12,7 +12,10 @@ import {
 import { EntityFileStore, collisionResistantId } from "../shared/file-storage";
 
 /** A create input carrying its attachment set's resolved metadata (Task 6). */
-type CreateTaskInputWithAttachments = CreateTaskInput & { attachments?: Attachment[] };
+type CreateTaskInputWithAttachments = CreateTaskInput & {
+  attachments?: Attachment[];
+  baseBranch?: string;
+};
 
 /**
  * What a `queued` task remembers about its pending dispatch: the resolved `target` +
@@ -108,6 +111,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       text: input.text,
       paths: input.paths ?? [],
       toolGrants: input.toolGrants ?? [],
+      ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
       attachments: input.attachments ?? [],
       scheduledAt: input.scheduledAt,
       status: "scheduled",
@@ -138,6 +142,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       text: input.text,
       paths: input.paths ?? [],
       toolGrants: input.toolGrants ?? [],
+      ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
       attachments: input.attachments ?? [],
       scheduledAt: now,
       status,
@@ -186,6 +191,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       text: input.text,
       paths: input.paths ?? [],
       toolGrants: input.toolGrants ?? [],
+      ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
       attachments: input.attachments ?? [],
       scheduledAt: now,
       status: "pending",
@@ -334,6 +340,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       text: input.text,
       paths: input.paths ?? [],
       toolGrants: input.toolGrants ?? [],
+      ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
       attachments: input.attachments ?? [],
       scheduledAt: resumeAt,
       status: "scheduled",
@@ -420,6 +427,7 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
       text: input.text,
       paths: input.paths ?? [],
       toolGrants: input.toolGrants ?? [],
+      ...(input.baseBranch ? { baseBranch: input.baseBranch } : {}),
       attachments: input.attachments ?? [],
       scheduledAt: now,
       status: "dispatched",

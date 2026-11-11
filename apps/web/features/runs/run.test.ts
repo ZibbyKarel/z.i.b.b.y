@@ -4,6 +4,7 @@ import {
   type RunView,
   approvalForRun,
   findSelectedRun,
+  isHandoverableRun,
   isPausableRun,
   isResumableRun,
   isStoppableRun,
@@ -221,5 +222,16 @@ describe("parked workflow actions", () => {
     expect(isPausableRun({ kind: "workflow", status: "awaiting-approval" })).toBe(true);
     expect(isPausableRun({ kind: "agent", status: "running" })).toBe(false);
     expect(isPausableRun({ kind: "workflow", status: "done" })).toBe(false);
+  });
+
+  it("hand over: never live; a self-resuming run only when it can be stopped first", () => {
+    expect(isHandoverableRun({ kind: "workflow", status: "error" })).toBe(true);
+    expect(isHandoverableRun({ kind: "agent", status: "done" })).toBe(true);
+    expect(isHandoverableRun({ kind: "workflow", status: "running" })).toBe(false);
+    expect(isHandoverableRun({ kind: "workflow", status: "queued" })).toBe(false);
+    expect(isHandoverableRun({ kind: "workflow", status: "paused-limit" })).toBe(true);
+    expect(isHandoverableRun({ kind: "workflow", status: "parked" })).toBe(true);
+    expect(isHandoverableRun({ kind: "goal", status: "paused-limit" })).toBe(false);
+    expect(isHandoverableRun({ kind: "goal", status: "parked" })).toBe(false);
   });
 });

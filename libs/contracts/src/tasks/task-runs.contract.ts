@@ -197,8 +197,12 @@ export const taskRunsContract = c.router(
         // The NEW task's view (`pending` until its background dispatch spawns).
         200: TaskRunSchema,
         404: ErrorSchema,
-        // The run is still live (running / dispatching): stop it first.
+        // Live / not yet dispatched, or a self-resuming run that can't be stopped.
         409: ErrorSchema,
+        // The target can't take the task (empty catalog / department roster).
+        422: ErrorSchema,
+        // The claude CLI is unavailable.
+        503: ErrorSchema,
       },
       summary:
         "Hand a run's task over to another agent/workflow/department with its goal, folder and artifacts",

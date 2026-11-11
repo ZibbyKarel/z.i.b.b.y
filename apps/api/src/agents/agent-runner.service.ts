@@ -186,6 +186,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * silently dropped here, server-side, never trusted from dispatch alone.
      */
     toolGrants?: string[],
+    /** todo-8 handover: cut the worktree from this existing local branch. */
+    baseBranch?: string,
   ): Promise<AgentRun> {
     // Throws AgentNotFoundError / InvalidAgentIdError when the agent is unknown.
     const agent = await this.agents.get(agentId);
@@ -201,6 +203,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       attachments,
       undefined,
       toolGrants,
+      baseBranch,
     );
   }
 
@@ -221,6 +224,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     matchedTerms?: string[],
     project = "",
     attachments?: RunAttachments,
+    baseBranch?: string,
   ): Promise<AgentRun> {
     return this.launch(
       ORCHESTRATOR_AGENT,
@@ -232,6 +236,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       matchedTerms,
       undefined,
       attachments,
+      undefined,
+      undefined,
+      baseBranch,
     );
   }
 
@@ -312,6 +319,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
      * the UI alone).
      */
     toolGrants?: string[],
+    baseBranch?: string,
   ): Promise<AgentRun> {
     const agentId = agent.id;
     // Phase 108: the FINAL grant set — the ceiling is enforced HERE, server-side,
@@ -371,6 +379,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
             projectPath: local.path,
             runId,
             slug: title || agentId,
+            ...(baseBranch ? { baseBranch } : {}),
             // Phase 12.7: worktree OUTSIDE the repo/data tree (only the sandbox stays under cwd).
             dir: await prepareWorktreeDir(runId),
           });

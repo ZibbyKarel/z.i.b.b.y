@@ -3,6 +3,8 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { taskRunsContract } from "@zibby/contracts";
 import { GoalRunNotParkedError } from "../goals/goals.errors";
 import { RunNotRetriesParkedError } from "../workflows/workflow-runner.service";
+import { ClaudeUnavailableError } from "../runner/claude-preflight.service";
+import { DepartmentEmptyRosterError, EmptyCatalogError } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
   TaskRunNotHandoverableError,
@@ -164,6 +166,13 @@ export class TaskRunsController {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
           if (error instanceof TaskRunNotHandoverableError) {
             return { status: 409, body: { message: error.message } };
+          }
+          // Same mapping as `createTask` (tasks.controller): the new task can't route/spawn.
+          if (error instanceof EmptyCatalogError || error instanceof DepartmentEmptyRosterError) {
+            return { status: 422, body: { message: error.message } };
+          }
+          if (error instanceof ClaudeUnavailableError) {
+            return { status: 503, body: { message: error.message } };
           }
           throw error;
         }

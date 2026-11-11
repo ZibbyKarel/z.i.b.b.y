@@ -83,7 +83,8 @@ export class WorkspaceService {
     return isGitRepoAt(dir);
   }
 
-  private async branchExists(projectPath: string, branch: string): Promise<boolean> {
+  /** Does local branch `branch` exist in the repo `dir` belongs to (any of its worktrees)? */
+  async branchExists(projectPath: string, branch: string): Promise<boolean> {
     return exec("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
       cwd: projectPath,
       timeout: GIT_TIMEOUT_MS,
@@ -113,6 +114,11 @@ export class WorkspaceService {
     dir: string;
     /** Task text; a Jira key in it names the branch `<KEY>-<title-slug>` (no `zibby/` prefix). */
     taskText?: string;
+    /**
+     * A handed-over task (todo-8): cut the new branch from this existing LOCAL branch
+     * so the original work is continued. Missing → logged, cut from origin as usual.
+     */
+    baseBranch?: string;
   }): Promise<Workspace> {
     const jira = jiraBranchName(opts.taskText);
     let branch = jira ?? `zibby/${opts.runId}-${sanitizeBranchSlug(opts.slug)}`;
@@ -121,7 +127,9 @@ export class WorkspaceService {
       if (jira && (await this.branchExists(opts.projectPath, branch))) {
         branch = `${jira}-${opts.runId}`;
       }
-      const base = await this.resolveWorktreeBase(opts.projectPath);
+      const base =
+        (opts.baseBranch && (await this.resolveBranchBase(opts.projectPath, opts.baseBranch))) ||
+        (await this.resolveWorktreeBase(opts.projectPath));
       await exec("git", ["worktree", "add", "-b", branch, opts.dir, base.ref], {
         cwd: opts.projectPath,
         // The checkout of a large monorepo (cms4: ~65k files) takes well over the
@@ -141,6 +149,27 @@ export class WorkspaceService {
         `Failed to create worktree for branch "${branch}" in "${opts.projectPath}": ${message}`,
       );
     }
+  }
+
+  /** `refs/heads/<branch>` and its sha, or null (logged) when it doesn't resolve. */
+  private async resolveBranchBase(
+    projectPath: string,
+    branch: string,
+  ): Promise<{ ref: string; sha: string } | null> {
+    const ref = `refs/heads/${branch}`;
+    return exec("git", ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], {
+      cwd: projectPath,
+      timeout: GIT_TIMEOUT_MS,
+    }).then(
+      (r) => ({ ref, sha: r.stdout.trim() }),
+      () => {
+        this.log?.warn("base branch does not resolve; cutting from origin instead", {
+          projectPath,
+          branch,
+        });
+        return null;
+      },
+    );
   }
 
   /**

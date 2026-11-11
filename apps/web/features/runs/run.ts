@@ -74,6 +74,17 @@ export function isStoppableRun(run: Pick<RunView, "kind" | "status">): boolean {
   }
 }
 
+/** Live, or a task still waiting to dispatch — a handover would double the work. */
+const LIVE_FOR_HANDOVER = new Set(["running", "pending", "queued", "scheduled"]);
+/** States a run leaves on its own — the API stops it before the handover. */
+const STOP_BEFORE_HANDOVER = new Set(["paused-limit", "awaiting-approval", "parked", "paused"]);
+
+/** Whether "Hand over task" applies (mirrors `TaskRunsService.handover`'s refusals). */
+export function isHandoverableRun(run: Pick<RunView, "kind" | "status">): boolean {
+  if (LIVE_FOR_HANDOVER.has(run.status)) return false;
+  return !STOP_BEFORE_HANDOVER.has(run.status) || isStoppableRun(run);
+}
+
 /** Whether Pause applies: only a workflow parks, at a stage boundary still ahead of it. */
 export function isPausableRun(run: Pick<RunView, "kind" | "status" | "pauseRequested">): boolean {
   if (run.kind !== "workflow" || run.pauseRequested) return false;

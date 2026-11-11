@@ -626,6 +626,11 @@ export const ScheduledTaskSchema = z.object({
    * (never trusted blindly). Defaults to `[]` so an old-shaped record still parses.
    */
   toolGrants: z.array(z.string()).default([]),
+  /**
+   * todo-8 handover: the existing local branch the run's worktree is cut from (the
+   * original run's branch). Server-set only — never part of the create contract.
+   */
+  baseBranch: z.string().optional(),
   /** Phase: the uploaded attachment set this task references (see AttachmentSchema). */
   attachmentSetId: z.string().optional(),
   /** Durable, displayable metadata for the referenced set (empty when none). */

@@ -141,6 +141,46 @@ describe("WorkspaceService", () => {
     expect(await git(repo, "rev-parse", ws.branch)).not.toBe(headBefore);
   });
 
+  it("a baseBranch cuts the new branch from that branch (handover), main checkout untouched", async () => {
+    const headBefore = await git(repo, "rev-parse", "HEAD");
+    const first = await svc.createWorktree({
+      projectPath: repo,
+      runId: "r-orig",
+      slug: "s",
+      dir: path.join(runDir, "orig"),
+    });
+    await fs.writeFile(path.join(first.path, "done.txt"), "stage work\n", "utf8");
+    await git(first.path, "add", "-A");
+    await git(first.path, "commit", "-m", "earlier stage");
+    const origTip = await git(repo, "rev-parse", first.branch);
+
+    expect(await svc.branchExists(first.path, first.branch)).toBe(true);
+    const ws = await svc.createWorktree({
+      projectPath: repo,
+      runId: "r-next",
+      slug: "s",
+      dir: path.join(runDir, "next"),
+      baseBranch: first.branch,
+    });
+    expect(ws.branch).not.toBe(first.branch);
+    expect(ws.baseRef).toBe(origTip);
+    expect(await git(ws.path, "rev-parse", "HEAD")).toBe(origTip);
+    expect(await git(repo, "rev-parse", "HEAD")).toBe(headBefore);
+  });
+
+  it("an unresolvable baseBranch falls back to the usual base", async () => {
+    const headBefore = await git(repo, "rev-parse", "HEAD");
+    expect(await svc.branchExists(repo, "zibby/gone")).toBe(false);
+    const ws = await svc.createWorktree({
+      projectPath: repo,
+      runId: "r-fb",
+      slug: "s",
+      dir: path.join(runDir, "fb"),
+      baseBranch: "zibby/gone",
+    });
+    expect(ws.baseRef).toBe(headBefore);
+  });
+
   it("diffstat lists the worktree's commits and changed files against the base", async () => {
     const dir = path.join(runDir, "worktree");
     const ws = await svc.createWorktree({ projectPath: repo, runId: "r1", slug: "s", dir });

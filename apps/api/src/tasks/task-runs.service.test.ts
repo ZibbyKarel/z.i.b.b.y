@@ -186,6 +186,7 @@ function build() {
     runChanges: vi.fn(
       async (): Promise<TaskRunChanges | null> => ({ diff: "d", truncated: false }),
     ),
+    branchExists: vi.fn(async () => true),
   };
   const opener = vi.fn(async () => {});
   const service = new TaskRunsService(
@@ -1487,6 +1488,58 @@ describe("TaskRunsService", () => {
       expect(input.text).toContain("finish it in delivery");
       // The mock's created task (task9) is the original's task, so it resolves to that run.
       expect(res.runId).toBe("delivery_3");
+    });
+
+    it("starts the new worktree from the original branch server-side, never a reset in the text", async () => {
+      const { service, scheduler, workspace } = failedWorkflow();
+      await service.handover("delivery_3", { target });
+      expect(workspace.branchExists).toHaveBeenCalledWith("/wt/delivery_3", "zibby/delivery_3");
+      const [input] = scheduler.createTask.mock.calls[0] as unknown as [
+        { text: string; baseBranch?: string },
+      ];
+      expect(input.baseBranch).toBe("zibby/delivery_3");
+      expect(input.text).not.toContain("reset");
+      expect(input.text).toContain("already starts from zibby/delivery_3");
+    });
+
+    it("an unresolvable original branch starts normally and says so", async () => {
+      const { service, scheduler, workspace } = failedWorkflow();
+      workspace.branchExists.mockResolvedValue(false);
+      await service.handover("delivery_3", { target });
+      const [input] = scheduler.createTask.mock.calls[0] as unknown as [
+        { text: string; baseBranch?: string },
+      ];
+      expect(input.baseBranch).toBeUndefined();
+      expect(input.text).toContain("could not be resolved");
+    });
+
+    it("stops a run that would resume on its own before handing it over", async () => {
+      const h = failedWorkflow();
+      h.workflowRunner.listAll.mockResolvedValue([
+        { ...pipeP, status: "paused-limit", taskId: "task9" },
+      ]);
+      const order: string[] = [];
+      h.workflowRunner.stop.mockImplementation(async () => {
+        order.push("stop");
+      });
+      h.scheduler.createTask.mockImplementation(async () => {
+        order.push("create");
+        return { outcome: "dispatched", runRef: "delivery_3" } as never;
+      });
+      await h.service.handover("delivery_3", { target });
+      expect(order).toEqual(["stop", "create"]);
+    });
+
+    it("refuses when the self-resuming run cannot be stopped (409)", async () => {
+      const h = failedWorkflow();
+      h.workflowRunner.listAll.mockResolvedValue([
+        { ...pipeP, status: "paused-limit", taskId: "task9" },
+      ]);
+      h.workflowRunner.stop.mockRejectedValue(new WorkflowRunNotStoppableError("delivery_3"));
+      await expect(h.service.handover("delivery_3", { target })).rejects.toBeInstanceOf(
+        TaskRunNotHandoverableError,
+      );
+      expect(h.scheduler.createTask).not.toHaveBeenCalled();
     });
 
     it("keeps the composed text within the 8000-char task cap", async () => {
