@@ -89,6 +89,8 @@ export const SECTIONS = [
       { id: "runs", href: "/activity/runs" },
       // todo-19: moved here from Governance; `/governance/approvals` redirects.
       { id: "approvals", href: "/activity/approvals" as Route },
+      // todo-18: the Overview's OPEN PRS number lands here.
+      { id: "pull-requests", href: "/activity/pull-requests" as Route },
       { id: "channels", href: "/activity/channels" as Route },
     ],
   },

@@ -17,7 +17,7 @@ import {
   prTeams,
   prTree,
   runRows,
-  spendTodayUsd,
+  spendMonthUsd,
 } from "./rows";
 
 const ago = (iso: string) => `ago:${iso.slice(0, 10)}`;
@@ -488,12 +488,12 @@ describe("runs", () => {
 });
 
 describe("briefing", () => {
-  it("sums today's cost across projects", () => {
+  it("sums the month-to-date cost across projects (todo-18)", () => {
     const budget = {
-      projects: [{ dailyCost: { spentUsd: 1.5 } }, { dailyCost: { spentUsd: 0.25 } }, {}],
+      projects: [{ monthlyCost: { spentUsd: 1.5 } }, { monthlyCost: { spentUsd: 0.25 } }, {}],
     } as unknown as BudgetStatus;
-    expect(spendTodayUsd(budget)).toBe(1.75);
-    expect(spendTodayUsd(undefined)).toBe(0);
+    expect(spendMonthUsd(budget)).toBe(1.75);
+    expect(spendMonthUsd(undefined)).toBe(0);
     expect(formatUsd(1.75)).toBe("$1.75");
   });
 });

@@ -471,9 +471,13 @@ export function runRows(
 // Briefing
 // ---------------------------------------------------------------------------
 
-/** Today's spend in USD: the sum of the projects' daily cost windows (0 when none reported). */
-export function spendTodayUsd(budget: BudgetStatus | undefined): number {
-  return (budget?.projects ?? []).reduce((sum, p) => sum + (p.dailyCost?.spentUsd ?? 0), 0);
+/**
+ * todo-18: this month's spend in USD — the sum of the projects' `monthlyCost` windows
+ * (month-to-date, Europe/Prague calendar month: the same window the Budgets page caps),
+ * 0 when none reported.
+ */
+export function spendMonthUsd(budget: BudgetStatus | undefined): number {
+  return (budget?.projects ?? []).reduce((sum, p) => sum + (p.monthlyCost?.spentUsd ?? 0), 0);
 }
 
 export function formatUsd(n: number): string {

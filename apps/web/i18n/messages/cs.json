@@ -31,6 +31,7 @@
         "log": "Log",
         "runs": "Běhy",
         "approvals": "Schválení",
+        "pull-requests": "Pull requesty",
         "channels": "Kanály"
       },
       "knowledge": {
@@ -3329,7 +3330,7 @@
         "needs": "Potřebuje tě",
         "running": "Běží teď",
         "prs": "Otevřené PR",
-        "spend": "Dnešní výdaje",
+        "spend": "Výdaje za měsíc",
         "kicker": "{date} · přehled",
         "fallback": "Zatím není co hlásit."
       },
@@ -3718,5 +3719,18 @@
     "helpLabel": "Co přepínače dělají",
     "helpMode": "Přepínače práci spouští v obou režimech. Schvalovat: výsledek čeká na tvé schválení. AUTOPILOT: odešle se bez schválení a jen dostaneš notifikaci.",
     "helpNever": "Nikdy automaticky: merge, deploy, platby, mazání, force push a push do sdílených větví vždy čekají na tebe."
+  },
+  "prsPage": {
+    "title": "Otevřená PR",
+    "emptyTitle": "Žádná otevřená PR",
+    "emptyBody": "Jakmile se objeví PR k tobě nebo od tebe, uvidíš ho tady.",
+    "column": {
+      "pr": "PR",
+      "author": "Autor",
+      "ci": "CI",
+      "review": "Review",
+      "conversations": "Konverzace",
+      "updated": "Změna"
+    }
   }
 }

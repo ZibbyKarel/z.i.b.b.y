@@ -38,3 +38,6 @@ export const Narrow: Story = {
   render: Overview.render,
 };
 export const Playground: Story = {};
+export const Linked: Story = {
+  render: () => <KpiStrip kpis={kpis.map((k) => ({ ...k, href: `#${k.id}` }))} />,
+};

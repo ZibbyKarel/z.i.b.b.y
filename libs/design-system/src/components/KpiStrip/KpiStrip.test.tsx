@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { render } from "../../utils/testRender";
@@ -27,5 +28,27 @@ describe("KpiStrip", () => {
       "min-w-0",
       "flex-wrap",
     );
+  });
+
+  it("renders a KPI with an href as a link through the linkComponent", () => {
+    const FakeLink = ({ href, children, ...rest }: { href: string; children?: ReactNode }) => (
+      <a data-fake="1" href={href} {...rest}>
+        {children}
+      </a>
+    );
+    render(
+      <KpiStrip
+        kpis={[
+          { id: "a", label: "A", value: "1", tone: "idle", href: "/x?state=running" },
+          { id: "b", label: "B", value: "2", tone: "idle" },
+        ]}
+        linkComponent={FakeLink}
+      />,
+    );
+    const link = screen.getByTestId(`${KpiStripTestId.Link}-a`);
+    expect(link).toHaveAttribute("href", "/x?state=running");
+    expect(link).toHaveAttribute("data-fake", "1");
+    expect(link).toHaveAccessibleName("A 1");
+    expect(screen.queryByTestId(`${KpiStripTestId.Link}-b`)).toBeNull();
   });
 });

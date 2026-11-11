@@ -31,6 +31,7 @@
         "log": "Log",
         "runs": "Runs",
         "approvals": "Approvals",
+        "pull-requests": "Pull requests",
         "channels": "Channels"
       },
       "knowledge": {
@@ -3329,7 +3330,7 @@
         "needs": "Needs you",
         "running": "Running now",
         "prs": "Open PRs",
-        "spend": "Spend today",
+        "spend": "Spend this month",
         "kicker": "{date} · briefing",
         "fallback": "Nothing to report yet."
       },
@@ -3718,5 +3719,18 @@
     "helpLabel": "What the switches do",
     "helpMode": "The toggles start the work in both modes. Approve: the outcome waits for your approval. AUTOPILOT: it is sent without approval and you only get notified.",
     "helpNever": "Never automatic: merge, deploy, payments, deletes, force push and pushes to shared branches always wait for you."
+  },
+  "prsPage": {
+    "title": "Open PRs",
+    "emptyTitle": "No open PRs",
+    "emptyBody": "PRs you authored or need to review show up here.",
+    "column": {
+      "pr": "PR",
+      "author": "Author",
+      "ci": "CI",
+      "review": "Review",
+      "conversations": "Threads",
+      "updated": "Updated"
+    }
   }
 }

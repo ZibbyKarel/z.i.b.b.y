@@ -72,7 +72,12 @@ vi.mock("../../briefing/queries", () => ({
 vi.mock("../../approvals/queries", () => ({ useApprovalsQuery: () => ({ data: d.approvals }) }));
 vi.mock("../../projects/queries", () => ({
   useBudgetQuery: () => ({
-    data: { projects: [{ dailyCost: { spentUsd: 1.5 } }, { dailyCost: { spentUsd: 0.25 } }] },
+    data: {
+      projects: [
+        { dailyCost: { spentUsd: 1.5 }, monthlyCost: { spentUsd: 40 } },
+        { dailyCost: { spentUsd: 0.25 }, monthlyCost: { spentUsd: 2.5 } },
+      ],
+    },
   }),
 }));
 vi.mock("../../departments/useDepartmentLookup", () => ({
@@ -768,7 +773,8 @@ describe("RunsWidget", () => {
 describe("BriefingWidget", () => {
   it("shows the lead and the KPIs, never empty", () => {
     d.approvals = [{}, {}, {}];
-    d.runs = [{}];
+    // todo-18: RUNNING NOW counts only running runs, matching its `?state=running` link.
+    d.runs = [run("a", "running"), run("q", "queued")];
     d.prs = [pr(1), pr(2)];
     const props = setup({ widget: widget("w-brief", "briefing") });
     renderWithProviders(<BriefingWidget {...props} />);
@@ -776,7 +782,22 @@ describe("BriefingWidget", () => {
     expect(screen.getByTestId(`${KpiStripTestId.Value}-needs`)).toHaveTextContent("03");
     expect(screen.getByTestId(`${KpiStripTestId.Value}-running`)).toHaveTextContent("01");
     expect(screen.getByTestId(`${KpiStripTestId.Value}-prs`)).toHaveTextContent("02");
-    expect(screen.getByTestId(`${KpiStripTestId.Value}-spend`)).toHaveTextContent("$1.75");
+    // todo-18: month-to-date spend (the projects' monthly cost windows), not today's.
+    expect(screen.getByTestId(`${KpiStripTestId.Value}-spend`)).toHaveTextContent("$42.50");
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("todo-18: every number links to its detail page", () => {
+    d.approvals = [];
+    d.runs = [];
+    d.prs = [];
+    const props = setup({ widget: widget("w-brief", "briefing") });
+    renderWithProviders(<BriefingWidget {...props} />);
+    const href = (id: string) =>
+      screen.getByTestId(`${KpiStripTestId.Link}-${id}`).getAttribute("href");
+    expect(href("needs")).toBe("/activity/approvals");
+    expect(href("running")).toBe("/activity/runs?state=running");
+    expect(href("prs")).toBe("/activity/pull-requests");
+    expect(href("spend")).toBe("/governance/budgets");
   });
 });
