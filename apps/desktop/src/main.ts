@@ -4,7 +4,9 @@ import path from "node:path";
 import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
 import { API_BASE_URL, API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
 import { routeExternalLinks } from "./externalLinks";
+import { attachFindBar } from "./findBar";
 import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
+import { type FindCommand, buildMenuTemplate } from "./menu";
 import { apiEntry, instanceLockFile, logDir, readBuildInfo, webServerEntry } from "./paths";
 import {
   isPortTaken,
@@ -23,6 +25,7 @@ app.setName("ZibbyOS");
 let apiChild: ChildProcess | undefined;
 let webChild: ChildProcess | undefined;
 let mainWindow: BrowserWindow | undefined;
+let findInWindow: ((command: FindCommand) => void) | undefined;
 let quitting = false;
 
 const WEB_ORIGIN = `http://localhost:${WEB_PORT}`;
@@ -44,7 +47,14 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 async function bootstrap(): Promise<void> {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(buildMenuTemplate()));
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(
+      buildMenuTemplate({
+        onCheckForUpdates: () => void checkForUpdates({ manual: true }),
+        onFind: (command) => findInWindow?.(command),
+      }),
+    ),
+  );
 
   const owner = findForeignOwner(readLockFile(instanceLockFile()), API_PORT, isPidAlive);
   if (owner) {
@@ -109,29 +119,6 @@ async function bootstrap(): Promise<void> {
   startUpdateChecks({ apiBaseUrl: API_BASE_URL });
 }
 
-function buildMenuTemplate(): Electron.MenuItemConstructorOptions[] {
-  return [
-    {
-      label: app.name,
-      submenu: [
-        { role: "about" },
-        { label: "Check for Updates…", click: () => void checkForUpdates({ manual: true }) },
-        { type: "separator" },
-        { role: "services" },
-        { type: "separator" },
-        { role: "hide" },
-        { role: "hideOthers" },
-        { role: "unhide" },
-        { type: "separator" },
-        { role: "quit" },
-      ],
-    },
-    { role: "editMenu" },
-    { role: "viewMenu" },
-    { role: "windowMenu" },
-  ];
-}
-
 function pipeChildLogs(child: ChildProcess, label: "api" | "web"): void {
   mkdirSync(logDir(), { recursive: true });
   const log = createWriteStream(path.join(logDir(), `${label}.log`), { flags: "a" });
@@ -161,7 +148,9 @@ function createWindow(): void {
   });
   mainWindow.on("closed", () => {
     mainWindow = undefined;
+    findInWindow = undefined;
   });
+  findInWindow = attachFindBar(mainWindow);
   routeExternalLinks(mainWindow, WEB_ORIGIN);
   void mainWindow.loadURL(`${WEB_ORIGIN}/`);
 }
