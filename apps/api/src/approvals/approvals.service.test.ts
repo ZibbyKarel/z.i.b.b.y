@@ -58,6 +58,72 @@ describe("ApprovalsService", () => {
     expect(cancel).not.toHaveBeenCalled();
   });
 
+  // todo-17: the web refetches off the reject response / the settled signal, so both must
+  // land only after the runner applied the decision (e.g. a PR gate stamp discarded).
+  it("reject awaits an async cancel before resolving", async () => {
+    let discarded = false;
+    service.register("agent", {
+      resume: vi.fn(),
+      cancel: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        discarded = true;
+      },
+    });
+    const created = await request();
+    await service.reject(created.id);
+    expect(discarded).toBe(true);
+  });
+
+  it("reject still resolves when the runner's cancel throws", async () => {
+    service.register("agent", {
+      resume: vi.fn(),
+      cancel: () => Promise.reject(new Error("boom")),
+    });
+    const created = await request();
+    await expect(service.reject(created.id)).resolves.toMatchObject({ status: "rejected" });
+  });
+
+  it("emits a settled signal after the runner applied approve / reject", async () => {
+    const order: string[] = [];
+    service.register("agent", {
+      resume: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        order.push("resumed");
+      },
+      cancel: () => {
+        order.push("cancelled");
+      },
+    });
+    const seen: unknown[] = [];
+    const sub = service.settled().subscribe((e) => {
+      order.push("settled");
+      seen.push(e);
+    });
+    const a = await request();
+    await service.approve(a.id);
+    const b = await request();
+    await service.reject(b.id);
+    sub.unsubscribe();
+    expect(order).toEqual(["resumed", "settled", "cancelled", "settled"]);
+    expect(seen).toEqual([
+      { approvalId: a.id, kind: "agent", status: "approved" },
+      { approvalId: b.id, kind: "agent", status: "rejected" },
+    ]);
+  });
+
+  it("emits settled even when resume throws, and still rethrows", async () => {
+    service.register("agent", {
+      resume: () => Promise.reject(new Error("push failed")),
+      cancel: vi.fn(),
+    });
+    const seen: unknown[] = [];
+    const sub = service.settled().subscribe((e) => seen.push(e));
+    const a = await request();
+    await expect(service.approve(a.id)).rejects.toThrow("push failed");
+    sub.unsubscribe();
+    expect(seen).toHaveLength(1);
+  });
+
   describe("secondary instance (shared data root)", () => {
     afterEach(() => {
       delete process.env.ZIBBY_ROLE;

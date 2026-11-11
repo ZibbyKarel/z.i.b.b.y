@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AgentsModule } from "../agents/agents.module";
+import { ApprovalsModule } from "../approvals/approvals.module";
 import { ChannelsModule } from "../channels/channels.module";
 import { GoalsModule } from "../goals/goals.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
@@ -12,7 +13,7 @@ import { EventsController } from "./events.controller";
  * channel for the dashboard.
  */
 @Module({
-  imports: [AgentsModule, WorkflowsModule, GoalsModule, ChannelsModule],
+  imports: [AgentsModule, ApprovalsModule, WorkflowsModule, GoalsModule, ChannelsModule],
   controllers: [EventsController],
 })
 export class EventsModule {}

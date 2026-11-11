@@ -272,7 +272,9 @@ export class TaskSchedulerService
     // held task is never a silent no-op (the Phase-5 channel-runner lesson).
     const runner: ResumableRunner = {
       resume: (taskId) => this.releaseHeld(taskId),
-      cancel: (taskId) => void this.storage.cancel(taskId),
+      cancel: async (taskId) => {
+        await this.storage.cancel(taskId);
+      },
     };
     this.approvals.register("task", runner);
 

@@ -7,6 +7,7 @@ import {
   type OperatorThreadReply,
   type PrReviewEvent,
 } from "@zibby/contracts";
+import { type Observable, Subject } from "rxjs";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { withPathLock } from "../shared/file-storage";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
@@ -31,10 +32,24 @@ export interface ResumableRunner {
    * todo-10: a PR-review runner reads the operator's `reviewEvent` from it.
    */
   resume(runId: string, approval?: Approval): Promise<void> | void;
-  /** Terminate a rejected run without performing its action. */
-  cancel(runId: string): void;
+  /**
+   * Terminate a rejected run without performing its action. A returned promise is awaited
+   * (todo-17), so the reject response and the settled signal land after the effect.
+   */
+  cancel(runId: string): Promise<void> | void;
   /** Optional: re-run the gated step with the operator's change request. */
   revise?(runId: string, note: string): Promise<void> | void;
+}
+
+/**
+ * todo-17 — a decision whose runner effect (resume / cancel / revise) has finished, pushed onto
+ * `/api/events` as the `"approvals"` scope. The `approval-*` activity is recorded at decide time,
+ * BEFORE the runner acts, so a client refetching off it alone can read the pre-decision state.
+ */
+export interface ApprovalSettledEvent {
+  approvalId: string;
+  kind: ApprovalRunKind;
+  status: Approval["status"];
 }
 
 /** Inputs a runner supplies when it pauses a run on the approval gate. */
@@ -74,6 +89,7 @@ export class ApprovalsService {
   /** Approvals requested by THIS process — the only ones a secondary may decide. */
   private readonly requestedHere = new Set<string>();
   private readonly log?: ScopedLogger;
+  private readonly settledSubject = new Subject<ApprovalSettledEvent>();
 
   constructor(
     private readonly storage: ApprovalsStorageService,
@@ -84,6 +100,24 @@ export class ApprovalsService {
     @Optional() private readonly activity?: ActivityLogService,
   ) {
     this.log = logger?.child(ApprovalsService.name);
+  }
+
+  /** Decisions whose runner effect has finished (succeeded or failed). */
+  settled(): Observable<ApprovalSettledEvent> {
+    return this.settledSubject.asObservable();
+  }
+
+  /** Run the runner's effect for a decided approval, then announce it settled either way. */
+  private async applyDecision(approval: Approval, effect: () => Promise<void> | void) {
+    try {
+      await effect();
+    } finally {
+      this.settledSubject.next({
+        approvalId: approval.id,
+        kind: approval.kind,
+        status: approval.status,
+      });
+    }
   }
 
   /** A runner registers itself so decisions on its kind can be routed back to it. */
@@ -201,7 +235,9 @@ export class ApprovalsService {
       runId: approval.runId,
       kind: approval.kind,
     });
-    await this.runners.get(approval.kind)?.resume(approval.runId, approval);
+    await this.applyDecision(approval, () =>
+      this.runners.get(approval.kind)?.resume(approval.runId, approval),
+    );
     return approval;
   }
 
@@ -214,7 +250,16 @@ export class ApprovalsService {
       runId: approval.runId,
       kind: approval.kind,
     });
-    this.runners.get(approval.kind)?.cancel(approval.runId);
+    // The decision is already persisted, so a failing cancel is logged, not thrown.
+    await this.applyDecision(approval, () =>
+      this.runners.get(approval.kind)?.cancel(approval.runId),
+    ).catch((error: unknown) =>
+      this.log?.warn("runner cancel failed after reject", {
+        id,
+        runId: approval.runId,
+        err: error instanceof Error ? error.message : String(error),
+      }),
+    );
     return approval;
   }
 
@@ -235,7 +280,9 @@ export class ApprovalsService {
       runId: approval.runId,
       kind: approval.kind,
     });
-    await this.runners.get(approval.kind)?.resume(approval.runId, approval);
+    await this.applyDecision(approval, () =>
+      this.runners.get(approval.kind)?.resume(approval.runId, approval),
+    );
     return approval;
   }
 
@@ -257,7 +304,7 @@ export class ApprovalsService {
       runId: approval.runId,
       kind: approval.kind,
     });
-    await runner.revise(approval.runId, note);
+    await this.applyDecision(approval, () => runner.revise?.(approval.runId, note));
     return approval;
   }
 

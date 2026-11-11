@@ -154,7 +154,7 @@ export class InboxRebaseService implements OnModuleInit {
   onModuleInit(): void {
     this.approvals.register("pr-rebase", {
       resume: (taskId) => this.push(taskId),
-      cancel: (taskId) => void this.discard(taskId),
+      cancel: (taskId) => this.discard(taskId),
     });
   }
 

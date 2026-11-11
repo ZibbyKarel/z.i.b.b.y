@@ -271,7 +271,7 @@ export class TaskOutputService implements OnModuleInit {
     // silent no-op (the Phase-5 channel-runner lesson).
     this.approvals.register("task-output", {
       resume: (taskId) => this.resolve(taskId, "approved"),
-      cancel: (taskId) => void this.resolve(taskId, "rejected"),
+      cancel: (taskId) => this.resolve(taskId, "rejected"),
     });
   }
 

@@ -119,7 +119,7 @@ knows how to resume or cancel that kind of paused work:
 ```typescript
 interface ResumableRunner {
   resume(runId: string, approval?: Approval): Promise<void> | void; // spawn the approved run; `approval` = the decided record (todo-10: PR-review runners read `reviewEvent`)
-  cancel(runId: string): void; // terminate a rejected run without performing its action
+  cancel(runId: string): Promise<void> | void; // terminate a rejected run without performing its action (awaited; a throw is logged, not returned)
   revise?(runId: string, note: string): Promise<void> | void; // only `workflow-gate`: re-run the gated step
 }
 ```
@@ -163,7 +163,14 @@ When a gate rule resolves to `ask`:
 4. The operator calls `POST /api/approvals/:id/approve` or `.../reject`
 5. `ApprovalsService` records the decision (`approval-approved` /
    `approval-rejected`) and looks up the registered runner for that `kind`
-6. The runner's `resume(runId)` (approve) or `cancel(runId)` (reject) is called
+6. The runner's `resume(runId)` (approve) or `cancel(runId)` (reject) is called and
+   awaited, so the HTTP response lands after its effect (todo-17: a rejected PR gate's
+   stamp is already `discarded` when the web refetches). A failing `cancel` is logged;
+   reject still returns the decided record.
+7. Once the runner is done (success or failure), `ApprovalsService.settled()` emits
+   `{ approvalId, kind, status }`, pushed on `/api/events` as the `approvals` scope
+   (see `docs/api/events.md`), so a decision taken anywhere (autopilot, operator channel)
+   refreshes the dashboard after it took effect.
 
 Rejecting a `workflow-stage` approval stops the whole workflow run: the stage is
 killed and the run lands `interrupted` (its finished `stageRuns` are kept). It is not

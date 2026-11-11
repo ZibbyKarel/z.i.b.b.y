@@ -146,7 +146,7 @@ export class InboxReviewService implements OnModuleInit {
           approval?.reviewEvent,
           approval?.ownReview ? (approval.reviewDocument ?? "") : undefined,
         ),
-      cancel: (taskId) => void this.discard(taskId),
+      cancel: (taskId) => this.discard(taskId),
     });
   }
 

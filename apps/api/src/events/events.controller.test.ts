@@ -1,7 +1,9 @@
 import type { MessageEvent } from "@nestjs/common";
 import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
+import { Subject } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
+import type { ApprovalSettledEvent, ApprovalsService } from "../approvals/approvals.service";
 import type { AgentRunnerService } from "../agents/agent-runner.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
@@ -22,6 +24,10 @@ function fakeRunner<T>() {
   };
 }
 
+function approvalsStub(subject = new Subject<ApprovalSettledEvent>()) {
+  return { settled: () => subject.asObservable() } as unknown as ApprovalsService;
+}
+
 describe("EventsController — merged `/api/events` SSE", () => {
   it("carries agent/workflow/goal transitions in the merged stream", () => {
     const agents = fakeRunner<AgentRun>();
@@ -34,6 +40,7 @@ describe("EventsController — merged `/api/events` SSE", () => {
       goals as unknown as GoalRunnerService,
       new ChannelEventsService(),
       new ActivityEventsService(),
+      approvalsStub(),
     );
 
     const events: MessageEvent[] = [];
@@ -51,5 +58,27 @@ describe("EventsController — merged `/api/events` SSE", () => {
     expect(parsed).toContainEqual({ scope: "goal-runs", runId: "ship-it_1", status: "running" });
 
     sub.unsubscribe();
+  });
+
+  it("carries settled approval decisions as the `approvals` scope (todo-17)", () => {
+    const settled = new Subject<ApprovalSettledEvent>();
+    const controller = new EventsController(
+      fakeRunner<AgentRun>() as unknown as AgentRunnerService,
+      fakeRunner<WorkflowRun>() as unknown as WorkflowRunnerService,
+      fakeRunner<GoalRun>() as unknown as GoalRunnerService,
+      new ChannelEventsService(),
+      new ActivityEventsService(),
+      approvalsStub(settled),
+    );
+    const events: MessageEvent[] = [];
+    const sub = controller.events().subscribe((e) => events.push(e));
+    settled.next({ approvalId: "a1", kind: "pr-rebase", status: "rejected" });
+    sub.unsubscribe();
+    expect(events.map((e) => JSON.parse(String(e.data)))).toContainEqual({
+      scope: "approvals",
+      approvalId: "a1",
+      kind: "pr-rebase",
+      status: "rejected",
+    });
   });
 });

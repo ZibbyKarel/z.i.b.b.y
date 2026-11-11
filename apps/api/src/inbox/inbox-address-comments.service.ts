@@ -102,7 +102,7 @@ export class InboxAddressCommentsService implements OnModuleInit {
   onModuleInit(): void {
     this.approvals.register("pr-address-comments", {
       resume: (taskId, approval) => this.push(taskId, approval?.replies),
-      cancel: (taskId) => void this.discard(taskId),
+      cancel: (taskId) => this.discard(taskId),
     });
   }
 

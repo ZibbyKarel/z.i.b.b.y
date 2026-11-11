@@ -3,6 +3,7 @@ import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
 import { type Observable, map, merge } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
+import { ApprovalsService } from "../approvals/approvals.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
@@ -25,6 +26,7 @@ export class EventsController {
     private readonly goals: GoalRunnerService,
     private readonly channels: ChannelEventsService,
     private readonly activity: ActivityEventsService,
+    private readonly approvals: ApprovalsService,
   ) {}
 
   @Sse("api/events")
@@ -66,6 +68,11 @@ export class EventsController {
           }),
         ),
       ),
+      // todo-17 — a decision whose runner effect finished (gate stamp discarded, push done).
+      // The `approval-*` activity fires before that, so the run feed / PR list refetch here too.
+      this.approvals
+        .settled()
+        .pipe(map((e): MessageEvent => ({ data: JSON.stringify({ scope: "approvals", ...e }) }))),
       heartbeats(),
     );
   }

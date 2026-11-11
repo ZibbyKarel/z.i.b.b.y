@@ -142,9 +142,9 @@ export class ReviewRuleFlowService implements OnModuleInit, ResumableRunner {
 
   /**
    * Reject → retire. The rule keeps absorbing occurrences but is never proposed
-   * again. `ApprovalsService.reject()` calls `cancel` UNAWAITED (its interface
-   * return type is `void`), so any rejection here would become an unhandled
-   * promise rejection — every step is wrapped so nothing can escape this method.
+   * again. `ApprovalsService.reject()` awaits `cancel` but only logs a failure (the
+   * decision is already persisted) — every step is wrapped so the retire failure is
+   * logged here with the rule's context.
    */
   async cancel(runId: string): Promise<void> {
     const parsed = parseReviewRuleRunId(runId);

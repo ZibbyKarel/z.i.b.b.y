@@ -79,7 +79,7 @@ export class InboxFixCiService {
   onModuleInit(): void {
     this.approvals.register("pr-fix-ci", {
       resume: (taskId) => this.push(taskId),
-      cancel: (taskId) => void this.discard(taskId),
+      cancel: (taskId) => this.discard(taskId),
     });
   }
 

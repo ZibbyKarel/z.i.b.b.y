@@ -14,11 +14,11 @@ ts-rest models.
 
 ## Pieces
 
-| Piece        | File                                       | Role                                                                                                                |
-| ------------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| Controller   | `apps/api/src/events/events.controller.ts` | the `@Sse("api/events")` handler; merges every scope's `Observable<MessageEvent>`                                   |
-| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `WorkflowsModule`, `GoalsModule`, `ChannelsModule` for their exported runner/event services |
-| SSE plumbing | `apps/api/src/shared/sse/sse.ts`           | `fromRunStatus()` (run-status → SSE event), `heartbeats()` (keep-alive ping)                                        |
+| Piece        | File                                       | Role                                                                                                                                   |
+| ------------ | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Controller   | `apps/api/src/events/events.controller.ts` | the `@Sse("api/events")` handler; merges every scope's `Observable<MessageEvent>`                                                      |
+| Module       | `apps/api/src/events/events.module.ts`     | imports `AgentsModule`, `WorkflowsModule`, `GoalsModule`, `ChannelsModule`, `ApprovalsModule` for their exported runner/event services |
+| SSE plumbing | `apps/api/src/shared/sse/sse.ts`           | `fromRunStatus()` (run-status → SSE event), `heartbeats()` (keep-alive ping)                                                           |
 
 ## Flow
 
@@ -34,6 +34,13 @@ ts-rest models.
 - **`activity`** — over `ActivityEventsService.stream()`, projecting
   `{ kind, at, entry }` (the activity log is a global module, so `EventsModule`
   needs no explicit import for it).
+- **`approvals`** (todo-17) — over `ApprovalsService.settled()`, projecting
+  `{ approvalId, kind, status }` once a decision's runner effect (resume / cancel /
+  revise) has finished, whether it succeeded or not. The `approval-*` activity fires at
+  decide time, before the runner acts (a PR gate stamp is discarded, a push lands), so a
+  refetch off it alone can read the pre-decision state. The web refetches the run feeds,
+  the approvals queue, scheduled tasks and task detail off it (and, for `pr-*` kinds,
+  the inbox PRs).
 - A merged **heartbeat** (`heartbeats()`) so the connection survives idle periods
   through intermediary proxies.
 
@@ -54,6 +61,10 @@ invalidating the matching TanStack Query cache entry and letting the normal fetc
 path re-read current state. Scopes the client doesn't yet know about are ignored
 rather than erroring, which is what let `channel-items` and `activity` be added
 without a client-side migration.
+
+There is no replay: events emitted while a client's stream was down are lost. When
+the stream reopens after an error, the web's `RunEventsProvider` invalidates every
+query (the same as a page reload); the first open does not.
 
 ## Endpoints
 

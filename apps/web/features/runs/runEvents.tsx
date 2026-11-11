@@ -29,7 +29,7 @@ import { taskRunsRootKey } from "./queries/keys";
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
-  scope: "agent-runs" | "workflow-runs" | "goal-runs" | "channel-items" | "activity";
+  scope: "agent-runs" | "workflow-runs" | "goal-runs" | "channel-items" | "activity" | "approvals";
   runId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
@@ -101,8 +101,18 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
     if (!API_URL || typeof EventSource === "undefined") return;
     const source = new EventSource(`${API_URL}/api/events`);
 
-    source.onopen = () => setStatus("open");
-    source.onerror = () => setStatus("down");
+    // todo-17: events emitted while the stream was down are lost (no replay), and polling
+    // stops again the moment it reopens — so a reopen refetches everything, like a reload.
+    let dropped = false;
+    source.onopen = () => {
+      if (dropped) void qc.invalidateQueries();
+      dropped = false;
+      setStatus("open");
+    };
+    source.onerror = () => {
+      dropped = true;
+      setStatus("down");
+    };
     source.onmessage = (event) => {
       let parsed: RunStatusEvent;
       try {
@@ -155,6 +165,13 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.status === "parked") {
           void qc.invalidateQueries({ queryKey: getBriefingQueryKey() });
         }
+      } else if (parsed.scope === "approvals") {
+        // todo-17: a decision whose runner effect has finished (gate stamp discarded, push
+        // done). Its `approval-*` activity fired BEFORE the runner acted, so refetch now.
+        void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
+        void qc.invalidateQueries({ queryKey: taskRunsRootKey });
+        void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
+        void qc.invalidateQueries({ queryKey: getTaskDetailRootKey() });
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).

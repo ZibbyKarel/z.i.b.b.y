@@ -121,6 +121,26 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getWorkflowRunQueryKey("delivery_1") });
   });
 
+  // todo-17: a decision settled server-side (gate stamp discarded / push done) — the
+  // `approval-*` activity fired before the runner acted, so this is the refetch that sticks.
+  it("a settled approval decision refreshes the run feeds, approvals and tasks", () => {
+    act(() => {
+      mock.last().emit({ scope: "approvals", approvalId: "a1", kind: "agent", status: "rejected" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: taskRunsRootKey });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getApprovalsQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getScheduledTasksQueryKey() });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getTaskDetailRootKey() });
+  });
+
+  it("a stream reopening after a drop refetches everything; the first open does not", () => {
+    act(() => mock.last().emitOpen());
+    expect(invalidate).not.toHaveBeenCalled();
+    act(() => mock.last().emitError());
+    act(() => mock.last().emitOpen());
+    expect(invalidate).toHaveBeenCalledWith();
+  });
+
   // Phase 89: the plain subscribe API the department web's particle layer rides.
   describe("onRunEvent (Phase 89 subscribe API)", () => {
     it("delivers a parsed event to every subscribed listener", () => {
