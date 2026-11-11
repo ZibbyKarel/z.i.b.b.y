@@ -14,7 +14,8 @@ describe("sectionForPath", () => {
     ["/workforce/agents/e1", "workforce"],
     ["/workforce/departments/dev/team", "workforce"],
     ["/activity/channels", "activity"],
-    ["/governance/approvals", "governance"],
+    ["/activity/approvals", "activity"],
+    ["/governance/gates", "governance"],
     ["/governance/spend", "governance"],
     ["/system/registries", "workforce"],
     ["/system/registries/hooks/foo", "workforce"],
@@ -53,5 +54,9 @@ describe("SECTIONS sub-menus", () => {
     // todo-14: the Tasks list is gone (merged into Activity → Runs).
     expect(ids("work")).toEqual(["goals", "workflows", "automations"]);
     expect(SECTIONS.find((s) => s.id === "work")?.href).toBe("/work/goals");
+    // todo-19: Approvals moved from Governance to Activity.
+    expect(ids("activity")).toEqual(["log", "runs", "approvals", "channels"]);
+    expect(ids("governance")).toEqual(["gates", "patterns", "budgets", "spend"]);
+    expect(SECTIONS.find((s) => s.id === "governance")?.href).toBe("/governance/gates");
   });
 });

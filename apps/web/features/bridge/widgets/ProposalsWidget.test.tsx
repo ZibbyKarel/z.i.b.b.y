@@ -118,7 +118,7 @@ describe("ProposalsWidget", () => {
   it.each([
     [{ noteId: "patterns-suggestions" }, "/knowledge/vault?note=patterns-suggestions"],
     [{ agentId: "bob", approvalId: "ap1" }, "/workforce/agents/bob"],
-    [{ approvalId: "ap1" }, "/governance/approvals"],
+    [{ approvalId: "ap1" }, "/activity/approvals"],
     [{ noteId: "n", agentId: "bob" }, "/knowledge/vault?note=n"],
   ])("links provenance %j", (provenance, href) => {
     d.proposals = [proposal("a", { provenance })];
@@ -130,7 +130,7 @@ describe("ProposalsWidget", () => {
     d.proposals = [
       proposal("a", { source: "agent-factory", provenance: { agentId: "bob", approvalId: "ap1" } }),
     ];
-    const href = "/governance/approvals";
+    const href = "/activity/approvals";
     renderWithProviders(<ProposalsWidget {...setup()} />);
     expect(screen.getByTestId(ProposalsWidgetTestId.Provenance).getAttribute("href")).toBe(href);
   });

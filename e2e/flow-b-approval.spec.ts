@@ -102,7 +102,7 @@ test("an approval is denied with a reason from the sheet, and the denial is reco
   // table (`ApprovalsScreen`) has no agent-name column — its "task" column
   // shows `a.runId` (the fake-claude runner's generic intent text isn't
   // unique per test run, but the run id is), so assert on that instead.
-  await page.goto("/governance/approvals");
+  await page.goto("/activity/approvals");
   expect(runId, "the pending approval carried no runId").toBeTruthy();
   await expect(page.getByText(runId as string)).toBeVisible({ timeout: 20000 });
 });

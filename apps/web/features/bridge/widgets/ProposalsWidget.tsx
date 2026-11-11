@@ -64,7 +64,7 @@ export function proposalProvenance(
   source?: Proposal["source"],
 ): Provenance | null {
   if (source === "agent-factory" && p.approvalId) {
-    return { kind: "approval", href: "/governance/approvals" as Route };
+    return { kind: "approval", href: "/activity/approvals" as Route };
   }
   if (p.noteId) {
     return {
@@ -75,7 +75,7 @@ export function proposalProvenance(
   if (p.agentId) {
     return { kind: "agent", href: `/workforce/agents/${encodeURIComponent(p.agentId)}` as Route };
   }
-  if (p.approvalId) return { kind: "approval", href: "/governance/approvals" as Route };
+  if (p.approvalId) return { kind: "approval", href: "/activity/approvals" as Route };
   return null;
 }
 

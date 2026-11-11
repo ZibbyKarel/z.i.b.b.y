@@ -87,6 +87,8 @@ export const SECTIONS = [
     tabs: [
       { id: "log", href: "/activity/log" },
       { id: "runs", href: "/activity/runs" },
+      // todo-19: moved here from Governance; `/governance/approvals` redirects.
+      { id: "approvals", href: "/activity/approvals" as Route },
       { id: "channels", href: "/activity/channels" as Route },
     ],
   },
@@ -103,9 +105,8 @@ export const SECTIONS = [
   {
     id: "governance",
     glyph: "shield",
-    href: "/governance/approvals" as Route,
+    href: "/governance/gates" as Route,
     tabs: [
-      { id: "approvals", href: "/governance/approvals" as Route },
       { id: "gates", href: "/governance/gates" as Route },
       { id: "patterns", href: "/governance/patterns" as Route },
       { id: "budgets", href: "/governance/budgets" as Route },

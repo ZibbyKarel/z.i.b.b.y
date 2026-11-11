@@ -5,7 +5,7 @@ import type { DashboardApproval } from "../approval";
 import { ApprovalsScreen } from "./ApprovalsScreen";
 
 const push = vi.fn();
-const pathname = "/governance/approvals";
+const pathname = "/activity/approvals";
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
   usePathname: () => pathname,

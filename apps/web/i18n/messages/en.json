@@ -30,6 +30,7 @@
       "activity": {
         "log": "Log",
         "runs": "Runs",
+        "approvals": "Approvals",
         "channels": "Channels"
       },
       "knowledge": {
@@ -66,7 +67,6 @@
         "marketplaces": "Marketplaces"
       },
       "governance": {
-        "approvals": "Approvals",
         "gates": "Gates",
         "patterns": "Patterns",
         "budgets": "Budgets",

@@ -30,6 +30,7 @@
       "activity": {
         "log": "Log",
         "runs": "Běhy",
+        "approvals": "Schválení",
         "channels": "Kanály"
       },
       "knowledge": {
@@ -66,7 +67,6 @@
         "marketplaces": "Marketplace"
       },
       "governance": {
-        "approvals": "Schválení",
         "gates": "Pravidla",
         "patterns": "Vzory",
         "budgets": "Rozpočty",

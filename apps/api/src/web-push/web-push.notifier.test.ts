@@ -58,7 +58,7 @@ describe("WebPushNotifier", () => {
     expect(send).toHaveBeenCalledTimes(2);
     const payload = JSON.parse(send.mock.calls[0]?.[1] ?? "{}");
     expect(payload.body).toBe("Waiting for your decision: Ship it?");
-    expect(payload.url).toBe("/governance/approvals");
+    expect(payload.url).toBe("/activity/approvals");
     const log = await fs.readFile(path.join(dir, "deliveries.jsonl"), "utf8");
     expect(JSON.parse(log.trim())).toMatchObject({ kind: "approval-waiting", sent: 2, failed: 0 });
   });

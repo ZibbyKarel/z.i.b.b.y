@@ -114,7 +114,7 @@ export async function toOperatorEvent(
           });
     }
     case "approval-requested": {
-      const path = "/governance/approvals";
+      const path = "/activity/approvals";
       if (!refs.approvalId) {
         // The roadmap gate's routing question rides the kind without an approval record.
         const target = refs.itemId ?? entry.id;
@@ -214,7 +214,7 @@ export async function toOperatorEvent(
         target: refs.approvalId ?? entry.id,
         state: "done",
         title: entry.summary,
-        path: refs.approvalId ? "/governance/approvals" : "/activity",
+        path: refs.approvalId ? "/activity/approvals" : "/activity",
       });
     default:
       return null;
