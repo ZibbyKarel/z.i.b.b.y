@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import { redirect } from "next/navigation";
 
 /** todo-19: Approvals moved to `/activity/approvals`; old links and pins (incl. `?approval=`) land there. */
@@ -11,5 +12,5 @@ export default async function GovernanceApprovalsRedirect({
     for (const v of Array.isArray(value) ? value : value ? [value] : []) params.append(key, v);
   }
   const qs = params.toString();
-  redirect(qs ? `/activity/approvals?${qs}` : "/activity/approvals");
+  redirect((qs ? `/activity/approvals?${qs}` : "/activity/approvals") as Route);
 }

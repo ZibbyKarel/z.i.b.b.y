@@ -1,3 +1,4 @@
+import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { runsListHrefFromParams } from "../../../../features/archive/runsListFilters";
 
@@ -12,5 +13,5 @@ export default async function WorkTasksPage({
   for (const [key, value] of Object.entries(await searchParams)) {
     for (const v of Array.isArray(value) ? value : value ? [value] : []) params.append(key, v);
   }
-  redirect(runsListHrefFromParams(params));
+  redirect(runsListHrefFromParams(params) as Route);
 }
