@@ -73,7 +73,7 @@ export function TeamKbIngest({ teamId }: { teamId: string }) {
           <Button
             data-testid={TeamKbIngestTestId.Runs}
             intent="ghost"
-            onClick={() => router.push("/work/tasks" as Route)}
+            onClick={() => router.push("/activity/runs" as Route)}
             size="sm"
           >
             {t("runsLink")}

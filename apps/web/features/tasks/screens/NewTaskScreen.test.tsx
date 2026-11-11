@@ -125,7 +125,7 @@ describe("NewTaskScreen (ZB-04b)", () => {
   it("navigates back to the tasks list on cancel", () => {
     render(<NewTaskScreen />);
     fireEvent.click(screen.getByText("Zrušit"));
-    expect(push).toHaveBeenCalledWith("/work/tasks");
+    expect(push).toHaveBeenCalledWith("/activity/runs");
   });
 
   it("prefills the brief and a valid department entry from the chat dock's CREATE TASK (ZB-12)", () => {

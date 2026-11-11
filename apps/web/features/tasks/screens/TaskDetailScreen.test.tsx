@@ -106,6 +106,6 @@ describe("TaskDetailScreen (ZB-04b)", () => {
     hooks.task = task();
     render(<TaskDetailScreen taskId="t_1" />);
     fireEvent.click(screen.getByText("← Zpět na úkoly"));
-    expect(push).toHaveBeenCalledWith("/work/tasks");
+    expect(push).toHaveBeenCalledWith("/activity/runs");
   });
 });

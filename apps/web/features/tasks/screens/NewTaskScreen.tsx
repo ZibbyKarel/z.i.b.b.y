@@ -263,7 +263,7 @@ function NewTaskForm({ issue }: { issue?: InboxRoadmapItem }) {
           )}
 
           <Stack direction="row" gap="100">
-            <Button intent="ghost" onClick={() => router.push("/work/tasks" as Route)}>
+            <Button intent="ghost" onClick={() => router.push("/activity/runs" as Route)}>
               {t("new.cancel")}
             </Button>
             <Button disabled={!canSubmit} intent="primary" loading={isPending} onClick={submit}>

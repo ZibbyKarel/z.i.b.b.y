@@ -208,7 +208,7 @@ export function TaskDetailScreen({ taskId }: TaskDetailScreenProps) {
             {t("detail.created", { time: compactAgo(task.createdAt, now) })}
           </Typography>
 
-          <Button intent="ghost" onClick={() => router.push("/work/tasks" as Route)} size="sm">
+          <Button intent="ghost" onClick={() => router.push("/activity/runs" as Route)} size="sm">
             {t("detail.back")}
           </Button>
         </Stack>
