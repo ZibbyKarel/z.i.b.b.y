@@ -284,6 +284,65 @@ describe("InboxPrThreadsService", () => {
       expect(tree.users.map((u) => u.login)).toEqual(["bob", "ann"]);
     });
 
+    it("degrades on a token without read:org: keeps the partial data GitHub returns", async () => {
+      const f = vi.fn(async (_url: string, init: { body: string }) => {
+        const { query } = JSON.parse(init.body) as { query: string };
+        if (query.includes("organization")) return new Response("{}", { status: 403 });
+        return new Response(
+          JSON.stringify({
+            data: {
+              repository: {
+                pullRequest: {
+                  ...prNode,
+                  reviewRequests: {
+                    nodes: [{ requestedReviewer: null }, prNode.reviewRequests.nodes[1]],
+                  },
+                  reviews: {
+                    nodes: [{ ...prNode.reviews.nodes[0], onBehalfOf: null }],
+                  },
+                },
+              },
+            },
+            errors: [{ type: "INSUFFICIENT_SCOPES", message: "needs read:org" }],
+          }),
+        );
+      });
+      const tree = await withFetch(f).reviewers("acme", 7);
+      expect(tree.users.map((u) => u.login)).toEqual(["bob", "ann"]);
+      expect(tree.teams.map((t) => t.slug)).toEqual(["web"]); // CODEOWNERS still names it
+    });
+
+    it("other GraphQL errors still fail the read", async () => {
+      const f = vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ data: null, errors: [{ type: "NOT_FOUND", message: "x" }] }),
+          ),
+      );
+      await expect(withFetch(f).reviewers("acme", 7)).rejects.toBeInstanceOf(GithubThreadsError);
+    });
+
+    it("requestReview still succeeds when the re-read after the POST fails", async () => {
+      const f = vi.fn(async (url: string) =>
+        url.endsWith("/requested_reviewers")
+          ? new Response("{}", { status: 201 })
+          : new Response("boom", { status: 500 }),
+      );
+      expect(await withFetch(f).requestReview("acme", 7, "ann")).toEqual({
+        teams: [],
+        users: [{ login: "ann", state: "pending", commented: false }],
+      });
+      expect(record).toHaveBeenCalledOnce();
+    });
+
+    it("asks for the newest 100 reviews", async () => {
+      const f = reviewersFetch(true);
+      await withFetch(f).reviewers("acme", 7);
+      const q = (JSON.parse((f.mock.calls[0]?.[1] as { body: string }).body) as { query: string })
+        .query;
+      expect(q).toContain("reviews(last:100)");
+    });
+
     it("requestReview posts the login to GitHub, records activity and returns the tree", async () => {
       const f = reviewersFetch(true);
       const tree = await withFetch(f).requestReview("acme", 7, "ann");

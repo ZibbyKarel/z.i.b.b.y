@@ -27,10 +27,10 @@ const THREADS_QUERY =
 const REPLY_MUTATION =
   "mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}";
 const RESOLVE_MUTATION = "mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id}}}";
-// ponytail: first 100 files / 100 reviews / 50 requests, CODEOWNERS only in its 3 standard spots.
+// ponytail: first 100 files / newest 100 reviews / 50 requests, CODEOWNERS only in its 3 standard spots.
 const CODEOWNERS_FILE = (alias: string, path: string) =>
   `${alias}:file(path:"${path}"){object{... on Blob{text}}}`;
-const REVIEWERS_QUERY = `query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){author{login} files(first:100){nodes{path}} reviewRequests(first:50){nodes{requestedReviewer{__typename ... on User{login} ... on Team{slug name}}}} reviews(first:100){nodes{author{login} state comments{totalCount} onBehalfOf(first:10){nodes{slug name}}}} baseRef{target{... on Commit{${CODEOWNERS_FILE("gh", ".github/CODEOWNERS")} ${CODEOWNERS_FILE("root", "CODEOWNERS")} ${CODEOWNERS_FILE("docs", "docs/CODEOWNERS")}}}}}}}`;
+const REVIEWERS_QUERY = `query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){author{login} files(first:100){nodes{path}} reviewRequests(first:50){nodes{requestedReviewer{__typename ... on User{login} ... on Team{slug name}}}} reviews(last:100){nodes{author{login} state comments{totalCount} onBehalfOf(first:10){nodes{slug name}}}} baseRef{target{... on Commit{${CODEOWNERS_FILE("gh", ".github/CODEOWNERS")} ${CODEOWNERS_FILE("root", "CODEOWNERS")} ${CODEOWNERS_FILE("docs", "docs/CODEOWNERS")}}}}}}}`;
 // ponytail: first 50 teams x 100 members; needs read:org — on failure nesting falls back to onBehalfOf.
 const ORG_TEAMS_QUERY =
   "query($org:String!,$logins:[String!]!){organization(login:$org){teams(first:50,userLogins:$logins){nodes{slug name members(first:100){nodes{login}}}}}}";
@@ -52,7 +52,8 @@ interface ReviewersNode {
       author: { login: string } | null;
       state: BuildReviewersInput["reviews"][number]["state"];
       comments: { totalCount: number };
-      onBehalfOf: { nodes: { slug: string; name: string }[] };
+      /** `null` when the token lacks read:org (partial data). */
+      onBehalfOf: { nodes: { slug: string; name: string }[] } | null;
     }[];
   };
   baseRef: {
@@ -231,14 +232,22 @@ export class InboxPrThreadsService {
     });
     this.log?.info(`re-requested review on ${repo}#${number}`, { login });
     this.inbox.dropPrsCache();
-    return this.readReviewers(gql, repo, number);
+    try {
+      return await this.readReviewers(gql, repo, number);
+    } catch (error) {
+      // The request is live — don't 502 it; show the person as pending until the next read.
+      this.log?.warn(`reviewers re-read failed on ${repo}#${number}`, { error: String(error) });
+      return { teams: [], users: [{ login, state: "pending", commented: false }] };
+    }
   }
 
   private async readReviewers(gql: Gql, repo: string, number: number): Promise<InboxPrReviewers> {
     const [owner = "", name] = repo.split("/");
+    // Team fields need read:org — without it GitHub nulls them and adds scope errors; keep the rest.
     const data = await gql<{ repository: { pullRequest: ReviewersNode | null } | null }>(
       REVIEWERS_QUERY,
       { owner, name, n: number },
+      { partial: true },
     );
     const pr = data.repository?.pullRequest;
     if (!pr) return { teams: [], users: [] };
@@ -255,7 +264,7 @@ export class InboxPrThreadsService {
               author: r.author.login,
               state: r.state,
               comments: r.comments.totalCount,
-              onBehalfOf: r.onBehalfOf.nodes,
+              onBehalfOf: r.onBehalfOf?.nodes ?? [],
             },
           ]
         : [],
@@ -324,7 +333,11 @@ export class InboxPrThreadsService {
     const project = await this.projects.get(projectId); // ProjectNotFoundError → 404
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
     if (!link) throw new NoGithubLinkError(project.id);
-    const gql: Gql = async <T>(query: string, variables: Record<string, unknown>) => {
+    const gql: Gql = async <T>(
+      query: string,
+      variables: Record<string, unknown>,
+      opts?: { partial?: boolean },
+    ) => {
       const res = await this.fetchImpl(GITHUB_GRAPHQL, {
         method: "POST",
         headers: { authorization: `Bearer ${link.token}`, "content-type": "application/json" },
@@ -334,7 +347,12 @@ export class InboxPrThreadsService {
       if (!res.ok) {
         throw new GithubThreadsError(res.status, `HTTP ${res.status}${await githubReason(res)}`);
       }
-      const json = (await res.json()) as { data?: T; errors?: { message?: string }[] };
+      const json = (await res.json()) as {
+        data?: T;
+        errors?: { message?: string; type?: string }[];
+      };
+      const scopeOnly = json.errors?.every((e) => e.type && PARTIAL_OK.has(e.type)) ?? true;
+      if (json.data && opts?.partial && scopeOnly) return json.data;
       if (json.errors?.length || !json.data) {
         throw new GithubThreadsError(res.status, json.errors?.[0]?.message ?? "no data");
       }
@@ -344,4 +362,11 @@ export class InboxPrThreadsService {
   }
 }
 
-type Gql = <T>(query: string, variables: Record<string, unknown>) => Promise<T>;
+type Gql = <T>(
+  query: string,
+  variables: Record<string, unknown>,
+  /** `partial`: return `data` when the only errors are missing-scope ones (fields come back null). */
+  opts?: { partial?: boolean },
+) => Promise<T>;
+
+const PARTIAL_OK = new Set(["INSUFFICIENT_SCOPES", "FORBIDDEN"]);

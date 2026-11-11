@@ -28,6 +28,11 @@ describe("codeOwnersOf", () => {
     expect(codeOwnersOf(text, "apps/web/a.tsx")).toEqual(["@acme/web"]);
     expect(codeOwnersOf(text, "apps/web/x/a.tsx")).toEqual(["@acme/everyone"]);
   });
+  it("a trailing single * does not reach into subdirectories", () => {
+    const rules = "*  @acme/all\ndocs/*  @acme/docs";
+    expect(codeOwnersOf(rules, "docs/a.md")).toEqual(["@acme/docs"]);
+    expect(codeOwnersOf(rules, "docs/a/b.md")).toEqual(["@acme/all"]);
+  });
   it("no rules, no owners", () => {
     expect(codeOwnersOf("", "a.ts")).toEqual([]);
   });
@@ -102,6 +107,16 @@ describe("buildReviewers", () => {
       { login: "dan", state: "commented", commented: true },
       { login: "eve", state: "commented", commented: false },
     ]);
+  });
+
+  it("matches CODEOWNERS team slugs case-insensitively (GraphQL slugs are lowercase)", () => {
+    const tree = buildReviewers({
+      ...base,
+      requestedTeams: [{ slug: "web", name: "Web" }],
+      codeowners: "* @Acme/Web",
+      files: ["a.ts"],
+    });
+    expect(tree.teams.map((t) => [t.slug, t.codeOwner])).toEqual([["web", true]]);
   });
 
   it("CODEOWNER teams of changed files are listed even when not requested", () => {

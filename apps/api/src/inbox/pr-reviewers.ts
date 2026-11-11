@@ -20,10 +20,15 @@ function patternRegex(raw: string): RegExp {
     else if (ch === "?") body += "[^/]";
     else body += ch.replace(/[.+^${}()|[\]\\]/g, "\\$&");
   }
-  return new RegExp(`${anchored ? "^" : "^(?:.*/)?"}${body}${dirOnly ? "/.*" : "(?:/.*)?"}$`);
+  // `docs/*` owns only direct children; any other pattern also owns what is below a matched dir.
+  const tail = dirOnly ? "/.*" : p.endsWith("*") && !p.endsWith("**") ? "" : "(?:/.*)?";
+  return new RegExp(`${anchored ? "^" : "^(?:.*/)?"}${body}${tail}$`);
 }
 
-/** Owners CODEOWNERS assigns to `path` — the last matching rule wins. */
+/**
+ * Owners CODEOWNERS assigns to `path` — the last matching rule wins.
+ * ponytail: no `\ ` / `\#` escapes (a path with a space or a leading # never matches); add if a repo needs it.
+ */
 export function codeOwnersOf(text: string, path: string): string[] {
   const rules = text
     .split("\n")
@@ -69,7 +74,8 @@ export function buildReviewers(input: BuildReviewersInput): InboxPrReviewers {
   if (input.codeowners) {
     for (const file of input.files) {
       for (const owner of codeOwnersOf(input.codeowners, file)) {
-        if (owner.toLowerCase().startsWith(prefix)) ownerTeams.add(owner.slice(prefix.length));
+        if (owner.toLowerCase().startsWith(prefix))
+          ownerTeams.add(owner.slice(prefix.length).toLowerCase());
       }
     }
   }
