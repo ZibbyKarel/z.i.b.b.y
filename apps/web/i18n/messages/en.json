@@ -2398,6 +2398,8 @@
       "allStates": "All",
       "project": "Project",
       "allProjects": "All projects",
+      "company": "Company",
+      "allCompanies": "All companies",
       "kind": "Kind",
       "allKinds": "All kinds"
     },

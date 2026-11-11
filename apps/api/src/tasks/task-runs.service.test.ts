@@ -1280,6 +1280,22 @@ describe("TaskRunsService", () => {
       expect(none.items).toEqual([]);
     });
 
+    it("todo-14: filters by company through the run's project", async () => {
+      const { service, agentRunner, projectsStore, scheduled } = build();
+      projectsStore.list.mockResolvedValue([{ ...acmeProject, companyId: "c1" }]);
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "task1", status: "dispatched", projectId: "acme" },
+      ]);
+      agentRunner.listAll.mockResolvedValue([
+        { ...doneA, taskId: "task1" },
+        { ...errorA, taskId: undefined },
+      ]);
+      const c1 = await service.listArchivedTaskRuns({ company: "c1" });
+      expect(c1.items.map((r) => r.runId)).toEqual(["a_done_1"]);
+      const other = await service.listArchivedTaskRuns({ company: "c2" });
+      expect(other.items).toEqual([]);
+    });
+
     it("todo-14: `sort` orders the whole set and pages with an offset cursor", async () => {
       const { service, agentRunner } = build();
       agentRunner.listAll.mockResolvedValue([

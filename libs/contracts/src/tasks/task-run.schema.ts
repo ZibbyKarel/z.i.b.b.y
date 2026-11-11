@@ -303,7 +303,8 @@ export const NO_DEPARTMENT = "none" as const;
  *
  * todo-14 (the merged Activity → Runs table): `statuses` is a comma-separated
  * {@link TaskRunStatusSchema} list replacing the default archived set; `project` narrows
- * to one `projectId`; `kind` to one {@link RunKindSchema}. `sort` + `dir` order the whole
+ * to one `projectId`; `company` to the runs whose project belongs to that company id; `kind`
+ * to one {@link RunKindSchema}. `sort` + `dir` order the whole
  * matched set server-side — with `sort` given, `before`/`nextCursor` become an offset
  * cursor (`@<n>`) instead of the keyset one.
  */
@@ -315,6 +316,7 @@ export const ArchivePageQuerySchema = z.object({
   departments: z.string().optional(),
   statuses: z.string().optional(),
   project: z.string().optional(),
+  company: z.string().optional(),
   kind: RunKindSchema.optional(),
   sort: ArchiveSortSchema.optional(),
   dir: z.enum(["asc", "desc"]).optional(),

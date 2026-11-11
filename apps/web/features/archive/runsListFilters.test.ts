@@ -3,6 +3,8 @@ import {
   EMPTY_RUNS_LIST_FILTERS,
   nextSort,
   parseRunsListFilters,
+  runsListHref,
+  runsListHrefFromParams,
   statusesForState,
   writeRunsListFilters,
 } from "./runsListFilters";
@@ -14,6 +16,7 @@ describe("runsListFilters (todo-14)", () => {
       q: "deploy",
       state: "running" as const,
       project: "p1",
+      company: "c1",
       kind: "workflow" as const,
       sort: "cost" as const,
       dir: "asc" as const,
@@ -42,5 +45,19 @@ describe("runsListFilters (todo-14)", () => {
     expect(statusesForState("running")).toEqual(["running"]);
     expect(statusesForState("")).toContain("awaiting-approval");
     expect(statusesForState("")).toContain("done");
+  });
+
+  it("runsListHref builds a filtered deep link", () => {
+    expect(runsListHref({ company: "acme" })).toBe("/activity/runs?company=acme");
+    expect(runsListHref({})).toBe("/activity/runs");
+  });
+
+  it("runsListHrefFromParams forwards the supported filters and drops the rest", () => {
+    expect(
+      runsListHrefFromParams(
+        new URLSearchParams("company=acme&project=p1&department=dev&source=channel&state=running"),
+      ),
+    ).toBe("/activity/runs?state=running&department=dev&project=p1&company=acme");
+    expect(runsListHrefFromParams(new URLSearchParams())).toBe("/activity/runs");
   });
 });

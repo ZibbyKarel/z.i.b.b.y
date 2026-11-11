@@ -27,6 +27,7 @@ import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { formatCostUsd } from "../../../utils/cost";
 import { compactAgo, formatDuration } from "../../../utils/time";
+import { useCompaniesQuery } from "../../companies";
 import { useProjectsQuery } from "../../projects";
 import { useOwnerDepartmentMaps } from "../../departments/useOwnerDepartment";
 import { RUN_STATUS_GROUPS } from "../../runs/statusGroups";
@@ -73,7 +74,7 @@ function statusGroup(status: RunView["status"]) {
 
 /**
  * `/activity/runs` (ZB-07, todo-14) — every run, live and finished (todo-14 merged the
- * old `/work/tasks` list into it). Filters (search, state group, department, project,
+ * old `/work/tasks` list into it). Filters (search, state group, department, project, company,
  * kind) and the sort column all live in the URL (`runsListFilters`) and run server-side,
  * so the table survives a trip to a run detail and back and can be pinned. Infinite
  * scroll; row click opens `/activity/runs/[runId]`.
@@ -88,6 +89,7 @@ export function ActivityRunsScreen() {
   const pathname = usePathname();
   const [now] = useState(() => Date.now());
   const { data: projects = [] } = useProjectsQuery();
+  const { data: companies = [] } = useCompaniesQuery();
 
   const filters = parseRunsListFilters(searchParams);
   const setFilters = (patch: Partial<RunsListFilters>) => {
@@ -123,6 +125,7 @@ export function ActivityRunsScreen() {
     departments: filters.department ? [filters.department] : [],
     statuses,
     project: filters.project || undefined,
+    company: filters.company || undefined,
     kind: filters.kind || undefined,
     sort: filters.sort || undefined,
     dir: filters.dir || undefined,
@@ -154,7 +157,7 @@ export function ActivityRunsScreen() {
     ...RUN_STATUS_GROUPS.map((g) => ({ value: g.key, label: tRuns(`group.${g.key}`) })),
   ];
   const hasFilters = Boolean(
-    filters.department || filters.project || filters.kind || filters.state,
+    filters.department || filters.project || filters.company || filters.kind || filters.state,
   );
 
   const isPending = itemsPending || countsPending;
@@ -269,7 +272,7 @@ export function ActivityRunsScreen() {
         <FilterBar
           onClear={
             hasFilters
-              ? () => setFilters({ department: "", project: "", kind: "", state: "" })
+              ? () => setFilters({ department: "", project: "", company: "", kind: "", state: "" })
               : undefined
           }
         >
@@ -291,6 +294,15 @@ export function ActivityRunsScreen() {
               ...projects.map((p) => ({ value: p.id, label: p.name })),
             ]}
             value={filters.project}
+          />
+          <SelectField
+            label={t("filter.company")}
+            onValueChange={(v) => setFilters({ company: v })}
+            options={[
+              { value: "", label: t("filter.allCompanies") },
+              ...companies.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            value={filters.company}
           />
           <SelectField
             label={t("filter.kind")}

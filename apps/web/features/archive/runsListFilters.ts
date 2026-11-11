@@ -10,7 +10,7 @@ import { RUN_STATUS_GROUPS, type RunStatusGroupKey } from "../runs/statusGroups"
 
 /**
  * todo-14: the `/activity/runs` table's filter + sort state. It lives ONLY in the URL
- * (`?q=&state=&department=&project=&kind=&sort=&dir=`), so a pinned link reproduces the
+ * (`?q=&state=&department=&project=&company=&kind=&sort=&dir=`), so a pinned link reproduces the
  * table and going to a run detail and back keeps it. `""` = default, never written.
  * Default sort (`""`) is newest-started first.
  */
@@ -19,6 +19,7 @@ export interface RunsListFilters {
   state: RunStatusGroupKey | "";
   department: string;
   project: string;
+  company: string;
   kind: RunKind | "";
   sort: ArchiveSort | "";
   dir: "asc" | "desc" | "";
@@ -29,6 +30,7 @@ export const EMPTY_RUNS_LIST_FILTERS: RunsListFilters = {
   state: "",
   department: "",
   project: "",
+  company: "",
   kind: "",
   sort: "",
   dir: "",
@@ -47,6 +49,7 @@ export function parseRunsListFilters(params: URLSearchParams): RunsListFilters {
     state: oneOf(STATE_KEYS, params.get("state")),
     department: params.get("department") ?? "",
     project: params.get("project") ?? "",
+    company: params.get("company") ?? "",
     kind: oneOf(RunKindSchema.options, params.get("kind")),
     sort: oneOf(ArchiveSortSchema.options, params.get("sort")),
     dir: oneOf(["asc", "desc"] as const, params.get("dir")),
@@ -92,4 +95,9 @@ export function runsListHref(patch: Partial<RunsListFilters>): string {
     ...patch,
   }).toString();
   return qs ? `/activity/runs?${qs}` : "/activity/runs";
+}
+
+/** The runs table for a legacy URL's query (`/work/tasks?…`): keeps only the filter keys. */
+export function runsListHrefFromParams(params: URLSearchParams): string {
+  return runsListHref(parseRunsListFilters(params));
 }

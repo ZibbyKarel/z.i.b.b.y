@@ -104,9 +104,10 @@ describe("CompanyDetailScreen (ZB-06)", () => {
     );
   });
 
-  it("links to /work/tasks?company=<id>", () => {
+  it("links to the runs table filtered to the company (todo-14)", async () => {
     render(<CompanyDetailScreen companyId="acme" />);
-    expect(screen.getByText("Všechny úkoly této firmy →")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Všechny úkoly této firmy →"));
+    expect(push).toHaveBeenCalledWith("/activity/runs?company=acme");
   });
 
   describe("new company mode", () => {

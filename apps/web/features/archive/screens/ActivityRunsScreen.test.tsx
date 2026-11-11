@@ -13,6 +13,9 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/activity/runs",
   useSearchParams: () => new URLSearchParams(search),
 }));
+vi.mock("../../companies", () => ({
+  useCompaniesQuery: () => ({ data: [{ id: "c1", name: "Acme" }] }),
+}));
 vi.mock("../../projects", () => ({
   useProjectsQuery: () => ({ data: [{ id: "p1", name: "Portal" }] }),
 }));
@@ -110,13 +113,15 @@ describe("ActivityRunsScreen (ZB-07)", () => {
   });
 
   it("todo-14: sends every URL filter + sort to the server query", () => {
-    search = "q=deploy&state=running&project=p1&kind=workflow&department=dev&sort=cost&dir=asc";
+    search =
+      "q=deploy&state=running&company=c1&project=p1&kind=workflow&department=dev&sort=cost&dir=asc";
     render(<ActivityRunsScreen />);
     expect(runsQuery).toHaveBeenLastCalledWith({
       search: "deploy",
       departments: ["dev"],
       statuses: ["running"],
       project: "p1",
+      company: "c1",
       kind: "workflow",
       sort: "cost",
       dir: "asc",

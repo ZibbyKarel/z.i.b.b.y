@@ -208,13 +208,15 @@ export class TaskRunsService {
     /** todo-14: replaces the default archived set. */
     statuses?: readonly string[];
     project?: string;
+    /** Company id — matched through the run's `projectId` → project `companyId`. */
+    company?: string;
     kind?: TaskRun["kind"];
     sort?: ArchiveSort;
     dir?: "asc" | "desc";
     before?: string;
     limit?: number;
   }): Promise<ArchivePage> {
-    const { runs, childRunIds, workflowDefsById } = await this.collect();
+    const { runs, childRunIds, workflowDefsById, projectCompany } = await this.collect();
     const departmentSet = opts.departments?.length ? new Set(opts.departments) : null;
     const inScope = statusScope(opts.statuses);
     const limit = Math.min(Math.max(opts.limit ?? 40, 1), 100);
@@ -226,6 +228,9 @@ export class TaskRunsService {
       .filter((r) => matchesArchiveSearch(r, opts.search ?? ""))
       .filter((r) => !departmentSet || departmentSet.has(archiveDepartmentId(r, workflowDefsById)))
       .filter((r) => !opts.project || r.projectId === opts.project)
+      .filter(
+        (r) => !opts.company || (!!r.projectId && projectCompany.get(r.projectId) === opts.company),
+      )
       .filter((r) => !opts.kind || r.kind === opts.kind)
       .sort(byNewestRun);
 
@@ -620,6 +625,8 @@ export class TaskRunsService {
     runs: TaskRun[];
     childRunIds: Set<string>;
     workflowDefsById: ReadonlyMap<string, Workflow>;
+    /** projectId → companyId, for the archive's company filter (todo-14). */
+    projectCompany: ReadonlyMap<string, string>;
   }> {
     const [
       agents,
@@ -728,7 +735,10 @@ export class TaskRunsService {
         return view ? [resolveProjectDisplay(view, projectNames)] : [];
       }),
     ];
-    return { runs, childRunIds, workflowDefsById };
+    const projectCompany = new Map(
+      projects.flatMap((p) => (p.companyId ? [[p.id, p.companyId] as const] : [])),
+    );
+    return { runs, childRunIds, workflowDefsById, projectCompany };
   }
 
   /** Attach the processor metadata for an agent/workflow/goal run view. */

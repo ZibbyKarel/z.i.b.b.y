@@ -28,6 +28,7 @@ import { PageBreadcrumb } from "../../../components/layout/PageBreadcrumb";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { slug } from "../../../utils/slug";
+import { runsListHref } from "../../archive/runsListFilters";
 import { useProjectsQuery } from "../../projects";
 import { type CompanyBasicsBody, CompanyBasicsPanel } from "../components/CompanyBasicsPanel";
 import { CompanyIntegrationsPanel } from "../components/CompanyIntegrationsPanel";
@@ -57,7 +58,7 @@ interface MemberProjectRow {
  * `/companies/[id]` (ZB-06) — moved from `/companies/[id]` and re-skinned:
  * a `MetricStrip` (projects/contacts/budget), the linked-projects `DataTable`,
  * contacts as `ContactRow`s, `ConfirmDeleteButton` for delete, and the
- * "ALL TASKS FOR THIS COMPANY →" link into `/work/tasks?company=<id>`.
+ * "ALL TASKS FOR THIS COMPANY →" link into `/activity/runs?company=<id>`.
  */
 export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
   const t = useTranslations("companies");
@@ -268,7 +269,7 @@ export function CompanyDetailScreen({ companyId }: CompanyDetailScreenProps) {
             <Row justify="end">
               <Button
                 intent="ghost"
-                onClick={() => router.push(`/work/tasks?company=${id}` as Route)}
+                onClick={() => router.push(runsListHref({ company: id }) as Route)}
               >
                 {t("allTasksLink")}
               </Button>

@@ -825,6 +825,7 @@ GET /api/tasks/runs/archive?search=&departments=&before=&limit=
   statuses     (todo-14) comma-separated TaskRunStatus list replacing the archived set —
                the Activity → Runs table passes every status so live runs list too
   project      (todo-14) one projectId
+  company      (todo-14) one company id — runs whose project belongs to it (via projectId)
   kind         (todo-14) agent | workflow | goal | scheduled
   sort, dir    (todo-14) started | title | state | duration | cost, asc | desc (default
                desc). With `sort` the cursor is an offset (`@<n>`), not the keyset one;

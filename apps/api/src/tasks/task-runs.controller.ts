@@ -33,7 +33,7 @@ export class TaskRunsController {
       listTaskRuns: async () => ({ status: 200, body: await this.runs.listTaskRuns() }),
 
       listArchivedTaskRuns: async ({
-        query: { search, departments, statuses, project, kind, sort, dir, before, limit },
+        query: { search, departments, statuses, project, company, kind, sort, dir, before, limit },
       }) => ({
         status: 200,
         body: await this.runs.listArchivedTaskRuns({
@@ -41,6 +41,7 @@ export class TaskRunsController {
           departments: splitList(departments),
           statuses: splitList(statuses),
           project,
+          company,
           kind,
           sort,
           dir,

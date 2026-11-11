@@ -15,6 +15,8 @@ export interface ArchiveRunsFilter {
   /** todo-14: statuses to list (empty = the server's archived default). */
   statuses?: readonly string[];
   project?: string;
+  /** todo-14: company id, matched through the run's project. */
+  company?: string;
   kind?: RunKind;
   sort?: ArchiveSort;
   dir?: "asc" | "desc";
@@ -23,7 +25,7 @@ export interface ArchiveRunsFilter {
 /** Cache key for one archive filter combination — changing `search` or `departments`
  * naturally starts a fresh paginated query (a new key discards the old pages). */
 export function getArchiveRunsQueryKey(filter: ArchiveRunsFilter) {
-  const { search, departments, statuses = [], project, kind, sort, dir } = filter;
+  const { search, departments, statuses = [], project, company, kind, sort, dir } = filter;
   return [
     "taskRuns",
     "archive",
@@ -32,6 +34,7 @@ export function getArchiveRunsQueryKey(filter: ArchiveRunsFilter) {
     [...departments].sort().join(","),
     [...statuses].sort().join(","),
     project ?? "",
+    company ?? "",
     kind ?? "",
     sort ?? "",
     dir ?? "",
@@ -61,7 +64,7 @@ function selectArchiveRuns(data: InfiniteData<ArchivePageResponse>): TaskRun[] {
  * mirrors `useActivityFeedInfiniteQuery`'s cursor-walk shape.
  */
 export function useArchiveRunsInfiniteQuery(filter: ArchiveRunsFilter) {
-  const { search, departments, statuses = [], project, kind, sort, dir } = filter;
+  const { search, departments, statuses = [], project, company, kind, sort, dir } = filter;
   return apiClient.taskRuns.listArchivedTaskRuns.useInfiniteQuery<TaskRun[], string | undefined>({
     queryKey: getArchiveRunsQueryKey(filter),
     queryData: ({ pageParam }) => ({
@@ -71,6 +74,7 @@ export function useArchiveRunsInfiniteQuery(filter: ArchiveRunsFilter) {
         ...(departments.length ? { departments: departments.join(",") } : {}),
         ...(statuses.length ? { statuses: statuses.join(",") } : {}),
         ...(project ? { project } : {}),
+        ...(company ? { company } : {}),
         ...(kind ? { kind } : {}),
         ...(sort ? { sort } : {}),
         ...(dir ? { dir } : {}),
