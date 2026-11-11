@@ -2,6 +2,7 @@ import type { InboxPr, InboxRoadmapItem } from "@zibby/contracts";
 import {
   BoardRowTestId,
   ButtonGroupTestId,
+  DropdownTestId,
   IconBadgeTestId,
   IconTestId,
   IndentRailTestId,
@@ -19,6 +20,7 @@ import { PrsWidget, PrsWidgetTestId } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
 import { TasksWidget } from "./TasksWidget";
+import { WidgetSortControlTestId } from "./widgetFilters";
 
 const refreshMutate = vi.hoisted(() => vi.fn());
 vi.mock("../../inbox/mutations", () => ({
@@ -460,6 +462,29 @@ describe("PrsWidget", () => {
     );
     rerender(<PrsWidget {...props} filtersOpen />);
     expect(screen.getByTestId(`${ButtonGroupTestId.Option}-failing`)).toBeInTheDocument();
+  });
+
+  it("the filter bar carries the sort: a live pick from widget.sort that resets when it changes", async () => {
+    const ago = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
+    d.prs = [pr(1, { createdAt: ago(5), updatedAt: ago(1) }), pr(2, { createdAt: ago(3) })];
+    const props = setup({ widget: widget("w", "prs"), filtersOpen: true });
+    const { rerender } = renderWithProviders(<PrsWidget {...props} />);
+    const order = () => screen.getAllByTestId(BoardRowTestId.Root).map((r) => r.textContent);
+    expect(order()[0]).toContain("PR 1"); // last change, newest first
+
+    const sort = screen.getByTestId(WidgetSortControlTestId.Root);
+    await userEvent.click(within(sort).getByTestId(DropdownTestId.Trigger));
+    await userEvent.click(screen.getByText("Vytvoření, nejnovější nahoře"));
+    expect(order()[0]).toContain("PR 2");
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filtersActive: true }),
+    );
+
+    rerender(<PrsWidget {...props} widget={{ ...props.widget, sort: "updated-asc" }} />);
+    expect(order()[0]).toContain("PR 2"); // updated-asc: PR 2 (3 h) before PR 1 (1 h)
+    expect(props.onCountChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ filtersActive: false }),
+    );
   });
 
   it("is empty with no PRs", () => {

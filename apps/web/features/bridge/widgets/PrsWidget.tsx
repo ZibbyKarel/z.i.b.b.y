@@ -23,7 +23,12 @@ import { useBridgeInboxFilters } from "../state/useBridgeInboxFilters";
 import { CI_ICON, PrFilterControls, REVIEW_ICON } from "./PrFilterControls";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
-import { WidgetFilterBar, useWidgetFilterPick } from "./widgetFilters";
+import {
+  WidgetFilterBar,
+  WidgetSortControl,
+  useWidgetFilterPick,
+  useWidgetSortPick,
+} from "./widgetFilters";
 
 export enum PrsWidgetTestId {
   Avatar = "prs-widget-avatar",
@@ -53,7 +58,7 @@ function StateIcon({
 
 /**
  * Pull requests: the set the `/dashboard/inbox/pull-requests` screen lists (stored filters) as
- * one flat list ordered by `widget.sort` (default: last change, newest first), each stack kept together (base -> head, indented behind a rail).
+ * one flat list ordered by the live sort (from `widget.sort`, default: last change, newest first), each stack kept together (base -> head, indented behind a rail).
  * The filter row above narrows by review / CI state, owner, company and requested review team and
  * doubles as the legend of the card icons.
  * No action buttons here; they live in the detail sheet.
@@ -76,6 +81,8 @@ export function PrsWidget({
   const onRefresh = useCallback(() => mutate(), [mutate]);
   const prsQuery = useInboxPrsQuery();
   const [pick, setPick, filtersChanged] = useWidgetFilterPick(widget.filters);
+  // The order is part of the filter bar: a live pick from the saved `widget.sort`.
+  const [sort, setSort, sortChanged] = useWidgetSortPick(widget.sort);
 
   const { nodes, counts, total, you } = useMemo(
     () =>
@@ -85,9 +92,9 @@ export function PrsWidget({
         filters,
         pick,
         (iso) => compactAgo(iso, now),
-        widget.sort,
+        sort,
       ),
-    [widget.id, prsQuery.data, filters, pick, now, widget.sort],
+    [widget.id, prsQuery.data, filters, pick, now, sort],
   );
   // The header counts the whole set, not the picked slice: an empty pick must not collapse the
   // widget (and its filter with it).
@@ -99,7 +106,7 @@ export function PrsWidget({
       loading: prsQuery.isPending,
       count: prsQuery.isPending ? undefined : total,
       you,
-      filtersActive: filtersChanged,
+      filtersActive: filtersChanged || sortChanged,
     },
     { onEmptyChange, onCountChange },
   );
@@ -183,6 +190,7 @@ export function PrsWidget({
   return (
     <>
       <WidgetFilterBar open={filtersOpen}>
+        <WidgetSortControl onChange={setSort} value={sort} />
         <PrFilterControls counts={counts} onChange={setPick} pick={pick} />
       </WidgetFilterBar>
       {nodes.map((n) => tree(n, 0))}

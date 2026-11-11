@@ -1,6 +1,6 @@
 "use client";
 
-import { type WidgetFilters, WidgetSortSchema } from "@zibby/contracts";
+import { type WidgetFilters, type WidgetSort, WidgetSortSchema } from "@zibby/contracts";
 import { Container, Dropdown, FilterBar, SelectField, Stack } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { type ReactNode, useState } from "react";
@@ -28,6 +28,49 @@ export function WidgetSortSettings({ draft, onChange }: WidgetSettingsProps) {
       />
     </Stack>
   );
+}
+
+export enum WidgetSortControlTestId {
+  Root = "widget-sort-control",
+}
+
+/** The list order in a widget's header filter bar — a live pick, like the filters. */
+export function WidgetSortControl({
+  value,
+  onChange,
+}: {
+  value: WidgetSort;
+  onChange: (next: WidgetSort) => void;
+}) {
+  const t = useTranslations("bridge.settings");
+  return (
+    <Container data-testid={WidgetSortControlTestId.Root}>
+      <Dropdown
+        aria-label={t("sort")}
+        onChange={onChange}
+        options={WidgetSortSchema.options.map((s) => ({ value: s, label: t(`sortBy.${s}`) }))}
+        size="sm"
+        value={value}
+      />
+    </Container>
+  );
+}
+
+/**
+ * A widget's live sort, starting from its saved `widget.sort` and reset when that changes (same
+ * rule as `useWidgetFilterPick`). The third value is true while it differs from the saved one.
+ */
+export function useWidgetSortPick(
+  saved: WidgetSort | undefined,
+): [WidgetSort, (next: WidgetSort) => void, boolean] {
+  const initial = saved ?? "updated-desc";
+  const [sort, setSort] = useState(initial);
+  const [seen, setSeen] = useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setSort(initial);
+  }
+  return [sort, setSort, sort !== initial];
 }
 
 /** Drops unset groups (empty lists, `undefined`, `false`): an absent group doesn't filter. */
