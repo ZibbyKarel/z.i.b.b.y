@@ -184,6 +184,26 @@ export class InboxController {
           return mapThreadsError(error);
         }
       },
+      getInboxPrReviewers: async ({ params }) => {
+        try {
+          return {
+            status: 200 as const,
+            body: await this.threads.reviewers(params.projectId, params.number),
+          };
+        } catch (error) {
+          return mapThreadsError(error);
+        }
+      },
+      requestInboxPrReview: async ({ params, body }) => {
+        try {
+          return {
+            status: 201 as const,
+            body: await this.threads.requestReview(params.projectId, params.number, body.login),
+          };
+        } catch (error) {
+          return mapThreadsError(error);
+        }
+      },
       getInboxState: async () => ({ status: 200, body: await this.inbox.getState() }),
       setInboxHidden: async ({ body }) => ({ status: 200, body: await this.inbox.setHidden(body) }),
     });

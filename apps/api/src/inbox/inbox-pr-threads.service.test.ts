@@ -210,4 +210,101 @@ describe("InboxPrThreadsService", () => {
       expect(fetchImpl).not.toHaveBeenCalled();
     });
   });
+
+  describe("reviewers", () => {
+    const prNode = {
+      author: { login: "me" },
+      files: { nodes: [{ path: "src/a.ts" }] },
+      reviewRequests: {
+        nodes: [
+          { requestedReviewer: { __typename: "Team", slug: "web", name: "Web" } },
+          { requestedReviewer: { __typename: "User", login: "bob" } },
+        ],
+      },
+      reviews: {
+        nodes: [
+          {
+            author: { login: "ann" },
+            state: "CHANGES_REQUESTED",
+            comments: { totalCount: 2 },
+            onBehalfOf: { nodes: [] },
+          },
+        ],
+      },
+      baseRef: { target: { gh: null, root: { object: { text: "*.ts @acme/web" } }, docs: null } },
+    };
+
+    const reviewersFetch = (orgOk: boolean) =>
+      vi.fn(async (url: string, init: { body: string }) => {
+        if (url.endsWith("/requested_reviewers")) return new Response("{}", { status: 201 });
+        const { query } = JSON.parse(init.body) as { query: string };
+        if (query.includes("organization")) {
+          return orgOk
+            ? gqlResponse({
+                organization: {
+                  teams: {
+                    nodes: [{ slug: "web", name: "Web", members: { nodes: [{ login: "ann" }] } }],
+                  },
+                },
+              })
+            : new Response(JSON.stringify({ errors: [{ message: "read:org" }] }));
+        }
+        return gqlResponse({ repository: { pullRequest: prNode } });
+      });
+
+    const withFetch = (f: ReturnType<typeof vi.fn>) =>
+      new InboxPrThreadsService(
+        { get: async () => PROJECT } as never,
+        { resolveIntegrations: async () => [GITHUB] } as never,
+        { read: async () => ({ token: "tok" }) } as never,
+        { dropPrsCache } as never,
+        undefined,
+        { record } as never,
+        f as unknown as typeof fetch,
+      );
+
+    it("maps the PR into a team tree with CODEOWNER flag and nested members", async () => {
+      expect(await withFetch(reviewersFetch(true)).reviewers("acme", 7)).toEqual({
+        teams: [
+          {
+            slug: "web",
+            name: "Web",
+            codeOwner: true,
+            requested: true,
+            members: [{ login: "ann", state: "changesRequested", commented: true }],
+          },
+        ],
+        users: [{ login: "bob", state: "pending", commented: false }],
+      });
+    });
+
+    it("tolerates a failing org-teams query (no read:org) — people stay top-level", async () => {
+      const tree = await withFetch(reviewersFetch(false)).reviewers("acme", 7);
+      expect(tree.teams[0]?.members).toEqual([]);
+      expect(tree.users.map((u) => u.login)).toEqual(["bob", "ann"]);
+    });
+
+    it("requestReview posts the login to GitHub, records activity and returns the tree", async () => {
+      const f = reviewersFetch(true);
+      const tree = await withFetch(f).requestReview("acme", 7, "ann");
+      const post = f.mock.calls.find((c) => String(c[0]).endsWith("/requested_reviewers"));
+      expect(post?.[0]).toBe("https://api.github.com/repos/acme/app/pulls/7/requested_reviewers");
+      expect(JSON.parse((post?.[1] as { body: string }).body)).toEqual({ reviewers: ["ann"] });
+      expect(record).toHaveBeenCalledOnce();
+      expect(dropPrsCache).toHaveBeenCalledOnce();
+      expect(tree.teams).toHaveLength(1);
+    });
+
+    it("surfaces a GitHub refusal of the review request", async () => {
+      const f = vi.fn(
+        async () => new Response(JSON.stringify({ message: "nope" }), { status: 422 }),
+      );
+      const err = await withFetch(f)
+        .requestReview("acme", 7, "ann")
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(GithubThreadsError);
+      expect(err.status).toBe(422);
+      expect(record).not.toHaveBeenCalled();
+    });
+  });
 });

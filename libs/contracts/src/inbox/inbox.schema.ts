@@ -356,6 +356,43 @@ export type SubmitInboxPrReviewInput = z.infer<typeof SubmitInboxPrReviewInputSc
 export const SubmitInboxPrReviewResultSchema = z.object({ id: z.number().int() });
 export type SubmitInboxPrReviewResult = z.infer<typeof SubmitInboxPrReviewResultSchema>;
 
+/** GitHub login (user, not team). */
+const GithubLoginSchema = z.string().regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/);
+
+/**
+ * One person in a PR's reviewers tree. `state` = their latest verdict; `pending` = their review is
+ * (re-)requested and not given yet; `commented` = they left any review comment.
+ */
+export const InboxPrReviewerSchema = z.object({
+  login: z.string(),
+  state: z.enum(["approved", "changesRequested", "commented", "pending"]),
+  commented: z.boolean(),
+});
+export type InboxPrReviewer = z.infer<typeof InboxPrReviewerSchema>;
+
+/** A reviewer team; `codeOwner` = CODEOWNERS (base branch) names it for a changed file. */
+export const InboxPrReviewTeamSchema = z.object({
+  slug: z.string(),
+  name: z.string(),
+  codeOwner: z.boolean(),
+  /** The team's review request is still open. */
+  requested: z.boolean(),
+  /** Reviewers who belong to this team (one person may sit under several teams). */
+  members: z.array(InboxPrReviewerSchema),
+});
+export type InboxPrReviewTeam = z.infer<typeof InboxPrReviewTeamSchema>;
+
+/** GitHub-style reviewers tree: teams with nested people, then people outside any listed team. */
+export const InboxPrReviewersSchema = z.object({
+  teams: z.array(InboxPrReviewTeamSchema),
+  users: z.array(InboxPrReviewerSchema),
+});
+export type InboxPrReviewers = z.infer<typeof InboxPrReviewersSchema>;
+
+/** Re-request one person's review. */
+export const RequestInboxPrReviewInputSchema = z.object({ login: GithubLoginSchema });
+export type RequestInboxPrReviewInput = z.infer<typeof RequestInboxPrReviewInputSchema>;
+
 /** Hide key: the item's source identity, stable across re-syncs. */
 export const InboxHiddenKeySchema = z.object({
   integrationId: z.string().min(1),

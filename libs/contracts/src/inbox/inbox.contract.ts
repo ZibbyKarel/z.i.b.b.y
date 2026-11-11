@@ -7,6 +7,7 @@ import {
   FixInboxPrCiInputSchema,
   InboxItemsResponseSchema,
   InboxPrDiffSchema,
+  InboxPrReviewersSchema,
   InboxPrThreadSchema,
   InboxPrThreadsSchema,
   InboxPrsResponseSchema,
@@ -15,6 +16,7 @@ import {
   ProcessInboxItemInputSchema,
   RebaseInboxPrInputSchema,
   ReplyInboxPrThreadInputSchema,
+  RequestInboxPrReviewInputSchema,
   ReviewInboxPrInputSchema,
   ReviewInboxPrResultSchema,
   SetInboxHiddenSchema,
@@ -175,6 +177,38 @@ export const inboxContract = c.router(
         502: ErrorSchema,
       },
       summary: "Post the operator's own review (approve / request changes / comment) on one PR",
+    },
+    getInboxPrReviewers: {
+      method: "GET",
+      path: "/inbox/prs/:projectId/:number/reviewers",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+      }),
+      responses: {
+        200: InboxPrReviewersSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
+      summary:
+        "Get one PR's reviewers tree from GitHub: teams (CODEOWNER flag for changed files) with their reviewing members, then other people",
+    },
+    requestInboxPrReview: {
+      method: "POST",
+      path: "/inbox/prs/:projectId/:number/reviewers/request",
+      pathParams: z.object({
+        projectId: z.string().min(1),
+        number: z.coerce.number().int().positive(),
+      }),
+      body: RequestInboxPrReviewInputSchema,
+      responses: {
+        201: InboxPrReviewersSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        502: ErrorSchema,
+      },
+      summary: "Re-request one person's review on a PR (operator click); returns the updated tree",
     },
     getInboxState: {
       method: "GET",

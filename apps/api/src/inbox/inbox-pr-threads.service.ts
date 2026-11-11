@@ -1,5 +1,6 @@
 import { Injectable, Optional } from "@nestjs/common";
 import type {
+  InboxPrReviewers,
   InboxPrThread,
   ReplyInboxPrThreadInput,
   SubmitInboxPrReviewInput,
@@ -14,6 +15,7 @@ import { ResolvedProjectService } from "../projects/resolved-project.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { githubReason } from "./inbox-review.service";
 import { InboxService } from "./inbox.service";
+import { type BuildReviewersInput, buildReviewers } from "./pr-reviewers";
 
 const GITHUB_GRAPHQL = "https://api.github.com/graphql";
 const GITHUB_TIMEOUT_MS = 15_000;
@@ -25,6 +27,38 @@ const THREADS_QUERY =
 const REPLY_MUTATION =
   "mutation($id:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$id,body:$body}){comment{id}}}";
 const RESOLVE_MUTATION = "mutation($id:ID!){resolveReviewThread(input:{threadId:$id}){thread{id}}}";
+// ponytail: first 100 files / 100 reviews / 50 requests, CODEOWNERS only in its 3 standard spots.
+const CODEOWNERS_FILE = (alias: string, path: string) =>
+  `${alias}:file(path:"${path}"){object{... on Blob{text}}}`;
+const REVIEWERS_QUERY = `query($owner:String!,$name:String!,$n:Int!){repository(owner:$owner,name:$name){pullRequest(number:$n){author{login} files(first:100){nodes{path}} reviewRequests(first:50){nodes{requestedReviewer{__typename ... on User{login} ... on Team{slug name}}}} reviews(first:100){nodes{author{login} state comments{totalCount} onBehalfOf(first:10){nodes{slug name}}}} baseRef{target{... on Commit{${CODEOWNERS_FILE("gh", ".github/CODEOWNERS")} ${CODEOWNERS_FILE("root", "CODEOWNERS")} ${CODEOWNERS_FILE("docs", "docs/CODEOWNERS")}}}}}}}`;
+// ponytail: first 50 teams x 100 members; needs read:org — on failure nesting falls back to onBehalfOf.
+const ORG_TEAMS_QUERY =
+  "query($org:String!,$logins:[String!]!){organization(login:$org){teams(first:50,userLogins:$logins){nodes{slug name members(first:100){nodes{login}}}}}}";
+
+interface ReviewersNode {
+  author: { login: string } | null;
+  files: { nodes: { path: string }[] } | null;
+  reviewRequests: {
+    nodes: {
+      requestedReviewer:
+        | { __typename: "User"; login: string }
+        | { __typename: "Team"; slug: string; name: string }
+        | { __typename: "Bot" | "Mannequin" }
+        | null;
+    }[];
+  };
+  reviews: {
+    nodes: {
+      author: { login: string } | null;
+      state: BuildReviewersInput["reviews"][number]["state"];
+      comments: { totalCount: number };
+      onBehalfOf: { nodes: { slug: string; name: string }[] };
+    }[];
+  };
+  baseRef: {
+    target: Partial<Record<"gh" | "root" | "docs", { object: { text: string } | null } | null>>;
+  } | null;
+}
 
 /** GitHub answered a GraphQL call with an HTTP/GraphQL error; `status` is the upstream HTTP one (200 for GraphQL errors). */
 export class GithubThreadsError extends Error {
@@ -158,6 +192,108 @@ export class InboxPrThreadsService {
     // The review changes the PR's section — don't serve the stale 30 s cache.
     this.inbox.dropPrsCache();
     return { id };
+  }
+
+  /** The PR's reviewers tree (teams with CODEOWNER flag + their reviewing members, then people). */
+  async reviewers(projectId: string, number: number): Promise<InboxPrReviewers> {
+    const { gql, repo } = await this.open(projectId);
+    return this.readReviewers(gql, repo, number);
+  }
+
+  /** Re-requests one person's review (operator click) and returns the updated tree. */
+  async requestReview(projectId: string, number: number, login: string): Promise<InboxPrReviewers> {
+    const { gql, repo, token } = await this.open(projectId);
+    const res = await this.fetchImpl(
+      `https://api.github.com/repos/${repo}/pulls/${number}/requested_reviewers`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          accept: "application/vnd.github+json",
+          "x-github-api-version": "2022-11-28",
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ reviewers: [login] }),
+        signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS),
+      },
+    );
+    if (!res.ok) {
+      throw new GithubThreadsError(
+        res.status,
+        `HTTP ${res.status}${await githubReason(res)}`,
+        "review request",
+      );
+    }
+    void this.activity?.record({
+      kind: "channel-reply", // closest existing kind for an operator GitHub action
+      summary: `re-requested review from ${login} on ${repo}#${number}`,
+      refs: { projectId },
+    });
+    this.log?.info(`re-requested review on ${repo}#${number}`, { login });
+    this.inbox.dropPrsCache();
+    return this.readReviewers(gql, repo, number);
+  }
+
+  private async readReviewers(gql: Gql, repo: string, number: number): Promise<InboxPrReviewers> {
+    const [owner = "", name] = repo.split("/");
+    const data = await gql<{ repository: { pullRequest: ReviewersNode | null } | null }>(
+      REVIEWERS_QUERY,
+      { owner, name, n: number },
+    );
+    const pr = data.repository?.pullRequest;
+    if (!pr) return { teams: [], users: [] };
+    const requestedUsers: string[] = [];
+    const requestedTeams: { slug: string; name: string }[] = [];
+    for (const { requestedReviewer: r } of pr.reviewRequests.nodes) {
+      if (r?.__typename === "User") requestedUsers.push(r.login);
+      else if (r?.__typename === "Team") requestedTeams.push({ slug: r.slug, name: r.name });
+    }
+    const reviews = pr.reviews.nodes.flatMap((r) =>
+      r.author
+        ? [
+            {
+              author: r.author.login,
+              state: r.state,
+              comments: r.comments.totalCount,
+              onBehalfOf: r.onBehalfOf.nodes,
+            },
+          ]
+        : [],
+    );
+    const target = pr.baseRef?.target;
+    const codeowners =
+      target?.gh?.object?.text ?? target?.root?.object?.text ?? target?.docs?.object?.text ?? null;
+    const logins = [...new Set([...requestedUsers, ...reviews.map((r) => r.author)])];
+    const teamMembers: Record<string, string[]> = {};
+    const teamNames: Record<string, string> = {};
+    if (logins.length)
+      try {
+        const org = await gql<{
+          organization: {
+            teams: {
+              nodes: { slug: string; name: string; members: { nodes: { login: string }[] } }[];
+            };
+          } | null;
+        }>(ORG_TEAMS_QUERY, { org: owner, logins });
+        for (const t of org.organization?.teams.nodes ?? []) {
+          teamMembers[t.slug] = t.members.nodes.map((m) => m.login);
+          teamNames[t.slug] = t.name;
+        }
+      } catch (error) {
+        // No read:org scope or a user-owned repo — nest by onBehalfOf only.
+        this.log?.debug(`org teams unavailable for ${owner}`, { error: String(error) });
+      }
+    return buildReviewers({
+      org: owner,
+      author: pr.author?.login ?? "",
+      requestedUsers,
+      requestedTeams,
+      reviews,
+      teamMembers,
+      teamNames,
+      codeowners,
+      files: (pr.files?.nodes ?? []).map((f) => f.path),
+    });
   }
 
   private async read(gql: Gql, repo: string, number: number): Promise<InboxPrThread[]> {
