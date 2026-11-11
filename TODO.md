@@ -1,8 +1,8 @@
 # TODO
 
-1. [ ] v detailu schválení pr-review potřebuju mít možnost odstranit daný thred celý pokud se mi navrhovaný komentář nebude zdát
+1. [x] v detailu schválení pr-review potřebuju mít možnost odstranit daný thred celý pokud se mi navrhovaný komentář nebude zdát (main@b660013cb)
 2. [ ] Po schválení code-review, zpracování komentářů a podobných úkonů se musí refreshnout PRs. Pokud se PRs refreshují
-3. [ ] Chat - volání nástrojů je občas velice dlouhé. Nepotřebuji vědět postupně které nástroje se volali. Stačí mi vždy poslední vidět abych věděl že se neco děje. Až se požadavek zpracuje tak můžeme odstranit i volání posledního nástroje z chatu.
+3. [x] Chat - volání nástrojů je občas velice dlouhé. Nepotřebuji vědět postupně které nástroje se volali. Stačí mi vždy poslední vidět abych věděl že se neco děje. Až se požadavek zpracuje tak můžeme odstranit i volání posledního nástroje z chatu. (main@b660013cb)
 4. [ ] Stránka automatizace - automatizace se mohoou zobrazovat ve třech sloupcích místo současných dvou
 5. [ ] Na detailu PR potřebuju vidět stejně jako je to teď v githubu na nové stránce preview sekci Reviewers - ve stromové struktuře zobrazený seznam týmů nebo lidí, kteří jsou vyžádáni nebo udělali code-review. vždy potřebuju vidět u týmu jestli je tým code-owner nějakých soubporů, které jsem v PR měnil nebo ne. Lidé, které mi PR udělali, jsou zanořeni v týmech, do kterých patří (jeden člověk může být ve více týmech a dělá pak code-review sa všechny týmy, ve kterých je). Pokud dotyčný přidal komentáře musím to u něj vidět, stejně tak pokud klikl aproove/requested-changes musím to vidět. Stavové ikonky budeme zobrazovat na pravé straně a jméno týmu/developera na levé. Celou sekci zobrazíme na úrovni běhů jen bude úplně napravo. Pokud developer klikl na requested changes musíme u něj mít vedle ještě ikonku "refresh", která si znovu vyžádá jeh review.
 6. [x] Widget - Pull Requesty - řazení je součástí filtrů takže se musí zobrazovat stejně tak když uživatel zobrazí filtry přes tlačítko v hlavičce (main@2380757bd)
@@ -14,7 +14,7 @@
 12. [ ] na detailu běhu u ID PR bude malá ikonka github/gitlab podle zdroje a u issue ID bude ikonka JIRA, smaž šipku u odkazů a odkazy budou na hover podtrzené
 13. [x] v detailu běhu, pokud je jeho výstupem kod, bych potřeboval vidět změny, které se v tom běhu udělali (pozor né celé PR ale jen změny přidané v tom běhu) (main@6dc218658)
 14. [ ] stránky Práce -> Úlohy a Aktivita -> Běhy jsou prakticky totožné. Navrhuji stránku Úlohy zrušit a na stránce aktivita přidat do tabulky více informací, udělat ji sortofací a filtrovací. Hlavně filtry musejí být perzistentní v url aby sem mohl stránky pinnout a tabulka držela vyfiltrovaná a sortovaná ikdyž jdu do detailu běhu a zpět
-15. [ ] v apps desktop když se buildne tak nefunguje cmd+f hledání na stránce
+15. [x] v apps desktop když se buildne tak nefunguje cmd+f hledání na stránce (main@b660013cb)
 16. [ ] Při pustění ve zbuilděné desktop appce rebase větve pr-rebase_1794307789426 tak když dojel, viděl jsem běh ve widgetu běhy na dvou místech - jako že dojel úspěšně a podruhý jako že čeká na mě ke schválení
 17. [ ] nerefreshují se informace ve widgetu běhy. Občas když někde potvrdím schválení nebo zamítnu, nebo běh stopnu nebo zruším tak jsou běhy stále nerefreshnuté. Musím refreshnout stránku abych viděl aktuální informace
 18. [ ] Widget Přehled - každý číslo, které widget ukazuje musí být klikatelné a přesměrovat mě na stránku s více informacemi takže třeba "5 čeká na tebe" povede na stránku Aktivita kde se vyfiltruje patřičný stav. To samé "Teď běží". Pro "Otevřená PR" asi budem potřebovat novou stránku kde se zobrazí moje PR v tabulce s vnořenými řádky pro stacked PRs s informacemi, které jsme schopní o PRs získat. Místo hodnoty "dnešní výdaje" budeme agregovat výdaje za poslední měsíc a klik na tuto hodnotu povede na stránku Pravidla -> Rozpočty
