@@ -165,10 +165,12 @@ export function ApprovalSheet({
     id: string;
     byThread: Record<string, OperatorThreadReply>;
   } | null>(null);
-  // The operator's edits to the PR-review findings' comment text, by finding index, keyed by approval id.
+  // The operator's edits to the PR-review findings — comment text by finding index and the
+  // indices they removed (todo-1) — keyed by approval id.
   const [reviewEdits, setReviewEdits] = useState<{
     id: string;
     byIndex: Record<number, string>;
+    removed: number[];
   } | null>(null);
   // todo-36: the operator's own review replacing ZIBBY's, keyed by approval id.
   const [ownDraft, setOwnDraft] = useState<{ id: string; text: string } | null>(null);
@@ -240,15 +242,23 @@ export function ApprovalSheet({
   // A PR-review checkpoint (it carries a suggested review type) renders its findings as cards.
   const reviewDoc =
     checkpoint && approval?.suggestedReviewEvent ? parseReviewDoc(checkpoint) : null;
-  const findingEdits = reviewEdits && reviewEdits.id === approval?.id ? reviewEdits.byIndex : {};
+  const ownEdits = reviewEdits && reviewEdits.id === approval?.id ? reviewEdits : null;
+  const findingEdits = ownEdits?.byIndex ?? {};
+  const removedFindings = ownEdits?.removed ?? [];
   // The review document to send: only when the operator changed something, else the agent's own.
   const editedReviewDocument =
-    reviewDoc && Object.keys(findingEdits).length > 0
+    reviewDoc && (Object.keys(findingEdits).length > 0 || removedFindings.length > 0)
       ? serializeReviewDoc(
           reviewDoc.summary,
-          reviewDoc.findings.map((f, i) => ({ ...f, body: findingEdits[i] ?? f.body })),
+          reviewDoc.findings
+            .map((f, i) => ({ ...f, body: findingEdits[i] ?? f.body }))
+            .filter((_, i) => !removedFindings.includes(i)),
         )
       : undefined;
+  // Everything removed: "" would be dropped from the request and the API would post the agent's
+  // original findings, so it goes as a bare own review — which GitHub only takes as APPROVE.
+  const reviewEmptied = !own && editedReviewDocument === "";
+  const emptiedBlocked = reviewEmptied && reviewEvent !== "APPROVE";
   // Code context for the findings: the PR of the review task behind the gated workflow run.
   const reviewTask = useTaskQuery(reviewDoc ? (gatedRun?.taskId ?? "") : "").data;
   const { data: reviewDiff } = useInboxPrDiffQuery(
@@ -368,9 +378,18 @@ export function ApprovalSheet({
             setReviewEdits({
               id: approval.id,
               byIndex: { ...findingEdits, [index]: body },
+              removed: removedFindings,
+            })
+          }
+          onRemove={(index) =>
+            setReviewEdits({
+              id: approval.id,
+              byIndex: findingEdits,
+              removed: [...removedFindings, index],
             })
           }
           prUrl={reviewTask?.prReview?.url}
+          removed={removedFindings}
           summary={reviewDoc.summary}
         />
       ) : checkpoint ? (
@@ -471,7 +490,7 @@ export function ApprovalSheet({
         <Row wrap gap="100">
           <Button
             block={!compact}
-            disabled={ownBlocked}
+            disabled={ownBlocked || emptiedBlocked}
             intent="primary"
             loading={approve.isPending}
             onClick={() =>
@@ -482,7 +501,7 @@ export function ApprovalSheet({
                     address ? addressReplies : undefined,
                     reviewEvent,
                     own ? own.text.trim() : editedReviewDocument,
-                    own !== null,
+                    own !== null || reviewEmptied,
                   ),
                 },
                 { onSuccess: close },

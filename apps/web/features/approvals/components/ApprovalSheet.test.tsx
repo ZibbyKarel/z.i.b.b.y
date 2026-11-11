@@ -276,4 +276,41 @@ describe("ApprovalSheet (ZB-08 / D-014)", () => {
       { onSuccess: expect.any(Function) },
     );
   });
+
+  const REVIEW_DOC = "Summary.\n\n### a.ts:1 (Minor)\nFirst.\n\n### b.ts:2\nSecond.";
+
+  it("todo-1: a removed finding is left out of the posted review", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    hooks.checkpoint = REVIEW_DOC;
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Odebrat komentář" })[0] as HTMLElement,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat review" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      {
+        params: { id: "appr-pr" },
+        body: { reviewEvent: "REQUEST_CHANGES", reviewDocument: "Summary.\n\n### b.ts:2\nSecond." },
+      },
+      { onSuccess: expect.any(Function) },
+    );
+  });
+
+  it("todo-1: removing every finding of a summary-less review never falls back to ZIBBY's", async () => {
+    hooks.approval = { data: PR_REVIEW, isPending: false, isError: false, refetch: vi.fn() };
+    hooks.checkpoint = "### a.ts:1\nFirst.";
+    render(<ApprovalSheet approvalId="appr-pr" onClose={onClose} />);
+    await userEvent.click(screen.getByRole("button", { name: "Odebrat komentář" }));
+    // An empty review can't request changes (GitHub needs a body) — submit waits for APPROVE.
+    expect(screen.getByRole("button", { name: "Odeslat review" })).toBeDisabled();
+    await userEvent.click(screen.getByTestId(item("APPROVE")));
+    await userEvent.click(screen.getByRole("button", { name: "Odeslat review" }));
+    expect(hooks.approve).toHaveBeenCalledWith(
+      {
+        params: { id: "appr-pr" },
+        body: { reviewEvent: "APPROVE", reviewDocument: "", ownReview: true },
+      },
+      { onSuccess: expect.any(Function) },
+    );
+  });
 });

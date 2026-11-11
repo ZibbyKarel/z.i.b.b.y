@@ -77,4 +77,27 @@ describe("ReviewFindings", () => {
       expect.stringMatching(/\/pull\/1\/files#diff-[0-9a-f]{64}R7$/),
     );
   });
+
+  it("todo-1: removes a finding — reports its index and hides removed ones", () => {
+    const onRemove = vi.fn();
+    renderWithProviders(
+      <ReviewFindings
+        approvalId="a1"
+        findings={[
+          { path: "a.ts", line: 1, body: "first" },
+          { path: "b.ts", line: 2, body: "second" },
+          { path: "c.ts", line: 3, body: "third" },
+        ]}
+        onRemove={onRemove}
+        removed={[0]}
+        summary=""
+      />,
+    );
+    const inputs = screen.getAllByTestId(ReviewFindingsTestId.Comment);
+    expect(inputs.map((i) => (i as HTMLTextAreaElement).value)).toEqual(["second", "third"]);
+    const buttons = screen.getAllByTestId(ReviewFindingsTestId.Remove);
+    expect(buttons[1]).toHaveAccessibleName("Odebrat komentář");
+    fireEvent.click(buttons[1] as HTMLElement);
+    expect(onRemove).toHaveBeenCalledWith(2);
+  });
 });

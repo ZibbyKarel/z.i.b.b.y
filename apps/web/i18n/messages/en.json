@@ -950,6 +950,7 @@
   "approvals": {
     "findingFileLink": "Open {where} in the PR",
     "findingComment": "Review comment",
+    "findingRemove": "Remove comment",
     "addressSummary": "Fixed {done} of {total} threads · {question} questions · {skipped} skipped",
     "addressReport": "Full report",
     "addressAlreadyResolved": "Already resolved on GitHub",

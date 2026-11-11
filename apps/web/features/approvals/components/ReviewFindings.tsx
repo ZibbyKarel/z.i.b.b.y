@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Button,
   Card,
   CardContent,
   Container,
@@ -30,6 +31,7 @@ export enum ReviewFindingsTestId {
   FileLink = "review-findings-file-link",
   Snippet = "review-findings-snippet",
   Comment = "review-findings-comment",
+  Remove = "review-findings-remove",
 }
 
 const severityTone = { Critical: "error", Important: "blocked", Minor: "neutral" } as const;
@@ -45,6 +47,9 @@ export interface ReviewFindingsProps {
   /** Edited comment text by finding index; an absent entry keeps the agent's text. */
   edits?: Record<number, string>;
   onEdit?(index: number, body: string): void;
+  /** Indices of the findings the operator dropped — not rendered, not posted. */
+  removed?: number[];
+  onRemove?(index: number): void;
 }
 
 /** `path:line`, linked to that line of the file in the PR once GitHub's diff anchor is computed. */
@@ -99,6 +104,8 @@ export function ReviewFindings({
   prUrl,
   edits = {},
   onEdit,
+  removed = [],
+  onRemove,
 }: ReviewFindingsProps) {
   const t = useTranslations("approvals");
   return (
@@ -109,6 +116,7 @@ export function ReviewFindings({
         </div>
       )}
       {findings.map((original, i) => {
+        if (removed.includes(i)) return null;
         const f = { ...original, body: edits[i] ?? original.body };
         const hunk = diff ? findingHunk(diff, f.path, f.line) : null;
         const where = `${f.path}:${f.startLine ? `${f.startLine}-` : ""}${f.line}`;
@@ -149,6 +157,17 @@ export function ReviewFindings({
                 </InputFrame>
                 <Row gap="150" justify="between">
                   <ChatAboutButton about={findingChatAbout(f, approvalId, summary)} />
+                  {onRemove && (
+                    <Button
+                      data-testid={ReviewFindingsTestId.Remove}
+                      icon="trash"
+                      intent="ghost"
+                      onClick={() => onRemove(i)}
+                      size="sm"
+                    >
+                      {t("findingRemove")}
+                    </Button>
+                  )}
                 </Row>
               </Stack>
             </CardContent>

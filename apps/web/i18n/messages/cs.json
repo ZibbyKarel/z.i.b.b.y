@@ -950,6 +950,7 @@
   "approvals": {
     "findingFileLink": "Otevřít {where} v PR",
     "findingComment": "Komentář k review",
+    "findingRemove": "Odebrat komentář",
     "addressSummary": "Opraveno {done} z {total} vláken · {question} otázek · {skipped} přeskočeno",
     "addressReport": "Celý report",
     "addressAlreadyResolved": "Už vyřešeno na GitHubu",
