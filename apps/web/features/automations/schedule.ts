@@ -81,17 +81,24 @@ interface ZonedParts {
   weekday: number;
 }
 
+/** One formatter per time zone — building an `Intl.DateTimeFormat` is the expensive part. */
+const ZONED_FORMATS = new Map<string, Intl.DateTimeFormat>();
+
 /** The wall-clock fields of `date` in `timeZone`. */
 function zonedParts(date: Date, timeZone: string): ZonedParts {
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour12: false,
-    minute: "2-digit",
-    hour: "2-digit",
-    day: "2-digit",
-    month: "2-digit",
-    weekday: "short",
-  });
+  let fmt = ZONED_FORMATS.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      minute: "2-digit",
+      hour: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      weekday: "short",
+    });
+    ZONED_FORMATS.set(timeZone, fmt);
+  }
   const lookup: Record<string, string> = {};
   for (const p of fmt.formatToParts(date)) lookup[p.type] = p.value;
   const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -106,14 +113,13 @@ function zonedParts(date: Date, timeZone: string): ZonedParts {
 
 /**
  * The next instant at or after `from` that `expr` fires, or `null` if none falls
- * within a year (a guard against expressions that can never match). Scans whole
- * minutes — cheap arithmetic, and callers memoize per expression.
+ * within `limitMinutes` (default a year — a guard against expressions that can never
+ * match). Scans whole minutes; pass a short limit when only the near future matters.
  */
-export function nextCronRun(expr: string, from: Date): Date | null {
+export function nextCronRun(expr: string, from: Date, limitMinutes = 366 * 24 * 60): Date | null {
   if (expr.trim().split(/\s+/).length !== 5) return null;
   const start = Math.floor(from.getTime() / MINUTE_MS) * MINUTE_MS + MINUTE_MS;
-  const limit = 366 * 24 * 60;
-  for (let i = 0; i < limit; i++) {
+  for (let i = 0; i < limitMinutes; i++) {
     const candidate = new Date(start + i * MINUTE_MS);
     if (matchesCron(expr, candidate)) return candidate;
   }

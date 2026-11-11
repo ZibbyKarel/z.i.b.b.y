@@ -18,7 +18,8 @@ export enum AutomationRunsWidgetTestId {
   Time = "automation-runs-widget-time",
 }
 
-const HORIZON_MS = 24 * 60 * 60 * 1000;
+/** How far ahead "upcoming" looks — also bounds the minute-by-minute cron scan. */
+const HORIZON_MINUTES = 24 * 60;
 
 /**
  * Automation runs: the live runs an automation fired (same row design as the Runs widget), then
@@ -69,8 +70,8 @@ export function AutomationRunsWidget({
       (automations ?? [])
         .flatMap((a) => {
           if (!a.enabled || a.trigger.type !== "cron") return [];
-          const at = nextCronRun(a.trigger.expr, new Date(now))?.getTime();
-          if (at === undefined || at - now > HORIZON_MS) return [];
+          const at = nextCronRun(a.trigger.expr, new Date(now), HORIZON_MINUTES)?.getTime();
+          if (at === undefined) return [];
           return [{ key: `${widget.id}:next:${a.id}`, automation: a, expr: a.trigger.expr, at }];
         })
         .sort((x, y) => x.at - y.at),

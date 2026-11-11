@@ -180,6 +180,18 @@ describe("nextCronRun", () => {
   it("returns null for an unparseable expression", () => {
     expect(nextCronRun("nope", new Date())).toBeNull();
   });
+
+  it("stops at limitMinutes: an impossible expression with a 24 h limit returns null quickly", () => {
+    const t0 = performance.now();
+    expect(nextCronRun("0 0 30 2 *", new Date("2026-11-11T11:00:00Z"), 24 * 60)).toBeNull();
+    expect(performance.now() - t0).toBeLessThan(200);
+  });
+
+  it("returns null when the next fire lies beyond limitMinutes", () => {
+    const from = new Date("2026-11-11T11:00:00Z"); // 12:00 Prague
+    expect(nextCronRun("0 9 1 * *", from, 24 * 60)).toBeNull();
+    expect(nextCronRun("30 18 * * *", from, 24 * 60)).not.toBeNull();
+  });
 });
 
 describe("dayName", () => {
