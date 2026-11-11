@@ -51,6 +51,8 @@ export function useRunsQuery(): {
   isPending: boolean;
   isError: boolean;
   refetch: () => unknown;
+  /** When `runs` was fetched (ms epoch, 0 before the first fetch) — todo-16's freshness tie-break. */
+  dataUpdatedAt: number;
 } {
   const streamConnected = useRunEventsConnected();
   const query = apiClient.taskRuns.listTaskRuns.useQuery({
@@ -78,7 +80,13 @@ export function useRunsQuery(): {
     if (entered) void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
   }, [runs, qc]);
 
-  return { runs, isPending: query.isPending, isError: query.isError, refetch: query.refetch };
+  return {
+    runs,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: query.refetch,
+    dataUpdatedAt: query.dataUpdatedAt,
+  };
 }
 
 /** Build the owner-id → glyph map from the skill/agent catalogs (for run cards). */

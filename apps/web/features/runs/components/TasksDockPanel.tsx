@@ -55,8 +55,13 @@ const DEFAULT_DONE_LIMIT = 20;
 
 /** The live (running or waiting) runs — the one source for both the list and the dock badge. */
 export function useLiveRuns(): RunView[] {
-  const { runs } = useRunsQuery();
-  return runs.filter((r) => LIVE_STATES.has(r.status));
+  return useLiveRunsSnapshot().runs;
+}
+
+/** {@link useLiveRuns} plus when the feed was fetched — for merging with another feed (todo-16). */
+export function useLiveRunsSnapshot(): { runs: RunView[]; updatedAt: number } {
+  const { runs, dataUpdatedAt } = useRunsQuery();
+  return { runs: runs.filter((r) => LIVE_STATES.has(r.status)), updatedAt: dataUpdatedAt };
 }
 
 /** Where a card leads: the task detail when the run came from a task, else the run detail. */

@@ -16,9 +16,12 @@ import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
 import { compactAgo, formatDuration } from "../../../utils/time";
-import { useInvalidateOnTerminalRun, useLiveRuns } from "../../runs/components/TasksDockPanel";
+import {
+  useInvalidateOnTerminalRun,
+  useLiveRunsSnapshot,
+} from "../../runs/components/TasksDockPanel";
 import { useRecentArchivedRunsQuery } from "../../runs/queries/useRecentArchivedRunsQuery";
-import { WAITING_STATES } from "../../runs/run";
+import { type RunView, WAITING_STATES } from "../../runs/run";
 import { useWorkflowsQuery } from "../../workflows";
 import { runRows } from "../state/rows";
 import type { BridgeWidgetProps } from "./registry";
@@ -51,6 +54,25 @@ export enum RunsWidgetTestId {
 const FINISHED_LIMIT = 10;
 
 /**
+ * todo-16 — the live feed and the archive are separate queries fetched at different moments,
+ * so a run that just changed state can sit in both (e.g. live "waiting for you", archive "done").
+ * Show it once, from the fresher snapshot (`dataUpdatedAt`); the archive wins a tie. A gate stamp
+ * written after `done` makes the run live again — a fresher live feed keeps it over a stale archive.
+ */
+export function dedupeRuns(
+  live: RunView[],
+  liveAt: number,
+  archived: RunView[],
+  archivedAt: number,
+): { live: RunView[]; archived: RunView[] } {
+  const inArchive = new Set(archived.map((r) => r.runId));
+  const inLive = new Set(live.map((r) => r.runId));
+  return archivedAt >= liveAt
+    ? { live: live.filter((r) => !inArchive.has(r.runId)), archived }
+    : { live, archived: archived.filter((r) => !inLive.has(r.runId)) };
+}
+
+/**
  * Runs (running & finished): the active live runs (everything not waiting - those are the queue
  * widget's) as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list, with the percent done and the elapsed time under it; a state icon otherwise), then the last 10 finished runs with a
  * state icon in their outcome colour and their age. A group header is omitted when empty. Every row
@@ -66,9 +88,20 @@ export function RunsWidget({
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.runs");
   const now = useNow(60_000);
-  const live = useLiveRuns();
+  const liveSnapshot = useLiveRunsSnapshot();
   useInvalidateOnTerminalRun(FINISHED_LIMIT);
-  const { data: archived, isPending } = useRecentArchivedRunsQuery(FINISHED_LIMIT);
+  const archivedQuery = useRecentArchivedRunsQuery(FINISHED_LIMIT);
+  const { isPending } = archivedQuery;
+  const { live, archived } = useMemo(
+    () =>
+      dedupeRuns(
+        liveSnapshot.runs,
+        liveSnapshot.updatedAt,
+        archivedQuery.data ?? [],
+        archivedQuery.dataUpdatedAt,
+      ),
+    [liveSnapshot.runs, liveSnapshot.updatedAt, archivedQuery.data, archivedQuery.dataUpdatedAt],
+  );
   const [closed, setClosed] = useState<Record<string, boolean>>({});
 
   const { data: workflows } = useWorkflowsQuery();
@@ -92,7 +125,7 @@ export function RunsWidget({
     [widget.id, live, phasesByWorkflow],
   );
   const finished = useMemo(() => {
-    const runs = (archived ?? []).slice(0, FINISHED_LIMIT);
+    const runs = archived.slice(0, FINISHED_LIMIT);
     const rows = runRows(widget.id, runs);
     return rows.map((r, i) => {
       const run = runs[i];

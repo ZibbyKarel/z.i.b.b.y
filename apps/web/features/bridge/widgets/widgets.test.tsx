@@ -57,6 +57,7 @@ vi.mock("../../tasks/queries", () => ({
 }));
 vi.mock("../../runs/components/TasksDockPanel", () => ({
   useLiveRuns: () => d.runs,
+  useLiveRunsSnapshot: () => ({ runs: d.runs, updatedAt: 0 }),
   useInvalidateOnTerminalRun: () => undefined,
 }));
 vi.mock("../../workflows", () => ({ useWorkflowsQuery: () => ({ data: d.workflows }) }));

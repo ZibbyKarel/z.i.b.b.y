@@ -68,8 +68,11 @@ so the web refetches both run feeds (live + archive, `["taskRuns"]`) off every `
 "waiting for you" into done).
 
 There is no replay: events emitted while a client's stream was down are lost. When
-the stream reopens after an error, the web's `RunEventsProvider` invalidates every
-query (the same as a page reload); the first open does not.
+the stream reopens after an error, the web's `RunEventsProvider` refetches the
+event-driven state — run feeds, approvals, scheduled tasks, task detail, activity and
+briefing — but not the PR inbox (GitHub, own 15-min poll); the first open does not.
+The Bridge Runs widget also shows a run that sits in both the live feed and the archive
+only once, from the fresher snapshot (archive wins a tie).
 
 ## Endpoints
 

@@ -89,9 +89,9 @@ export function useApiUnreachable(): boolean {
  * run transition into a targeted query invalidation — replacing the per-view
  * polling of the running list, the all-runs history (both 2s) and the workflow
  * aggregate (1s). The channel is just a signal ("this family changed, refetch"),
- * keeping the list endpoints the single source of truth. EventSource handles
- * reconnection (resuming via `Last-Event-ID`); we only track connectivity so the
- * queries know whether to self-poll as a fallback. Mounted once, high in the tree.
+ * keeping the list endpoints the single source of truth. EventSource reconnects on
+ * its own (nothing is replayed); we track connectivity so the queries know whether
+ * to self-poll as a fallback. Mounted once, high in the tree.
  */
 export function RunEventsProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
@@ -102,10 +102,20 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
     const source = new EventSource(`${API_URL}/api/events`);
 
     // todo-17: events emitted while the stream was down are lost (no replay), and polling
-    // stops again the moment it reopens — so a reopen refetches everything, like a reload.
+    // stops again the moment it reopens — so a reopen refetches the event-driven state. Not
+    // the PR inbox: it hits GitHub and keeps its own 15-min poll.
     let dropped = false;
     source.onopen = () => {
-      if (dropped) void qc.invalidateQueries();
+      if (dropped)
+        for (const queryKey of [
+          taskRunsRootKey,
+          getApprovalsQueryKey(),
+          getScheduledTasksQueryKey(),
+          getTaskDetailRootKey(),
+          getActivityQueryKey(),
+          getBriefingQueryKey(),
+        ])
+          void qc.invalidateQueries({ queryKey });
       dropped = false;
       setStatus("open");
     };

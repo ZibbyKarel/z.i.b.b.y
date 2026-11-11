@@ -10,6 +10,8 @@ import { getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQuery";
 import { getTaskDetailRootKey } from "../tasks/queries/useTaskQuery";
+import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
+import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
 import { taskRunsRootKey } from "./queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -169,12 +171,23 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxRootKey() });
   });
 
-  it("a stream reopening after a drop refetches everything; the first open does not", () => {
+  it("a stream reopening after a drop refetches the run/approval/task state; the first open does not", () => {
     act(() => mock.last().emitOpen());
     expect(invalidate).not.toHaveBeenCalled();
     act(() => mock.last().emitError());
     act(() => mock.last().emitOpen());
-    expect(invalidate).toHaveBeenCalledWith();
+    for (const queryKey of [
+      taskRunsRootKey,
+      getApprovalsQueryKey(),
+      getScheduledTasksQueryKey(),
+      getTaskDetailRootKey(),
+      getActivityQueryKey(),
+      getBriefingQueryKey(),
+    ])
+      expect(invalidate).toHaveBeenCalledWith({ queryKey });
+    // Never a blanket refetch: the PR inbox hits GitHub and polls on its own (15 min).
+    expect(invalidate).not.toHaveBeenCalledWith();
+    expect(invalidate).not.toHaveBeenCalledWith({ queryKey: getInboxPrsQueryKey() });
   });
 
   // Phase 89: the plain subscribe API the department web's particle layer rides.
