@@ -16,3 +16,9 @@
 14. [ ] stránky Práce -> Úlohy a Aktivita -> Běhy jsou prakticky totožné. Navrhuji stránku Úlohy zrušit a na stránce aktivita přidat do tabulky více informací, udělat ji sortofací a filtrovací. Hlavně filtry musejí být perzistentní v url aby sem mohl stránky pinnout a tabulka držela vyfiltrovaná a sortovaná ikdyž jdu do detailu běhu a zpět
 15. [ ] v apps desktop když se buildne tak nefunguje cmd+f hledání na stránce
 16. [ ] Při pustění ve zbuilděné desktop appce rebase větve pr-rebase_1794307789426 tak když dojel, viděl jsem běh ve widgetu běhy na dvou místech - jako že dojel úspěšně a podruhý jako že čeká na mě ke schválení
+17. [ ] nerefreshují se informace ve widgetu běhy. Občas když někde potvrdím schválení nebo zamítnu, nebo běh stopnu nebo zruším tak jsou běhy stále nerefreshnuté. Musím refreshnout stránku abych viděl aktuální informace
+18. [ ] Widget Přehled - každý číslo, které widget ukazuje musí být klikatelné a přesměrovat mě na stránku s více informacemi takže třeba "5 čeká na tebe" povede na stránku Aktivita kde se vyfiltruje patřičný stav. To samé "Teď běží". Pro "Otevřená PR" asi budem potřebovat novou stránku kde se zobrazí moje PR v tabulce s vnořenými řádky pro stacked PRs s informacemi, které jsme schopní o PRs získat. Místo hodnoty "dnešní výdaje" budeme agregovat výdaje za poslední měsíc a klik na tuto hodnotu povede na stránku Pravidla -> Rozpočty
+19. [ ] Stránka Pravidla -> Schválení mi přijde že by měla být spíše jako Aktivita -> Schválení
+20. [ ] Tlačíko "Zpracovat do úkolu" na detailu issue by nemělo být vidět vždy, kdy k Issue není žádný běh
+21. [ ] Widget Issues - smažeme border okolo karty issue pokud je ve stavu "čeká na tebe" a necháme jen stavový border-left
+22. [ ] Musíme upravit workflows, která se pouští pro code-review tak aby se kontrolovali jen soubory, které patří týmum, ve kterých jsem členem.
