@@ -54,6 +54,8 @@ export function attachFindBar(win: BrowserWindow): (command: FindCommand) => voi
   let view: WebContentsView | undefined;
   let open = false;
   let last = "";
+  // Resolves once the bar's markup (and its preload bridge) is live — a step sent before is lost.
+  let loaded: Promise<unknown> = Promise.resolve();
 
   const place = () => {
     const { width } = win.getContentBounds();
@@ -81,6 +83,13 @@ export function attachFindBar(win: BrowserWindow): (command: FindCommand) => voi
   };
   ipcMain.on("zibby:find", onFind);
   ipcMain.on("zibby:find-close", onClose);
+  // Esc closes the bar from the page too, not only from its own field.
+  page.on("before-input-event", (event, input) => {
+    if (open && input.type === "keyDown" && input.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  });
   page.on("found-in-page", (_e, result) => {
     view?.webContents.send("zibby:find-result", result.activeMatchOrdinal, result.matches);
   });
@@ -101,14 +110,19 @@ export function attachFindBar(win: BrowserWindow): (command: FindCommand) => voi
         },
       });
       view.webContents.on("will-navigate", (e) => e.preventDefault());
-      void view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(HTML)}`);
+      loaded = view.webContents
+        .loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(HTML)}`)
+        .catch(() => undefined);
     }
+    const shown = open;
     if (!open) {
       open = true;
       win.contentView.addChildView(view);
       place();
     }
-    if (command === "open") view.webContents.focus();
-    else view.webContents.send("zibby:find-step", command === "next");
+    const bar = view.webContents;
+    // A freshly shown bar takes focus whatever opened it, so the operator can type right away.
+    if (command === "open" || !shown) bar.focus();
+    if (command !== "open") void loaded.then(() => bar.send("zibby:find-step", command === "next"));
   };
 }
