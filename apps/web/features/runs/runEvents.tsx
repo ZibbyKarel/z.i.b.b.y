@@ -196,8 +196,13 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         // pending queue off it so the gate surfaces without waiting for a poll.
         if (parsed.kind?.startsWith("approval-")) {
           void qc.invalidateQueries({ queryKey: getApprovalsQueryKey() });
-          // A finished run reads awaiting-approval only once its task's approval exists,
-          // which is after the run's own `done` event — refetch the run feed + tasks now.
+        }
+        // A finished run reads awaiting-approval only once its task's approval exists,
+        // which is after the run's own `done` event — refetch the run feed + tasks now.
+        // todo-16: any task transition too (outcome, dispatch, hold…) — a run's view status is
+        // derived from its task, and the final `task-outcome` of a gated rebase is the event
+        // that turns it from "waiting for you" into done in BOTH feeds (live + archive).
+        if (parsed.kind?.startsWith("approval-") || parsed.kind?.startsWith("task-")) {
           void qc.invalidateQueries({ queryKey: taskRunsRootKey });
           void qc.invalidateQueries({ queryKey: getScheduledTasksQueryKey() });
           void qc.invalidateQueries({ queryKey: getTaskDetailRootKey() });

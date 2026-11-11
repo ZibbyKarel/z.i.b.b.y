@@ -92,6 +92,21 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getInboxItemsQueryKey() });
   });
 
+  // todo-16: a gated run's view status is derived from its task (gate stamp, outcome). The
+  // final `task-outcome` (rebase pushed) must refetch BOTH run feeds, or the live feed keeps
+  // "waiting for you" while the archive already lists the run as done.
+  it.each(["task-outcome", "task-dispatched", "task-held"])(
+    "a %s activity event refreshes the run feeds and tasks",
+    (kind) => {
+      act(() => {
+        mock.last().emit({ scope: "activity", kind, at: "2026-11-10" });
+      });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: taskRunsRootKey });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getScheduledTasksQueryKey() });
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: getTaskDetailRootKey() });
+    },
+  );
+
   it("other activity leaves the inbox alone", () => {
     act(() => {
       mock.last().emit({ scope: "activity", kind: "task-created", at: "2026-10-16" });

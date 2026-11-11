@@ -62,6 +62,11 @@ path re-read current state. Scopes the client doesn't yet know about are ignored
 rather than erroring, which is what let `channel-items` and `activity` be added
 without a client-side migration.
 
+A run's view status is partly derived from its task (a PR gate stamp, the task outcome),
+so the web refetches both run feeds (live + archive, `["taskRuns"]`) off every `approval-*`
+**and `task-*`** activity kind (todo-16: a rebase's final `task-outcome` is what turns it from
+"waiting for you" into done).
+
 There is no replay: events emitted while a client's stream was down are lost. When
 the stream reopens after an error, the web's `RunEventsProvider` invalidates every
 query (the same as a page reload); the first open does not.
