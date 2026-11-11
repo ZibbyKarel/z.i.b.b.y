@@ -3,6 +3,7 @@ import {
   CopyableTextTestId,
   MarkdownTestId,
   NeedsYouCardTestId,
+  SheetPartsTestId,
   StatCellTestId,
 } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -190,6 +191,21 @@ describe("IssueSheet", () => {
     hooks.items = [item("todo")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
+  });
+
+  const blockLabels = () =>
+    screen.getAllByTestId(SheetPartsTestId.BlockLabel).map((el) => el.textContent);
+
+  it("puts runs and details right below the header, above the description", () => {
+    hooks.items = [withRuns()];
+    const { unmount } = renderWithProviders(
+      <IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />,
+    );
+    expect(blockLabels()).toEqual(["Běhy", "Detaily", "Popis"]);
+    unmount();
+    hooks.items = [item("todo")];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(blockLabels()).toEqual(["Detaily", "Popis"]);
   });
 });
 

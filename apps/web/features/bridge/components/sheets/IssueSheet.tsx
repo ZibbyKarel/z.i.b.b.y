@@ -46,7 +46,7 @@ const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
   done: "done",
 };
 
-/** Issue detail: description, details table; the Issues screen's primary action sits top-right. */
+/** Issue detail: runs and details table right under the header, then the description; the Issues screen's primary action sits top-right. */
 export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
@@ -164,13 +164,6 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
         />
       ) : null}
       <SheetSection>
-        <SheetBlock label={t("bridge.sheet.description")}>
-          {item.description?.trim() ? (
-            <Markdown escapeHtml source={item.description} />
-          ) : (
-            <SheetText lines={[t("bridge.sheet.issue.noDescription")]} />
-          )}
-        </SheetBlock>
         {runRows.length > 0 ? (
           <SheetBlock label={t("runs.entity.title")}>
             <EntityRunList
@@ -185,6 +178,13 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
         ) : null}
         <SheetBlock label={t("bridge.sheet.details")}>
           <DetailTable rows={rows} />
+        </SheetBlock>
+        <SheetBlock label={t("bridge.sheet.description")}>
+          {item.description?.trim() ? (
+            <Markdown escapeHtml source={item.description} />
+          ) : (
+            <SheetText lines={[t("bridge.sheet.issue.noDescription")]} />
+          )}
         </SheetBlock>
       </SheetSection>
     </AnchoredSheet>
