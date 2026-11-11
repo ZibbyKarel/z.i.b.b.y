@@ -156,7 +156,9 @@ export function Screen() {
                   <Icon name="bolt" size="sm" tone="accent" /> {t("eventSection")}
                 </Stack>
               </SectionLabel>
-              <Stack gap="150">{eventAutomations.map(renderCard)}</Stack>
+              <Grid cols={1} gap="150" lg={3} sm={2}>
+                {eventAutomations.map(renderCard)}
+              </Grid>
             </Container>
           )}
           {systemAutomations.length > 0 && (
@@ -170,7 +172,7 @@ export function Screen() {
                 <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
                   {t("systemHint")}
                 </Typography>
-                <Grid gap="150" lg={2}>
+                <Grid cols={1} gap="150" lg={3} sm={2}>
                   {systemAutomations.map((automation) => (
                     <SystemAutomationRow
                       automation={automation}

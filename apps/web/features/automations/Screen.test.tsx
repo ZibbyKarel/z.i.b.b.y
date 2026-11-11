@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Automation } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { fireEvent, renderWithProviders as render, screen } from "../../test/render";
+import { GridTestId } from "@zibby/design-system";
 import { Screen } from "./Screen";
 import { AutomationCardTestId } from "./components/AutomationCard";
 import { AutomationFormTestId } from "./components/AutomationFormFields";
@@ -218,5 +219,24 @@ describe("Automations Screen — user + system automations in one list", () => {
     render(<Screen />);
     expect(screen.queryByText("Zatím žádné automatizace")).not.toBeInTheDocument();
     expect(screen.getByTestId(SystemAutomationRowTestId.Root)).toBeInTheDocument();
+  });
+  it("lays every section out in up to three responsive columns (todo-4)", () => {
+    const eventAutomation: Automation = {
+      ...automation,
+      id: "on-ci-red",
+      name: "CI red",
+      trigger: { type: "event", events: ["pr.opened"] },
+    };
+    query.automations = [automation, eventAutomation, systemAutomation];
+    render(<Screen />);
+    const items = [
+      ...screen.getAllByTestId(AutomationCardTestId.Root),
+      screen.getByTestId(SystemAutomationRowTestId.Root),
+    ];
+    expect(items).toHaveLength(3);
+    for (const item of items) {
+      const grid = item.closest(`[data-testid="${GridTestId.Root}"]`);
+      expect(grid).toHaveClass("grid-cols-1", "sm:grid-cols-2", "lg:grid-cols-3");
+    }
   });
 });
