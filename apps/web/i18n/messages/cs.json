@@ -3158,6 +3158,19 @@
         "and": " a ",
         "below": "Vše pod ním je schválené.",
         "bottom": "Spodek stacku. Cílí na {base}."
+      },
+      "reviewers": {
+        "title": "Revieweři",
+        "codeOwner": "Code-owner měněných souborů",
+        "requested": "Review vyžádáno",
+        "state": {
+          "approved": "Schváleno",
+          "changesRequested": "Požaduje změny",
+          "commented": "Zrevidováno",
+          "pending": "Čeká na review"
+        },
+        "commented": "Přidal komentáře",
+        "reRequest": "Znovu vyžádat review od {login}"
       }
     },
     "detail": {

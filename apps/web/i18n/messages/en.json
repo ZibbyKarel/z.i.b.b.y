@@ -3158,6 +3158,19 @@
         "and": " and ",
         "below": "Everything below is approved.",
         "bottom": "Bottom of the stack. Targets {base}."
+      },
+      "reviewers": {
+        "title": "Reviewers",
+        "codeOwner": "Code owner of changed files",
+        "requested": "Review requested",
+        "state": {
+          "approved": "Approved",
+          "changesRequested": "Changes requested",
+          "commented": "Reviewed",
+          "pending": "Review pending"
+        },
+        "commented": "Left comments",
+        "reRequest": "Re-request review from {login}"
       }
     },
     "detail": {

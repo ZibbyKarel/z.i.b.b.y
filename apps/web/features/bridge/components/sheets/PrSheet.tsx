@@ -3,10 +3,12 @@
 import type { InboxPr } from "@zibby/contracts";
 import {
   AnchoredSheet,
+  Container,
   Icon,
   type IconName,
   type IconTone,
   Pressable,
+  Row,
   SheetBlock,
   SheetSection,
   type SheetTone,
@@ -28,10 +30,12 @@ import { chainKey, itemKey, linkedPrOf, prBaseLabel, prChildren } from "../../..
 import { issueHref } from "../../../inbox/components/IssueRow";
 import { EntityRunList, prRunTone } from "../../../runs/components/EntityRunList";
 import { prChatAbout } from "../../../inbox/prChatAbout";
+import { PrReviewers } from "../../../inbox/components/PrReviewers";
 import { PrThreads } from "../../../inbox/components/PrThreads";
 import {
   useInboxItemsQuery,
   useInboxPrDiffQuery,
+  useInboxPrReviewersQuery,
   useInboxPrThreadsQuery,
   useInboxPrsQuery,
 } from "../../../inbox/queries";
@@ -143,6 +147,8 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const { data: diff } = useInboxPrDiffQuery(pr?.projectId, pr?.number);
   const files = useMemo(() => diffFiles(diff?.diff ?? ""), [diff]);
   const { data: threads } = useInboxPrThreadsQuery(pr?.projectId, pr?.number);
+  const { data: reviewers } = useInboxPrReviewersQuery(pr?.projectId, pr?.number);
+  const hasReviewers = Boolean(reviewers && (reviewers.teams.length || reviewers.users.length));
 
   const base = pr ? prBaseLabel(pr, all) : "";
   const about = useMemo(
@@ -252,18 +258,26 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
           ))}
         </Stack>
       ) : null}
-      {runRows.length > 0 ? (
+      {runRows.length > 0 || hasReviewers ? (
         <SheetSection>
-          <SheetBlock label={t("runs.entity.title")}>
-            <EntityRunList
-              onOpen={(runId) =>
-                onOpen
-                  ? onOpen(selectionFor("run", runId))
-                  : router.push(`/activity/runs/${runId}` as Route)
-              }
-              rows={runRows}
-            />
-          </SheetBlock>
+          {/* Runs on the left, the Reviewers tree on the same row at the far right (todo-5). */}
+          <Row wrap align="start" gap="300" justify={runRows.length > 0 ? "between" : "end"}>
+            {runRows.length > 0 ? (
+              <Container grow minW0>
+                <SheetBlock label={t("runs.entity.title")}>
+                  <EntityRunList
+                    onOpen={(runId) =>
+                      onOpen
+                        ? onOpen(selectionFor("run", runId))
+                        : router.push(`/activity/runs/${runId}` as Route)
+                    }
+                    rows={runRows}
+                  />
+                </SheetBlock>
+              </Container>
+            ) : null}
+            {hasReviewers ? <PrReviewers number={pr.number} projectId={pr.projectId} /> : null}
+          </Row>
         </SheetSection>
       ) : null}
       {path.length > 1 ? (

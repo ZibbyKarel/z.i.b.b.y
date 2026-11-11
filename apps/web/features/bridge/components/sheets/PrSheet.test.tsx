@@ -1,4 +1,4 @@
-import type { InboxPr } from "@zibby/contracts";
+import type { InboxPr, InboxPrReviewers } from "@zibby/contracts";
 import {
   AnchoredSheetTestId,
   IconTestId,
@@ -11,11 +11,17 @@ import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton"
 import { ChatProvider, useChat } from "../../../chat/ChatContext";
 import { fireEvent, renderWithProviders, screen, within } from "../../../../test/render";
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
+import { PrReviewersTestId } from "../../../inbox/components/PrReviewers";
 import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
 import { PrSheet } from "./PrSheet";
 
 const { hooks } = vi.hoisted(() => ({
-  hooks: { prs: [] as InboxPr[], diff: "", items: [] as unknown[] },
+  hooks: {
+    prs: [] as InboxPr[],
+    diff: "",
+    items: [] as unknown[],
+    reviewers: undefined as InboxPrReviewers | undefined,
+  },
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
@@ -29,6 +35,7 @@ vi.mock("../../../inbox/mutations", () => ({
   useFixInboxPrCiMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useAddressInboxPrCommentsMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useSubmitInboxPrReviewMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useRequestInboxPrReviewMutation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 vi.mock("../../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -37,6 +44,7 @@ vi.mock("../../../inbox/queries", () => ({
   useInboxItemsQuery: () => ({ data: { items: hooks.items, epics: [] } }),
   useInboxPrsQuery: () => ({ data: { prs: hooks.prs, errors: [] } }),
   useInboxPrThreadsQuery: () => ({ data: [] }),
+  useInboxPrReviewersQuery: () => ({ data: hooks.reviewers }),
   useInboxPrDiffQuery: () => ({
     data: { diff: hooks.diff, truncated: false },
     isPending: false,
@@ -84,6 +92,7 @@ afterEach(() => {
   hooks.prs = [];
   hooks.diff = "";
   hooks.items = [];
+  hooks.reviewers = undefined;
 });
 
 describe("PrSheet action buttons", () => {
@@ -283,6 +292,29 @@ describe("PrSheet runs and issue link", () => {
 
   it("renders no approval card and no runs section without runs", () => {
     show(pr(31, {}));
+    expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
+  });
+
+  it("shows the reviewers tree next to the runs, and alone without runs", () => {
+    hooks.reviewers = {
+      teams: [],
+      users: [{ login: "ann", state: "approved", commented: false }],
+    };
+    const { unmount } = show(
+      pr(32, {
+        runs: [
+          { taskId: "t1", kind: "fix-ci", state: "failed", startedAt: "2026-01-01T00:00:00.000Z" },
+        ],
+      }),
+    );
+    const reviewers = screen.getByTestId(PrReviewersTestId.Root);
+    // Same row as the runs, as its last (right-most) child.
+    const row = reviewers.parentElement!;
+    expect(row).toContainElement(screen.getByTestId(EntityRunListTestId.Root));
+    expect(row.lastElementChild).toBe(reviewers);
+    unmount();
+    show(pr(33, {}));
+    expect(screen.getByTestId(PrReviewersTestId.Root)).toBeInTheDocument();
     expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
   });
 
