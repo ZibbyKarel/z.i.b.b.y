@@ -928,6 +928,7 @@ function enrichRunWithTask(
   return {
     ...run,
     ...(sourcePr ? { sourcePr } : {}),
+    ...(task.automationId ? { automationId: task.automationId } : {}),
     ...(gated && run.status === "done" ? { status: "awaiting-approval" as const } : {}),
     ...(continuing ? { status: "queued" as const } : {}),
     taskTitle: task.title || task.text,
@@ -1041,6 +1042,7 @@ function scheduledTaskToView(t: ScheduledTask): TaskRun | null {
     roadmapItemId: t.roadmapItemId,
     roadmapItemLabel: t.roadmapItemLabel,
     ...(sourcePr ? { sourcePr } : {}),
+    ...(t.automationId ? { automationId: t.automationId } : {}),
     heldReason: t.heldReason,
     approvalId: t.approvalId,
     deferredLimit: t.deferredReason === "limit",

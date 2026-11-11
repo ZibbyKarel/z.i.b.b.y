@@ -8,6 +8,10 @@ describe("BridgeWidgetSchema scope", () => {
     expect(BridgeWidgetSchema.safeParse({ ...base, type: "proposals" }).success).toBe(true);
   });
 
+  it("accepts an automationRuns widget (todo-11)", () => {
+    expect(BridgeWidgetSchema.safeParse({ ...base, type: "automationRuns" }).success).toBe(true);
+  });
+
   it("accepts a mentions widget", () => {
     expect(BridgeWidgetSchema.safeParse({ ...base, type: "mentions" }).success).toBe(true);
   });

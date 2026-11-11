@@ -81,6 +81,9 @@ Body: {
                                # for every `source: "automation"` task: the run
                                # takes no run slot, so it bypasses the global and per-project
                                # concurrency caps. Budget hold, usage limits and gates still apply.
+  automationId?: string        # Stamped by the automation scheduler: the automation firing
+                               # the task. Persisted on the task and enriched onto its
+                               # `TaskRun.automationId` (drives the Bridge "Automation runs" widget).
 }
 ```
 

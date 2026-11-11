@@ -175,7 +175,8 @@ when the config changes.
      input), `source: "automation"`, synchronous. Automation runs never count toward the run-slot
      limit (`createTask` forces `immediate: true` for `source: "automation"`), so they never
      queue behind the cap; budget, usage limits and gates still apply (ref = the run ref, or
-     the task id when held/deferred)
+     the task id when held/deferred). The task carries `automationId` (→ `TaskRun.automationId`), so
+     the Bridge "Automation runs" widget can show the run under its automation
    - `agent` → the same, with target `{ kind: "agent", id }`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`

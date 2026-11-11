@@ -202,7 +202,12 @@ describe("SchedulerService — dispatch (agent / workflow targets ride the task 
 
     const explicit = { kind: "workflow", id: "release", name: "release" };
     expect(createTask).toHaveBeenCalledWith(
-      { text: "focus on regressions", target: explicit, source: "automation" },
+      {
+        text: "focus on regressions",
+        target: explicit,
+        source: "automation",
+        automationId: "nightly-workflow",
+      },
       expect.any(Number),
       undefined,
       explicit,
@@ -244,7 +249,12 @@ describe("SchedulerService — dispatch (agent / workflow targets ride the task 
 
     const explicit = { kind: "agent", id: "writer", name: "writer" };
     expect(createTask).toHaveBeenCalledWith(
-      { text: "tidy the docs", target: explicit, source: "automation" },
+      {
+        text: "tidy the docs",
+        target: explicit,
+        source: "automation",
+        automationId: "nightly-agent",
+      },
       expect.any(Number),
       undefined,
       explicit,
@@ -292,6 +302,7 @@ describe("SchedulerService — dispatch (Phase 116b: task target)", () => {
         output: undefined,
         toolGrants: undefined,
         source: "automation",
+        automationId: "prompt-automation",
       },
       expect.any(Number),
       undefined,

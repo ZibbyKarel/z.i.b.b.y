@@ -3446,6 +3446,18 @@
           "workflow": "Workflow",
           "agent": "Agent"
         }
+      },
+      "automationRuns": {
+        "group": {
+          "running": "Running",
+          "upcoming": "Next 24 h"
+        },
+        "runNow": "Run now",
+        "schedule": "Schedule",
+        "prompt": "Prompt",
+        "lastFired": "Last run",
+        "never": "Never",
+        "disabled": "Disabled"
       }
     },
     "you": "{n} you",
@@ -3497,6 +3509,10 @@
       "mentions": {
         "label": "Mentions",
         "desc": "Jira, GitHub, Slack and email items addressed to you"
+      },
+      "automationRuns": {
+        "label": "Automation runs",
+        "desc": "Automations running now and the ones due in the next 24 hours."
       }
     },
     "sheet": {
@@ -3506,7 +3522,8 @@
         "task": "Task",
         "pr": "Pull request",
         "run": "Run",
-        "note": "Note"
+        "note": "Note",
+        "automation": "Automation"
       },
       "needsYou": "Needs you · {kind}",
       "waiting": "Waiting {wait}",

@@ -3446,6 +3446,18 @@
           "workflow": "Workflow",
           "agent": "Agent"
         }
+      },
+      "automationRuns": {
+        "group": {
+          "running": "Běží",
+          "upcoming": "Příštích 24 h"
+        },
+        "runNow": "Spustit hned",
+        "schedule": "Plán",
+        "prompt": "Zadání",
+        "lastFired": "Poslední běh",
+        "never": "Nikdy",
+        "disabled": "Vypnuto"
       }
     },
     "you": "{n} ty",
@@ -3497,6 +3509,10 @@
       "mentions": {
         "label": "Zmínky",
         "desc": "Jira, GitHub, Slack a e-maily, které se týkají tebe"
+      },
+      "automationRuns": {
+        "label": "Běhy automatizací",
+        "desc": "Automatizace, které právě běží, a ty, které se spustí v příštích 24 hodinách."
       }
     },
     "sheet": {
@@ -3506,7 +3522,8 @@
         "task": "Úkol",
         "pr": "Pull request",
         "run": "Běh",
-        "note": "Poznámka"
+        "note": "Poznámka",
+        "automation": "Automatizace"
       },
       "needsYou": "Čeká na tebe · {kind}",
       "waiting": "Čeká {wait}",

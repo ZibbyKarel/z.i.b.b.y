@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { type SheetAnchor, anchorChanged, measureSheet } from "../state/measure";
 import { findRow, useRowKeyNav } from "../state/useRowKeyNav";
 import type { BridgeSelection } from "../widgets/registry";
+import { AutomationSheet } from "./sheets/AutomationSheet";
 import { IssueSheet } from "./sheets/IssueSheet";
 import { NoteSheet } from "./sheets/NoteSheet";
 import { PrSheet } from "./sheets/PrSheet";
@@ -90,6 +91,7 @@ export function DetailSheet({ selection, onClose, onSideChange, onOpen }: Detail
       {common && kind === "run" ? <RunSheet {...common} /> : null}
       {common && kind === "quickAction" ? <QuickActionSheet {...common} /> : null}
       {common && kind === "note" ? <NoteSheet {...common} /> : null}
+      {common && kind === "automation" ? <AutomationSheet {...common} /> : null}
     </>
   );
 }

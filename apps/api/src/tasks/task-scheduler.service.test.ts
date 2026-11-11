@@ -2905,10 +2905,17 @@ describe("run slots (global + per-project cap)", () => {
   it("an automation-sourced task does not count toward the run-slot cap (todo-11)", async () => {
     makeService(1);
     await dispatched("do A"); // the global cap of 1 is now full
-    const r = await service.createTask({ text: "cron", title: "cron", source: "automation" });
+    const r = await service.createTask({
+      text: "cron",
+      title: "cron",
+      source: "automation",
+      automationId: "nightly",
+    });
     expect(r.outcome).toBe("dispatched");
     expect(slots.inUse()).toBe(1);
-    expect((await storage.get(r.task.id)).immediate).toBe(true);
+    const stored = await storage.get(r.task.id);
+    expect(stored.immediate).toBe(true);
+    expect(stored.automationId).toBe("nightly");
   });
 
   it("an immediate task also bypasses a full per-project cap", async () => {

@@ -163,6 +163,11 @@ export const TaskRunSchema = z.object({
    * to ZIBBY's in-app PR page. Absent on every other run. Read-model only.
    */
   sourcePr: TaskRunSourcePrSchema.optional(),
+  /**
+   * Enriched from the task record: the automation that fired this run. Drives the
+   * Bridge "Automation runs" widget. Read-model only.
+   */
+  automationId: z.string().optional(),
   /** Held tasks: why the budget guard parked it. */
   heldReason: z.string().optional(),
   /** Held tasks: the spend-past-cap approval gating the override. */

@@ -33,10 +33,11 @@ function queuedFields(extra: QueuedExtra): Partial<ScheduledTask> {
 /** Fields carried verbatim from the create input onto every persisted shape. */
 function provenanceFields(
   input: CreateTaskInputWithAttachments,
-): Pick<ScheduledTask, "source" | "immediate"> {
+): Pick<ScheduledTask, "source" | "immediate" | "automationId"> {
   return {
     ...(input.source ? { source: input.source } : {}),
     ...(input.immediate ? { immediate: true as const } : {}),
+    ...(input.automationId ? { automationId: input.automationId } : {}),
   };
 }
 

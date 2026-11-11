@@ -520,6 +520,15 @@ describe("TaskRunsService", () => {
       expect(run?.sourcePr).toEqual({ kind: "rebase", ...pr });
     });
 
+    it("joins the firing automation's id onto its run (todo-11)", async () => {
+      const { service, scheduled } = build();
+      scheduled.list.mockResolvedValue([
+        { ...scheduledS, id: "task1", status: "dispatched", automationId: "nightly" },
+      ]);
+      const run = (await service.listTaskRuns()).find((r) => r.runId === "researcher_1");
+      expect(run?.automationId).toBe("nightly");
+    });
+
     it("leaves sourcePr unset when the task has no PR stamp", async () => {
       const { service, scheduled } = build();
       scheduled.list.mockResolvedValue([{ ...scheduledS, id: "task1", status: "dispatched" }]);

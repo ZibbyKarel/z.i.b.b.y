@@ -2,6 +2,7 @@ import type { WidgetFilters } from "@zibby/contracts";
 import type { IconName } from "@zibby/design-system";
 import type { ReactNode } from "react";
 import type { BridgeWidget, WidgetType } from "../grid/layout";
+import { AutomationRunsWidget } from "./AutomationRunsWidget";
 import { BriefingWidget } from "./BriefingWidget";
 import { BudgetsWidget } from "./BudgetsWidget";
 import { IssuesFilterControls, IssuesWidget } from "./IssuesWidget";
@@ -19,7 +20,7 @@ import { WidgetSortSettings } from "./widgetFilters";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
 export interface BridgeSelection {
-  kind: "issue" | "task" | "pr" | "run" | "quickAction" | "note";
+  kind: "issue" | "task" | "pr" | "run" | "quickAction" | "note" | "automation";
   id: string;
   /** Id of the widget the row lives in (J/K navigates within it). */
   widgetId: string;
@@ -142,6 +143,12 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.runs.desc",
     icon: "play",
     Component: RunsWidget,
+  },
+  automationRuns: {
+    labelKey: "bridge.widget.automationRuns.label",
+    descKey: "bridge.widget.automationRuns.desc",
+    icon: "clock",
+    Component: AutomationRunsWidget,
   },
   pins: {
     labelKey: "bridge.widget.pins.label",

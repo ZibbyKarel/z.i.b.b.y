@@ -244,7 +244,7 @@ export function RunsWidget({
 }
 
 /** How long a running run has been going ("3m 12s"), ticking every second in its own leaf. */
-function RunElapsed({ startedAt }: { startedAt: string }) {
+export function RunElapsed({ startedAt }: { startedAt: string }) {
   const now = useNow(1_000);
   const start = Date.parse(startedAt);
   return Number.isNaN(start) ? "—" : formatDuration(now - start);
@@ -260,7 +260,7 @@ function RunStateIcon({ tone, runKey }: { tone: StateTone; runKey: string }) {
   );
 }
 
-function RunTitle({ title, step }: { title: string; step: string }) {
+export function RunTitle({ title, step }: { title: string; step: string }) {
   return (
     <BoardLine direction="col" gap="3">
       <BoardText kind="body">{title}</BoardText>
