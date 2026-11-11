@@ -278,7 +278,7 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
                 {it.hidden ? t("row.unhide") : t("row.hide")}
               </Button>
             )}
-            {status === "new" && (
+            {status === "new" && it.runs.length === 0 && (
               <Button
                 data-testid={InboxItemScreenTestId.Process}
                 onClick={() => router.push(newTaskFromIssueHref(it) as Route)}

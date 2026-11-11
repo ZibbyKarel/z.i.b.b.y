@@ -180,4 +180,12 @@ describe("InboxItemScreen process", () => {
     expect(push).toHaveBeenCalledWith("/work/tasks/new?issue=api%2Fi1");
     expect(process).not.toHaveBeenCalled();
   });
+
+  it("hides process once the issue has a run, even when it is back to todo (todo-20)", () => {
+    setData([
+      item({ runs: [{ taskId: "t1", startedAt: "2026-01-01T00:00:00.000Z", outcome: "failed" }] }),
+    ]);
+    renderWithProviders(<InboxItemScreen itemId="i1" projectId="api" />);
+    expect(screen.queryByTestId(InboxItemScreenTestId.Process)).toBeNull();
+  });
 });

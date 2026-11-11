@@ -129,6 +129,17 @@ describe("IssueSheet", () => {
     expect(screen.getByText("Zdroj nemá žádný popis.")).toBeInTheDocument();
   });
 
+  it("has no process action once the issue has a run, even back in todo (todo-20)", () => {
+    hooks.items = [
+      {
+        ...item("todo"),
+        runs: [{ taskId: "t1", startedAt: "2026-01-01T00:00:00.000Z", outcome: "failed" }],
+      },
+    ];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByText("Zpracovat do úkolu")).toBeNull();
+  });
+
   it("has no process action once the item is running", () => {
     hooks.items = [item("running")];
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);

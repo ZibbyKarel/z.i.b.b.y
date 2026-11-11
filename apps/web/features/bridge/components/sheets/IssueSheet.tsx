@@ -108,7 +108,8 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
 
   const href = issueHref(item);
   const primary =
-    status === "new" ? (
+    // Processing is offered only before the first run; after that the runs list carries the issue.
+    status === "new" && item.runs.length === 0 ? (
       <SheetAction
         intent="primary"
         onClick={() => router.push(newTaskFromIssueHref(item) as Route)}
