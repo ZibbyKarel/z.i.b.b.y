@@ -172,8 +172,10 @@ when the config changes.
 3. When due, dispatches the target:
    - `workflow` → `TaskSchedulerService.createTask(...)` with explicit target
      `{ kind: "workflow", id }`, the prompt as the task text (the workflow's first-phase
-     input), `source: "automation"`, synchronous — so it takes a run slot like any task
-     and queues when the limit is full (ref = the run ref, or the task id when queued)
+     input), `source: "automation"`, synchronous. Automation runs never count toward the run-slot
+     limit (`createTask` forces `immediate: true` for `source: "automation"`), so they never
+     queue behind the cap; budget, usage limits and gates still apply (ref = the run ref, or
+     the task id when held/deferred)
    - `agent` → the same, with target `{ kind: "agent", id }`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`

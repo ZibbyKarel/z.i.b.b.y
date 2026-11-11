@@ -77,7 +77,8 @@ Body: {
                                # the other legs stamp it server-side, see below); absent
                                # defaults to "operator", or "department" when the target
                                # is an explicit @department mention.
-  immediate?: boolean          # Operator-set only (quick action "Run immediately"): the run
+  immediate?: boolean          # Operator-set (quick action "Run immediately"), and forced on
+                               # for every `source: "automation"` task: the run
                                # takes no run slot, so it bypasses the global and per-project
                                # concurrency caps. Budget hold, usage limits and gates still apply.
 }

@@ -1006,7 +1006,8 @@ export const CreateTaskInputSchema = z.object({
   source: TaskSourceSchema.exclude(["chain", "handoff"]).optional(),
   /**
    * Run past the concurrency cap (no run slot). Budget, limits and gates still apply.
-   * Operator-set only. Server-side creators (triage, automations) never set it.
+   * Operator-set; also forced on server-side for every `source: "automation"` task
+   * (automation runs never count toward the run-slot cap). Triage never sets it.
    */
   immediate: z.boolean().optional(),
   /**
