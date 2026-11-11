@@ -121,6 +121,20 @@ describe("RunDetailActions", () => {
     expect(screen.queryByTestId(`${MenuButtonTestId.Item}-pause`)).not.toBeInTheDocument();
   });
 
+  it("the ··· menu offers HAND OVER on a finished/stuck run and calls onHandover", async () => {
+    const onHandover = vi.fn();
+    renderActions("parked", { status: "parked" }, { onHandover });
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await userEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-handover`));
+    expect(onHandover).toHaveBeenCalledOnce();
+  });
+
+  it("no HAND OVER while the run is still running", async () => {
+    renderActions("running", {}, { onHandover: vi.fn() });
+    await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    expect(screen.queryByTestId(`${MenuButtonTestId.Item}-handover`)).not.toBeInTheDocument();
+  });
+
   it("no delete while running", async () => {
     renderActions("running");
     await userEvent.click(screen.getByTestId(MenuButtonTestId.Trigger));

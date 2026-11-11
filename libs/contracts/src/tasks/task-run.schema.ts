@@ -12,7 +12,14 @@ import {
   StageRunSchema,
   WorkflowCheckpointSchema,
 } from "../workflows/workflow-run.schema";
-import { AttachmentSchema, ClassificationTraceSchema, PrOutputSchema } from "./task.schema";
+import {
+  AgentTaskTargetSchema,
+  AttachmentSchema,
+  ClassificationTraceSchema,
+  DepartmentTaskTargetSchema,
+  PrOutputSchema,
+  WorkflowTaskTargetSchema,
+} from "./task.schema";
 
 /**
  * The kind of processor running a task. `scheduled` is a task that has not been
@@ -244,6 +251,21 @@ export const ResumeTaskRunSchema = z.object({
   mode: z.enum(["continue", "fresh"]).optional(),
 });
 export type ResumeTaskRunInput = z.infer<typeof ResumeTaskRunSchema>;
+
+/**
+ * Body accepted by `handoverTaskRun` — hand a run's task to another unit (the operator's
+ * explicit pick, so the classifier is skipped). The new task carries the original goal,
+ * the original run's folder and its artifacts (PR, branch, output file) plus `note`.
+ */
+export const HandoverTaskRunSchema = z.object({
+  target: z.discriminatedUnion("kind", [
+    AgentTaskTargetSchema,
+    WorkflowTaskTargetSchema,
+    DepartmentTaskTargetSchema,
+  ]),
+  note: z.string().trim().max(4000).optional(),
+});
+export type HandoverTaskRunInput = z.infer<typeof HandoverTaskRunSchema>;
 
 /** Body accepted by `sendTaskRunMessage` — an operator message for the crew. */
 export const SendRunMessageSchema = z.object({

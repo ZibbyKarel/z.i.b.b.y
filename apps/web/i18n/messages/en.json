@@ -1362,7 +1362,8 @@
         "openAgent": "Open agent →",
         "openFolder": "Open task folder",
         "copyId": "Copy run ID",
-        "delete": "Delete run"
+        "delete": "Delete run",
+        "handover": "Hand over task"
       },
       "metric": {
         "progress": "Progress",
@@ -1491,7 +1492,21 @@
         "body": "There is no run with ID {id}. It may have been deleted.",
         "back": "← All runs"
       },
-      "outputPr": "Pull request {ref}"
+      "outputPr": "Pull request {ref}",
+      "handover": {
+        "title": "Hand over task",
+        "description": "The new target gets the original goal, a link to this run's folder and its artifacts (PR, branch, file).",
+        "target": "Target",
+        "targetPlaceholder": "Pick an agent, workflow or department",
+        "note": "Additional description",
+        "noteHint": "Optional — what the new target should do differently or finish.",
+        "submit": "Hand over",
+        "kind": {
+          "agent": "Agent",
+          "workflow": "Workflow",
+          "department": "Department"
+        }
+      }
     },
     "artifacts": {
       "title": "Artifacts",

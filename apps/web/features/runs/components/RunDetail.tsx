@@ -32,6 +32,7 @@ import {
 import { useRunLogStream, useStageRunLogStream } from "../useRunLogStream";
 import { useRunActions } from "../useRunActions";
 import { useRunArtifacts } from "../useRunArtifacts";
+import { HandoverRunDialog } from "./HandoverRunDialog";
 import { RunComposer } from "./RunComposer";
 import { RunDetailActions } from "./RunDetailActions";
 import { RunDetailHeader } from "./RunDetailHeader";
@@ -82,6 +83,7 @@ export function RunHeaderActions({ run }: { run: RunView }) {
   // Only the current stage's name is read (STOP confirm) — no ticking clock needed.
   const [now] = useState(Date.now);
   const current = buildStageRail(run, mode, definedPhaseIds, now).find((r) => r.current);
+  const [handoverOpen, setHandoverOpen] = useState(false);
 
   return (
     <Row wrap gap="75">
@@ -92,6 +94,7 @@ export function RunHeaderActions({ run }: { run: RunView }) {
         mode={mode}
         onContinueTask={() => openNewTask(undefined, undefined, continueContext)}
         onDelete={() => actions.remove(run.runId, run.kind)}
+        onHandover={() => setHandoverOpen(true)}
         onOpenFolder={
           run.kind === "workflow"
             ? () => openFolderMutation.mutate({ params: { runId: run.runId }, body: {} })
@@ -103,6 +106,17 @@ export function RunHeaderActions({ run }: { run: RunView }) {
         pending={actions.stopping || actions.pausing || actions.resuming || actions.deleting}
         run={run}
       />
+      {handoverOpen && (
+        <HandoverRunDialog
+          open
+          onClose={() => setHandoverOpen(false)}
+          onHandedOver={(id) => {
+            setHandoverOpen(false);
+            router.push(`/activity/runs/${id}`);
+          }}
+          run={run}
+        />
+      )}
     </Row>
   );
 }

@@ -5,6 +5,7 @@ import { GoalRunNotParkedError } from "../goals/goals.errors";
 import { RunNotRetriesParkedError } from "../workflows/workflow-runner.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotHandoverableError,
   TaskRunNotMessageableError,
   TaskRunNotPausableError,
   TaskRunNotResumableError,
@@ -150,6 +151,18 @@ export class TaskRunsController {
         } catch (error) {
           if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
           if (error instanceof TaskRunNotPausableError) {
+            return { status: 409, body: { message: error.message } };
+          }
+          throw error;
+        }
+      },
+
+      handoverTaskRun: async ({ params: { runId }, body }) => {
+        try {
+          return { status: 200, body: await this.runs.handover(runId, body) };
+        } catch (error) {
+          if (isMissing(error)) return { status: 404, body: { message: notFound(runId) } };
+          if (error instanceof TaskRunNotHandoverableError) {
             return { status: 409, body: { message: error.message } };
           }
           throw error;

@@ -724,6 +724,17 @@ A goal run is stoppable only while `running`. The run detail keeps PAUSE / STOP
 reachable in every state that has them (a button, else the ··· menu); STOP on a
 still-queued task cancels it out of the queue.
 
+**Handover.** `POST /tasks/runs/:runId/handover` creates a new task for the operator's
+chosen agent / workflow / department (e.g. a misrouted `development-patch` run that
+burnt its retries → `delivery`). The original goal (task text, else the run prompt)
+is followed by a handover section: the original run id, its folder, its PR url, its
+branch (the new run is told to `git reset --hard <branch>` in its own worktree so it
+continues the commits instead of redoing them), its output file and outcome summary,
+and the operator note; the goal is truncated so the section survives the 8000-char
+cap. Paths, attachments, tool grants, output choice and project carry over. The new
+run opens its own PR through its normal output (it never pushes onto the original PR
+branch); the original run is untouched.
+
 **Operator messages.** `POST /tasks/runs/:runId/messages { text, to = "all" }` queues
 a message for a workflow run that is not finished. There is no live channel into a
 running claude child, so it is delivered when the next agent stage starts (to `all`,
@@ -774,6 +785,10 @@ GET    /api/tasks/runs/:runId/files                          a workflow run's fo
 POST   /api/tasks/runs/:runId/stop                            stop a running run
 POST   /api/tasks/runs/:runId/pause                           pause a running workflow run at the next stage boundary (409 for
                                                                 other kinds / states)
+POST   /api/tasks/runs/:runId/handover                        hand the run's task to `{ target: agent|workflow|department, note? }`
+                                                                (explicit target, no classifier): a NEW task with the original goal +
+                                                                the run id, run folder, PR, branch, output file, outcome and note;
+                                                                409 while the run is running / its task still waits to dispatch
 POST   /api/tasks/runs/:runId/messages                        queue an operator message for the next agent stage of an open
                                                                 workflow run (409 for other kinds / finished runs)
 POST   /api/tasks/runs/:runId/open-folder                     open a workflow run's `book/` (else run root) folder in Finder, or with `{ artifact }` that run artifact (same allowlist as `artifacts/:name`; viewer file types only) in its default app; operator-initiated, no approval; 404 for non-workflow runs / missing artifacts

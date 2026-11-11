@@ -1362,7 +1362,8 @@
         "openAgent": "Otevřít agenta →",
         "openFolder": "Otevřít složku",
         "copyId": "Zkopírovat ID",
-        "delete": "Smazat běh"
+        "delete": "Smazat běh",
+        "handover": "Předat úlohu"
       },
       "metric": {
         "progress": "Průběh",
@@ -1491,7 +1492,21 @@
         "body": "Běh s ID {id} neexistuje. Možná byl smazán.",
         "back": "← Všechny běhy"
       },
-      "outputPr": "Pull request {ref}"
+      "outputPr": "Pull request {ref}",
+      "handover": {
+        "title": "Předat úlohu",
+        "description": "Nový cíl dostane původní zadání, odkaz na složku tohoto běhu a jeho artefakty (PR, větev, soubor).",
+        "target": "Cíl",
+        "targetPlaceholder": "Vyber agenta, workflow nebo oddělení",
+        "note": "Doplňující popis",
+        "noteHint": "Volitelné — co má nový cíl udělat jinak nebo dokončit.",
+        "submit": "Předat",
+        "kind": {
+          "agent": "Agent",
+          "workflow": "Workflow",
+          "department": "Oddělení"
+        }
+      }
     },
     "artifacts": {
       "title": "Artefakty",

@@ -8,6 +8,7 @@ import {
   ArchivePageQuerySchema,
   ArchivePageSchema,
   AssignTaskRunProjectSchema,
+  HandoverTaskRunSchema,
   OpenTaskRunFolderSchema,
   ResumeTaskRunSchema,
   RunFilesSchema,
@@ -185,6 +186,22 @@ export const taskRunsContract = c.router(
       body: EmptyBodySchema,
       responses: { 200: TaskRunSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary: "Request a pause: the running workflow parks at the next stage boundary",
+    },
+
+    handoverTaskRun: {
+      method: "POST",
+      path: "/tasks/runs/:runId/handover",
+      pathParams: RunIdParam,
+      body: HandoverTaskRunSchema,
+      responses: {
+        // The NEW task's view (`pending` until its background dispatch spawns).
+        200: TaskRunSchema,
+        404: ErrorSchema,
+        // The run is still live (running / dispatching): stop it first.
+        409: ErrorSchema,
+      },
+      summary:
+        "Hand a run's task over to another agent/workflow/department with its goal, folder and artifacts",
     },
 
     sendTaskRunMessage: {

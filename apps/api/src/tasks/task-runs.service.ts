@@ -8,6 +8,7 @@ import {
   type ArchivePage,
   type ArchiveSort,
   type GoalRun,
+  type HandoverTaskRunInput,
   type Processor,
   type ResumeTaskRunInput,
   type RunFiles,
@@ -100,6 +101,19 @@ export class TaskRunNotMessageableError extends Error {
     this.name = "TaskRunNotMessageableError";
   }
 }
+
+/** A live run (or a task still waiting to dispatch) cannot be handed over — stop/cancel it first. */
+export class TaskRunNotHandoverableError extends Error {
+  constructor(runId: string) {
+    super(`Task run "${runId}" cannot be handed over while it is live (stop or cancel it first)`);
+    this.name = "TaskRunNotHandoverableError";
+  }
+}
+
+/** A task's text cap (`CreateTaskInputSchema.text`). */
+const TASK_TEXT_MAX = 8000;
+/** Statuses with a live process or a dispatch still ahead — handing those over would double the work. */
+const NOT_HANDOVERABLE = new Set(["running", "pending", "queued", "scheduled"]);
 
 /** Definition id → human name, per processor kind. */
 interface NameMaps {
@@ -568,6 +582,72 @@ export class TaskRunsService {
       },
       undefined,
       task.projectId,
+      undefined,
+      true,
+    );
+    return this.getTaskRun(result.outcome === "dispatched" ? result.runRef : result.task.id);
+  }
+
+  /**
+   * Hand a run's task over to another unit (todo-8): a NEW task for the operator's
+   * explicit target (classifier skipped), through the normal create path so budget/
+   * staffing/approval gates apply. Its text is the original goal plus a handover
+   * section naming the original run, its folder and artifacts (PR, branch, output
+   * file, outcome) and the operator's note; the run is told to build on the original
+   * branch when there is one. The original run is left as it is (history). A live run
+   * or a not-yet-dispatched task → {@link TaskRunNotHandoverableError}.
+   */
+  async handover(runId: string, input: HandoverTaskRunInput): Promise<TaskRun> {
+    const run = await this.getTaskRun(runId);
+    if (NOT_HANDOVERABLE.has(run.status)) throw new TaskRunNotHandoverableError(runId);
+    const task = run.taskId
+      ? await this.scheduled.get(run.taskId).catch((error: unknown) => {
+          if (error instanceof ScheduledTaskNotFoundError) return undefined;
+          throw error;
+        })
+      : undefined;
+    const [agents, workflows, goals] = await Promise.all([
+      this.agentRunner.listAll(),
+      this.workflowRunner.listAll(),
+      this.goalRunner.listAll(),
+    ]);
+    const workflow = workflows.find((r) => r.workflowRunId === runId);
+    const raw: AgentRun | WorkflowRun | GoalRun | undefined =
+      workflow ?? goals.find((r) => r.goalRunId === runId) ?? agents.find((r) => r.runId === runId);
+    const folder = workflow ? await this.workflowRunner.runFolder(runId) : raw?.cwd;
+    const branch = raw?.workspace?.branch;
+
+    const lines = [
+      "---",
+      `Handed over from run ${runId} (${run.processor?.name ?? run.owner}, ${run.status}). Finish the task the original run did not.`,
+      folder ? `Original run folder (read its files for context): ${folder}` : null,
+      run.prOutput ? `Original PR: ${run.prOutput.url}` : null,
+      branch
+        ? `Original branch: ${branch} — your worktree shares the repository; start from it (\`git reset --hard ${branch}\` before your first change) so the original work is continued, not redone.`
+        : null,
+      run.outputArtifactName
+        ? `Original output file: ${run.outputArtifactName} (in the run folder)`
+        : null,
+      run.taskOutcomeSummary ? `Original outcome: ${run.taskOutcomeSummary}` : null,
+      input.note ? `Operator note: ${input.note}` : null,
+    ].filter((l): l is string => l !== null);
+    const handoverText = lines.join("\n");
+    const goal = (task?.text ?? run.taskText ?? run.prompt) || run.title || runId;
+    // The handover section must survive the cap; the goal is what gets cut.
+    const room = TASK_TEXT_MAX - handoverText.length - 2;
+    const goalText = goal.length > room ? `${goal.slice(0, Math.max(0, room - 1))}…` : goal;
+    const result = await this.scheduler.createTask(
+      {
+        title: task?.title || run.taskTitle || undefined,
+        text: `${goalText}\n\n${handoverText}`.slice(0, TASK_TEXT_MAX),
+        paths: task?.paths,
+        attachmentSetId: task?.attachmentSetId,
+        toolGrants: task?.toolGrants,
+        output: task?.output,
+        target: input.target,
+      },
+      undefined,
+      task?.projectId ?? run.projectId,
       undefined,
       true,
     );

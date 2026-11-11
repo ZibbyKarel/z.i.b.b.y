@@ -3,6 +3,7 @@ import { RunArtifactSchema, RunStatusSchema } from "../common.schema";
 import { DiffstatSchema } from "../common.schema";
 import { StageRunSchema } from "../workflows/workflow-run.schema";
 import {
+  HandoverTaskRunSchema,
   ResumeTaskRunSchema,
   SendRunMessageSchema,
   TaskRunArtifactSchema,
@@ -169,5 +170,34 @@ describe("run-detail redesign schemas", () => {
     expect(DiffstatSchema.safeParse({ files: [], additions: -1, deletions: 0 }).success).toBe(
       false,
     );
+  });
+});
+
+describe("HandoverTaskRunSchema", () => {
+  const target = { kind: "workflow", id: "delivery", name: "Delivery" } as const;
+
+  it("accepts an agent, workflow or department target with a trimmed note", () => {
+    expect(HandoverTaskRunSchema.parse({ target, note: "  finish it  " })).toEqual({
+      target,
+      note: "finish it",
+    });
+    expect(
+      HandoverTaskRunSchema.safeParse({ target: { kind: "agent", id: "coder", name: "Coder" } })
+        .success,
+    ).toBe(true);
+    expect(
+      HandoverTaskRunSchema.safeParse({ target: { kind: "department", id: "dev", name: "Dev" } })
+        .success,
+    ).toBe(true);
+  });
+
+  it("refuses a goal or orchestrator target and an over-long note", () => {
+    expect(
+      HandoverTaskRunSchema.safeParse({ target: { kind: "goal", id: "g", name: "G" } }).success,
+    ).toBe(false);
+    expect(
+      HandoverTaskRunSchema.safeParse({ target: { kind: "orchestrator", name: "O" } }).success,
+    ).toBe(false);
+    expect(HandoverTaskRunSchema.safeParse({ target, note: "x".repeat(4001) }).success).toBe(false);
   });
 });

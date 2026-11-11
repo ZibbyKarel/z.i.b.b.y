@@ -34,6 +34,7 @@ import {
 import type { TaskSchedulerService } from "./task-scheduler.service";
 import {
   TaskRunNotFoundError,
+  TaskRunNotHandoverableError,
   TaskRunNotMessageableError,
   TaskRunNotPausableError,
   TaskRunNotResumableError,
@@ -1425,6 +1426,96 @@ describe("TaskRunsService", () => {
       await expect(service.getChanges("delivery_3")).resolves.toBeNull();
       await expect(service.getChanges("nope")).resolves.toBeNull();
       expect(workspace.runChanges).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("handover", () => {
+    const target = { kind: "workflow" as const, id: "delivery", name: "Delivery" };
+    const doneTask: ScheduledTask = {
+      ...scheduledS,
+      id: "task9",
+      status: "dispatched",
+      text: "implement login",
+      paths: ["/repos/acme"],
+      projectId: "acme",
+      output: { type: "pr" },
+      outcome: {
+        status: "error",
+        summary: "ran out of retries",
+        finishedAt: AT,
+        pr: { url: "https://github.com/acme/api/pull/7", additions: 3, deletions: 1 },
+      },
+    };
+
+    function failedWorkflow() {
+      const h = build();
+      h.workflowRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          status: "failed",
+          taskId: "task9",
+          workspace: { branch: "zibby/delivery_3", path: "/wt/delivery_3", baseRef: "abc" },
+        },
+      ]);
+      h.scheduled.list.mockResolvedValue([doneTask]);
+      h.scheduled.get.mockResolvedValue(doneTask);
+      return h;
+    }
+
+    it("creates a task for the explicit target with goal, run folder, artifacts and note", async () => {
+      const { service, scheduler } = failedWorkflow();
+      const res = await service.handover("delivery_3", { target, note: "finish it in delivery" });
+      expect(scheduler.createTask).toHaveBeenCalledOnce();
+      const [input, , projectId, , interactive] = scheduler.createTask.mock.calls[0] as unknown as [
+        { text: string; target: unknown; paths: string[]; output: unknown },
+        unknown,
+        string,
+        unknown,
+        boolean,
+      ];
+      expect(input.target).toEqual(target);
+      expect(input.paths).toEqual(["/repos/acme"]);
+      expect(input.output).toEqual({ type: "pr" });
+      expect(projectId).toBe("acme");
+      expect(interactive).toBe(true);
+      expect(input.text).toMatch(/^implement login/);
+      expect(input.text).toContain("delivery_3");
+      expect(input.text).toContain("/runs/p");
+      expect(input.text).toContain("https://github.com/acme/api/pull/7");
+      expect(input.text).toContain("zibby/delivery_3");
+      expect(input.text).toContain("ran out of retries");
+      expect(input.text).toContain("finish it in delivery");
+      // The mock's created task (task9) is the original's task, so it resolves to that run.
+      expect(res.runId).toBe("delivery_3");
+    });
+
+    it("keeps the composed text within the 8000-char task cap", async () => {
+      const h = failedWorkflow();
+      h.scheduled.get.mockResolvedValue({ ...doneTask, text: "x".repeat(8000) });
+      await h.service.handover("delivery_3", { target });
+      const [input] = h.scheduler.createTask.mock.calls[0] as unknown as [{ text: string }];
+      expect(input.text.length).toBeLessThanOrEqual(8000);
+      expect(input.text).toContain("delivery_3");
+    });
+
+    it("falls back to the run prompt when the run has no backing task", async () => {
+      const { service, agentRunner, scheduler } = build();
+      agentRunner.listAll.mockResolvedValue([
+        { ...agentA, status: "error", taskId: undefined },
+        makerChild,
+      ]);
+      await service.handover("researcher_1", { target });
+      const [input] = scheduler.createTask.mock.calls[0] as unknown as [{ text: string }];
+      expect(input.text).toMatch(/^dig into X/);
+      expect(input.text).toContain("/tmp/acme");
+    });
+
+    it("refuses a run that is still running (409)", async () => {
+      const { service, scheduler } = build();
+      await expect(service.handover("delivery_3", { target })).rejects.toBeInstanceOf(
+        TaskRunNotHandoverableError,
+      );
+      expect(scheduler.createTask).not.toHaveBeenCalled();
     });
   });
 });

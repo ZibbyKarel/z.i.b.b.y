@@ -29,6 +29,8 @@ export interface RunDetailActionsProps {
   onDelete: () => void;
   onContinueTask: () => void;
   onOpenFolder?: () => void;
+  /** Opens the "hand over task" dialog — offered in the ··· menu once the run is not live. */
+  onHandover?: () => void;
   pending: boolean;
 }
 
@@ -64,6 +66,7 @@ export function RunDetailActions({
   onDelete,
   onContinueTask,
   onOpenFolder,
+  onHandover,
   pending,
 }: RunDetailActionsProps) {
   const t = useTranslations("runs");
@@ -167,6 +170,15 @@ export function RunDetailActions({
       danger: true,
       disabled: pending,
       onSelect: () => setConfirm("stop"),
+    });
+  // A live run (or a task still waiting to dispatch) would double the work — the API refuses it too.
+  if (onHandover && !["running", "pending", "queued", "scheduled"].includes(run.status))
+    moreItems.push({
+      id: "handover",
+      label: t("detail.more.handover"),
+      icon: "flow",
+      disabled: pending,
+      onSelect: onHandover,
     });
   moreItems.push({
     id: "copyId",
