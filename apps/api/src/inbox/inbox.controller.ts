@@ -12,11 +12,7 @@ import {
   InboxPrThreadsService,
   ThreadNotOnPrError,
 } from "./inbox-pr-threads.service";
-import {
-  InboxReviewService,
-  ReviewOutOfScopeError,
-  ReviewRepoMismatchError,
-} from "./inbox-review.service";
+import { InboxReviewService, ReviewRepoMismatchError } from "./inbox-review.service";
 import { RoadmapItemLifecycleError, RoadmapItemNotFoundError } from "../roadmap/roadmap.errors";
 import { InboxItemNotFoundError } from "./inbox-issues.service";
 import { InboxService } from "./inbox.service";
@@ -77,11 +73,7 @@ export class InboxController {
           if (error instanceof ProjectNotFoundError) {
             return { status: 404 as const, body: { message: error.message } };
           }
-          if (
-            error instanceof NoGithubLinkError ||
-            error instanceof ReviewRepoMismatchError ||
-            error instanceof ReviewOutOfScopeError
-          ) {
+          if (error instanceof NoGithubLinkError || error instanceof ReviewRepoMismatchError) {
             return { status: 422 as const, body: { message: error.message } };
           }
           throw error;

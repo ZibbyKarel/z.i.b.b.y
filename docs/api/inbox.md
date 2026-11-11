@@ -168,16 +168,19 @@ and the operator's identity from the project token (`GET /user` login + `GET /us
 `org/slug`; cached 10 min per token, CODEOWNERS 5 min per repo@ref —
 `apps/api/src/inbox/code-owners.service.ts`, matching via `codeOwnersOf` in `pr-reviewers.ts`). A file is in scope when its LAST matching CODEOWNERS rule names
 `@<my login>` or `@<org>/<team>` of a team I am in (email owners never count; a file no rule
-matches is out of scope). Then:
+matches is out of scope; a renamed file is in scope when its old or new path is). Then:
 
 - no CODEOWNERS, every file in scope, or any lookup failure (e.g. `/user/teams` 403 without
-  `read:org`) → the whole PR is reviewed (fail open), as before;
+  `read:org`) → the whole PR is reviewed (fail open), as before. Same when CODEOWNERS names
+  `@<org>/…` teams but `/user/teams` shows none in the repo's org (a token not authorized for a
+  SAML-SSO org still gets 200, just without that org's teams);
 - some files in scope → the brief's "Every phase" section lists them (as many as fit the 8000-char
   task text, the rest described by their owners) and tells every phase to review, test-select and
   comment only on them;
-- no file in scope → no task and no approval: the endpoint answers **422** with the reason (the
-  PR card shows it), and the PR automation records activity `pr-review-skipped` instead of
-  starting (remembered per head in memory, so it is not re-checked every tick).
+- no file in scope → an operator click still runs the full review (explicit target overrides),
+  the brief noting that none of the files belong to the operator's teams. The PR automation
+  starts nothing: no task, no approval, activity `pr-review-skipped` (remembered per head in
+  memory, so it is not re-checked every tick).
 
 **Run → approval mechanism:** the existing terminal-output hook,
 `TaskOutputService.handleTerminal`, which the scheduler already calls exactly once

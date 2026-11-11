@@ -116,13 +116,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
       {
         // The running label already reports the started review once the list refetches.
         onSuccess: () => setMessage(null),
-        // 422 — e.g. none of the PR's files is owned by the operator's teams (CODEOWNERS).
-        onError: (err) =>
-          setMessage(
-            "status" in err && err.status === 422
-              ? t("reviewRefused", { reason: err.body.message })
-              : t("reviewFailed"),
-          ),
+        onError: () => setMessage(t("reviewFailed")),
       },
     );
 

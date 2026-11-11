@@ -459,12 +459,34 @@ describe("InboxReviewService", () => {
       expect(input.text).not.toContain("Review scope");
     });
 
-    it("none of the files are mine → refuses with ReviewOutOfScopeError, no task", async () => {
+    it("none of the files are mine, auto start → ReviewOutOfScopeError, no task", async () => {
       fetchImpl.mockImplementation(routes("* @acme/core\n", ["api/b.ts"]));
       await expect(
-        service.start({ projectId: "acme", repo: "acme/app", number: 7 }),
+        service.start({ projectId: "acme", repo: "acme/app", number: 7 }, { auto: true }),
       ).rejects.toThrow(ReviewOutOfScopeError);
       expect(createTask).not.toHaveBeenCalled();
+    });
+
+    it("none of the files are mine, operator click → full review with a note (explicit target wins)", async () => {
+      fetchImpl.mockImplementation(routes("* @acme/core\n", ["api/b.ts"]));
+      await service.start({ projectId: "acme", repo: "acme/app", number: 7 });
+      const [input] = createTask.mock.calls[0] ?? [];
+      expect(input.text).toContain("none of the 1 changed files is owned by the operator's teams");
+      expect(input.text).toContain("review the whole PR");
+    });
+
+    it("carries previous_filename of a renamed file", async () => {
+      fetchImpl.mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            { filename: "b.ts", previous_filename: "a.ts", additions: 0, deletions: 0 },
+          ]),
+          { status: 200 },
+        ),
+      );
+      expect(await service.listPrFiles("acme", "acme/app", 7)).toEqual([
+        { filename: "b.ts", previousFilename: "a.ts", additions: 0, deletions: 0 },
+      ]);
     });
 
     it("keeps the brief within the task text limit for a huge scope", async () => {

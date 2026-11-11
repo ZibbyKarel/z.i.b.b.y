@@ -1,7 +1,6 @@
 import type { InboxPr, InboxPrReviewers } from "@zibby/contracts";
 import {
   AnchoredSheetTestId,
-  DropDownButtonTestId,
   IconTestId,
   StackCrumbsTestId,
   StatCellTestId,
@@ -22,7 +21,6 @@ const { hooks } = vi.hoisted(() => ({
     diff: "",
     items: [] as unknown[],
     reviewers: undefined as InboxPrReviewers | undefined,
-    reviewMutate: (() => {}) as (vars: unknown, opts?: { onError?: (e: unknown) => void }) => void,
   },
 }));
 vi.mock("next/navigation", () => ({
@@ -32,7 +30,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/dynamic", () => ({ default: () => () => <div data-testid="pr-diff" /> }));
 vi.mock("../../../inbox/mutations", () => ({
-  useReviewInboxPrMutation: () => ({ mutate: hooks.reviewMutate, isPending: false }),
+  useReviewInboxPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useRebaseInboxPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useFixInboxPrCiMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useAddressInboxPrCommentsMutation: () => ({ mutate: vi.fn(), isPending: false }),
@@ -105,19 +103,6 @@ describe("PrSheet action buttons", () => {
     unmount();
     show(pr(2, {}));
     expect(screen.queryByTestId(PrActionsTestId.Review)).toBeNull();
-  });
-
-  it("review-scope: a refused review (none of my teams' files) shows the reason", () => {
-    hooks.reviewMutate = (_vars, opts) =>
-      opts?.onError?.({ status: 422, body: { message: "None of the 2 changed files" } });
-    show(pr(9, { bucket: "to-review", section: "needs-your-review" }));
-    fireEvent.click(
-      within(screen.getByTestId(PrActionsTestId.Review)).getByTestId(DropDownButtonTestId.Primary),
-    );
-    expect(screen.getByTestId(PrActionsTestId.Message)).toHaveTextContent(
-      "Code-review odmítnuto: None of the 2 changed files",
-    );
-    hooks.reviewMutate = () => {};
   });
 
   it("shows address-comments exactly when my PR has open threads (isFix)", () => {

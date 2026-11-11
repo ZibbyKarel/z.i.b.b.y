@@ -20,7 +20,7 @@ const me: Routes = {
     body: [{ slug: "web", organization: { login: "org" } }],
   },
 };
-const files = ["apps/web/a.ts", "apps/api/b.ts", "README.md"];
+const files = ["apps/web/a.ts", "apps/api/b.ts", "README.md"].map((filename) => ({ filename }));
 const CODEOWNERS = "* @org/core\n/apps/web/ @org/web\n/README.md @karel\n";
 
 describe("CodeOwnersService.reviewScope", () => {
@@ -82,6 +82,37 @@ describe("CodeOwnersService.reviewScope", () => {
     const scope = await svc.reviewScope("org/repo", "main", "t", files);
     expect(scope.kind).toBe("all");
     expect(scope).toMatchObject({ reason: expect.stringContaining("/user/teams: HTTP 403") });
+  });
+
+  it("SAML SSO: no visible team in the repo's org while CODEOWNERS names its teams → review everything", async () => {
+    const svc = new CodeOwnersService(
+      fakeFetch({
+        "/user": { status: 200, body: { login: "karel" } },
+        "/user/teams": { status: 200, body: [{ slug: "x", organization: { login: "other" } }] },
+        "/repos/org/repo/contents/CODEOWNERS?ref=main": { status: 200, body: "* @org/core" },
+      }),
+    );
+    expect(await svc.reviewScope("org/repo", "main", "t", files)).toEqual({
+      kind: "all",
+      reason: "no team membership visible in org",
+    });
+  });
+
+  it("a renamed file is mine when either its old or its new path is mine", async () => {
+    const svc = new CodeOwnersService(
+      fakeFetch({
+        ...me,
+        "/repos/org/repo/contents/CODEOWNERS?ref=main": {
+          status: 200,
+          body: "* @org/core\n/apps/web/ @org/web\n",
+        },
+      }),
+    );
+    const scope = await svc.reviewScope("org/repo", "main", "t", [
+      { filename: "libs/moved.ts", previousFilename: "apps/web/moved.ts" },
+      { filename: "libs/other.ts" },
+    ]);
+    expect(scope).toMatchObject({ kind: "mine", files: ["libs/moved.ts"] });
   });
 
   it("caches the identity per token and CODEOWNERS per repo@ref", async () => {

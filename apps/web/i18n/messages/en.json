@@ -3074,7 +3074,6 @@
       "actions": {
         "reviewLevelsAria": "More code review levels",
         "reviewFailed": "Could not start the code review.",
-        "reviewRefused": "Code review refused: {reason}",
         "auto": "auto",
         "reviewState": {
           "running": "Review running",

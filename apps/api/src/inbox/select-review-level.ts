@@ -3,6 +3,8 @@ import type { PrReviewLevel } from "@zibby/contracts";
 /** One entry of `GET /repos/{repo}/pulls/{n}/files` — only what the level choice reads. */
 export interface PrFileChange {
   filename: string;
+  /** A rename's old path (GitHub `previous_filename`). */
+  previousFilename?: string;
   additions: number;
   deletions: number;
 }

@@ -55,20 +55,32 @@ export class CodeOwnersService {
     repo: string,
     baseRef: string | undefined,
     token: string,
-    files: readonly string[],
+    /** `previousFilename` — a rename's old path; the file is mine when either path is. */
+    files: readonly { filename: string; previousFilename?: string }[],
   ): Promise<ReviewScope> {
     const at = `${repo}@${baseRef ?? "default branch"}`;
     try {
       const file = await this.codeownersFile(repo, baseRef, token);
       if (!file) return { kind: "all", reason: `no CODEOWNERS in ${at}` };
       const me = await this.identity(token);
+      // SAML SSO: a token not authorized for the org still gets 200 from /user/teams, just
+      // without that org's teams — that would read every file as not mine. Fail open instead.
+      const org = (repo.split("/")[0] ?? "").toLowerCase();
+      if (
+        file.text.toLowerCase().includes(`@${org}/`) &&
+        !me.teams.some((t) => t.toLowerCase().startsWith(`${org}/`))
+      )
+        return { kind: "all", reason: `no team membership visible in ${org}` };
       const owners = new Set<string>();
-      const mine = files.filter((f) => {
-        const o = codeOwnersOf(file.text, f);
-        if (!isMine(o, me)) return false;
-        for (const id of o) if (isMine([id], me)) owners.add(id);
-        return true;
-      });
+      const mine = files
+        .filter((f) => {
+          const o = [f.filename, f.previousFilename]
+            .flatMap((p) => (p ? codeOwnersOf(file.text, p) : []))
+            .filter((id) => isMine([id], me));
+          for (const id of o) owners.add(id);
+          return o.length > 0;
+        })
+        .map((f) => f.filename);
       const source = `${file.path}@${baseRef ?? "default branch"}`;
       if (mine.length === 0) return { kind: "none", files: files.length, source };
       if (mine.length === files.length)
