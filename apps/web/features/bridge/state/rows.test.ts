@@ -182,6 +182,23 @@ describe("pull requests", () => {
     expect(order("updated-asc")).toEqual(["#2", "#3", "#1"]);
     expect(order("created-desc")).toEqual(["#3", "#2", "#1"]);
     expect(order("created-asc")).toEqual(["#1", "#2", "#3"]);
+
+    // The card age is the time the list sorts by (todo-7).
+    const ages = (sort?: WidgetSort) =>
+      Object.fromEntries(
+        prTree("p", all, none, {}, ago, sort).nodes.map((n) => [n.row.number, n.row.age]),
+      );
+    expect(ages()).toEqual({
+      "#1": "ago:2026-10-09",
+      "#2": "ago:2026-09-01",
+      "#3": "ago:2026-10-02",
+    });
+    expect(ages("updated-asc")["#1"]).toBe("ago:2026-10-09");
+    expect(ages("created-desc")).toEqual({
+      "#1": "ago:2026-08-01",
+      "#2": "ago:2026-09-01",
+      "#3": "ago:2026-10-01",
+    });
   });
 
   it("row: author name or login, avatar, repo, age, icons and tone", () => {

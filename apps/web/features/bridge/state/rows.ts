@@ -126,8 +126,10 @@ export function issueRow(
 }
 
 /** A row's time for a widget `sort`: its last change (no change = creation) or its creation. */
+const sortIso = (sort: WidgetSort, row: { createdAt: string; updatedAt?: string }) =>
+  sort.startsWith("updated") ? (row.updatedAt ?? row.createdAt) : row.createdAt;
 const sortTime = (sort: WidgetSort, row: { createdAt: string; updatedAt?: string }) =>
-  Date.parse(sort.startsWith("updated") ? (row.updatedAt ?? row.createdAt) : row.createdAt);
+  Date.parse(sortIso(sort, row));
 
 /** Orders two times by `sort`'s direction (`*-desc` = newest first). */
 const bySortDirection = (sort: WidgetSort, a: number, b: number) =>
@@ -277,7 +279,14 @@ function prTone(pr: InboxPr, ci: PrCiState, review: PrReviewState): RowTone {
   return review === "approved" ? "done" : "idle";
 }
 
-export function prRow(widgetId: string, pr: InboxPr, ago: Ago, muted = false): PrRowVm {
+/** `age` is the time the list sorts by: since the last change (`updated-*`) or since creation. */
+export function prRow(
+  widgetId: string,
+  pr: InboxPr,
+  ago: Ago,
+  muted = false,
+  sort: WidgetSort = "updated-desc",
+): PrRowVm {
   const ci = prCiState(pr);
   const review = prReviewState(pr);
   const mine = pr.bucket === "mine";
@@ -286,7 +295,7 @@ export function prRow(widgetId: string, pr: InboxPr, ago: Ago, muted = false): P
     id: pr.url,
     number: `#${pr.number}`,
     title: pr.title,
-    age: ago(pr.createdAt),
+    age: ago(sortIso(sort, pr)),
     author: pr.authorName ?? pr.author,
     avatarUrl: pr.authorAvatarUrl,
     project: pr.repo.split("/")[1] ?? pr.repo,
@@ -374,7 +383,7 @@ export function prTree(
     [...list]
       .sort((a, b) => bySortDirection(sort, subtreeTime(a), subtreeTime(b)))
       .map((p) => ({
-        row: prRow(widgetId, p, ago, !hitUrls.has(p.url)),
+        row: prRow(widgetId, p, ago, !hitUrls.has(p.url), sort),
         kids: build(kids.get(p.url) ?? []),
       }));
 
