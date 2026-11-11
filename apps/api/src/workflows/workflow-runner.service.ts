@@ -840,12 +840,14 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     this.runs.set(workflowRunId, run);
     if (run.status !== "paused-limit") return run;
     const workflow = await this.workflows.get(run.workflowId);
-    for (const s of run.stageRuns) {
-      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {});
-    }
+    // A stop may have landed during the await above — never revive a stopped run.
+    if (run.status !== "paused-limit") return run;
     run.limitResumeCycles = (run.limitResumeCycles ?? 0) + 1;
     run.status = "running";
     run.resumeAt = null;
+    for (const s of run.stageRuns) {
+      if (s.status === "paused-limit") await this.core.discardPausedLimit(s.runId).catch(() => {});
+    }
     await this.writeAggregate(run);
     const project = await this.projectForRun(run);
     const cursor = run.currentStage ?? workflow.phases[0]?.id ?? null;
@@ -1078,12 +1080,13 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // A limit-paused run waits on the usage window with no live child: stopping it
     // lands it `interrupted` so the limit tick never auto-resumes it.
     if (run?.status === "paused-limit") {
+      // Claim the status BEFORE any await so a concurrent limit auto-resume sees it.
+      run.status = "interrupted";
+      run.resumeAt = null;
       for (const s of run.stageRuns) {
         if (s.status === "paused-limit")
           await this.core.discardPausedLimit(s.runId).catch(() => {});
       }
-      run.status = "interrupted";
-      run.resumeAt = null;
       await this.writeAggregate(run);
       return;
     }

@@ -2628,6 +2628,41 @@ describe("operator pause (D-PAUSE)", () => {
     expect(h.service.listLimitPaused()).toHaveLength(0);
   });
 
+  it("a stop racing the limit auto-resume wins: the run stays interrupted", async () => {
+    const run = runOf();
+    run.status = "paused-limit";
+    run.resumeAt = Date.now() + 60_000;
+    const drive = vi.fn(async () => {});
+    (svc() as unknown as { drive: unknown }).drive = drive;
+    // Hold the resume inside its `workflows.get` await while the stop lands.
+    let release!: () => void;
+    const original = svc().workflows.get.getMockImplementation();
+    svc().workflows.get.mockImplementationOnce(async (...args: unknown[]) => {
+      await new Promise<void>((r) => (release = r));
+      return original?.(...args);
+    });
+    const resuming = h.service.resumeLimitPaused(WORKFLOW_RUN_ID);
+    await new Promise((r) => setImmediate(r));
+    await h.service.stop(WORKFLOW_RUN_ID);
+    release();
+    await resuming;
+    expect(run.status).toBe("interrupted");
+    expect(drive).not.toHaveBeenCalled();
+  });
+
+  it("stop lands interrupted synchronously, before the stage discards settle", async () => {
+    const run = runOf();
+    run.status = "paused-limit";
+    run.resumeAt = Date.now() + 60_000;
+    run.stageRuns = [{ phaseId: "phase1", runId: "s1", attempt: 1, status: "paused-limit" }];
+    const discard = vi.fn(() => new Promise<void>((r) => setTimeout(r, 5)));
+    (h.core as unknown as { discardPausedLimit: unknown }).discardPausedLimit = discard;
+    const stopping = h.service.stop(WORKFLOW_RUN_ID);
+    expect(run.status).toBe("interrupted");
+    expect(run.resumeAt).toBeNull();
+    await stopping;
+  });
+
   it("a stopped paused run drops its gate cursor", async () => {
     await h.service.onModuleInit();
     const run = runOf();
