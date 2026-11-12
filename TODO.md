@@ -1,6 +1,6 @@
 # TODO
 
-1. [ ] Widgetu návrhy - V dialogu schvalování automatizace musím mít předvyplněný prompt podle návrhu.
+1. [x] Widgetu návrhy - V dialogu schvalování automatizace musím mít předvyplněný prompt podle návrhu. (main@004c748a7)
 2. [ ] Widget Běhy automatizací - v detailu automatizace název bude link na detail automatizace
 3. [ ] Widget Běhy automatizací - místo textu "tuto minutu" budeme ukazovat "< 1 min"
 4. [ ] Widget Běhy automatizací - v detailu automatizace musím mít seznam běhů automatizace s možností zobrazit si log z jednotlivých běhů tzn všechny automatizace musí někam logovat.
