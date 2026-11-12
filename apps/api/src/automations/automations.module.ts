@@ -12,9 +12,10 @@ import { WorkflowsModule } from "../workflows/workflows.module";
 import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
 import { SecurityModule } from "../security/security.module";
-import { recipesDir } from "../shared/data-dir";
+import { dataDir, recipesDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
 import { SignalBusModule } from "./signal-bus.module";
+import { AUTOMATION_FIRES_DIR, AutomationFiresStore } from "./automation-fires.store";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { AutomationsController } from "./automations.controller";
 import { SchedulerService } from "./scheduler.service";
@@ -72,8 +73,13 @@ export function resolveAutomationsDir(): string {
   providers: [
     { provide: AUTOMATIONS_DIR, useFactory: resolveAutomationsDir },
     AutomationsStorageService,
+    {
+      provide: AUTOMATION_FIRES_DIR,
+      useFactory: () => process.env.AUTOMATION_FIRES_DIR ?? dataDir("automation-fires"),
+    },
+    AutomationFiresStore,
     SchedulerService,
   ],
-  exports: [AutomationsStorageService, SchedulerService],
+  exports: [AutomationsStorageService, SchedulerService, AutomationFiresStore],
 })
 export class AutomationsModule {}

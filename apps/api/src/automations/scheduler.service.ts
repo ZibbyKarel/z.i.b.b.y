@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { Automation, Signal, TaskTarget } from "@zibby/contracts";
+import type { Automation, AutomationFire, Signal, TaskTarget } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { ExternalSkillsService } from "../external-skills/external-skills.service";
@@ -18,6 +18,7 @@ import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { AutomationFiresStore } from "./automation-fires.store";
 import { AutomationsStorageService } from "./automations.storage.service";
 import { SignalBusService } from "./signal-bus.service";
 import { matchesCron } from "./cron";
@@ -59,6 +60,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly signalBus: SignalBusService,
     private readonly vaultLint: VaultLintService,
     private readonly externalSkills: ExternalSkillsService,
+    private readonly fires: AutomationFiresStore,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -70,7 +72,9 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     this.arm();
     // Signal-triggered automations dispatch through this same path (the bus is a leaf
     // module the producers inject, so it can't depend on the scheduler directly).
-    this.signalBus.registerDispatcher((automation, signal) => this.dispatch(automation, signal));
+    this.signalBus.registerDispatcher((automation, signal) =>
+      this.recordFire(automation, "signal", signal),
+    );
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
     // F6c: self-register the heartbeat probe (the base's lastTickAt, stamped on the
     // timer path; the M8 `health()` below keeps its own tick()-stamped field).
@@ -135,14 +139,56 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
   /** Fire an automation now (manual/event path); returns a run reference. */
   async trigger(id: string): Promise<string> {
     const automation = await this.storage.get(id);
-    const ref = await this.dispatch(automation);
+    const ref = await this.recordFire(automation, "manual");
     await this.storage.markFired(id, new Date().toISOString());
     return ref;
   }
 
   private async fire(automation: Automation, at: string): Promise<void> {
-    await this.dispatch(automation);
+    await this.recordFire(automation, "cron");
     await this.storage.markFired(automation.id, at);
+  }
+
+  /**
+   * Wrap {@link dispatch} in a fire record + log (todo-4) — every path (cron, manual,
+   * signal) goes through here. A run-backed target's record carries the run ref (the
+   * run owns its own lifecycle and log); an in-process handler's log is the only
+   * trace it leaves. Store failures are only warned about — they never block the
+   * dispatch — and a throwing handler still rejects to the caller after recording.
+   */
+  private async recordFire(
+    automation: Automation,
+    source: AutomationFire["source"],
+    signal?: Signal,
+  ): Promise<string> {
+    const { id } = automation;
+    const warn = (error: unknown) =>
+      this.log.warn("automation fire record failed", { id, error: String(error) });
+    const fire = await this.fires.begin(id, source).catch(warn);
+    const note = async (line: string) => {
+      if (fire) await this.fires.appendLog(id, fire.id, line).catch(warn);
+    };
+    const end = async (patch: Parameters<AutomationFiresStore["finish"]>[2]) => {
+      if (fire) await this.fires.finish(id, fire.id, patch).catch(warn);
+    };
+    const startedAt = Date.now();
+    await note(
+      `start target=${automation.target.type} prompt=${(automation.prompt ?? "").slice(0, 200)}`,
+    );
+    try {
+      const ref = await this.dispatch(automation, signal);
+      await note(`done in ${Date.now() - startedAt} ms: ${ref}`);
+      const runBacked = ["agent", "workflow", "task"].includes(automation.target.type);
+      await end({ status: "done", result: ref, ...(runBacked ? { runRef: ref } : {}) });
+      return ref;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const stack = error instanceof Error && error.stack ? `\n${error.stack}` : "";
+      await note(`error: ${message}${stack}`);
+      await note(`failed in ${Date.now() - startedAt} ms`);
+      await end({ status: "error", error: message });
+      throw error;
+    }
   }
 
   /**
