@@ -25,6 +25,7 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { AutomationFormFields, useAutomationFormState } from "./components/AutomationFormFields";
 import { TriggerFields } from "./components/TriggerFields";
+import { AutomationFires } from "./components/AutomationFires";
 import {
   useDeleteAutomationMutation,
   useTriggerAutomationMutation,
@@ -257,6 +258,10 @@ function AutomationEditor({ automation }: { automation: Automation }) {
                 </Stack>
               )}
             </Stack>
+          </Panel>
+
+          <Panel header={t("firesTitle")} padding="200">
+            <AutomationFires automationId={automation.id} />
           </Panel>
         </Stack>
       </PageContainer>

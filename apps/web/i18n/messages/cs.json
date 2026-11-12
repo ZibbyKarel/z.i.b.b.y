@@ -2108,7 +2108,20 @@
     "signalMinSeverityLabel": "Minimální závažnost",
     "signalSeverityAny": "Jakákoli závažnost",
     "approvalLabel": "Schválení před spuštěním",
-    "approvalHint": "Místo okamžitého spuštění nechá běh čekat na schválení."
+    "approvalHint": "Místo okamžitého spuštění nechá běh čekat na schválení.",
+    "firesTitle": "Běhy",
+    "firesEmpty": "Zatím žádné běhy",
+    "fireOpenRun": "Otevřít běh",
+    "fireStatus": {
+      "running": "Běží",
+      "done": "Hotovo",
+      "error": "Selhalo"
+    },
+    "fireSource": {
+      "cron": "Plán",
+      "manual": "Ručně",
+      "signal": "Signál"
+    }
   },
   "hooks": {
     "title": "Hooky",
