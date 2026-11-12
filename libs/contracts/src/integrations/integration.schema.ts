@@ -232,6 +232,12 @@ const IntegrationObjectSchema = z.object({
   status: IntegrationStatusSchema.default("disconnected"),
   lastSyncAt: IsoDateTimeSchema.optional(),
   lastError: z.string().optional(),
+  /**
+   * When the access token expires, stamped by the connection test (GitHub's
+   * `github-authentication-token-expiration` header). `null` = the token has no
+   * expiry; absent = unknown (never tested, or the kind doesn't report it).
+   */
+  tokenExpiresAt: IsoDateTimeSchema.nullable().optional(),
   /** Computed at read time: whether a credentials file exists. Never persisted. */
   hasCredentials: z.boolean().default(false),
 });
@@ -275,6 +281,7 @@ export const UpdateIntegrationSchema = IntegrationObjectSchema.omit({
   status: true,
   lastSyncAt: true,
   lastError: true,
+  tokenExpiresAt: true,
   hasCredentials: true,
 }).partial();
 export type UpdateIntegrationInput = z.infer<typeof UpdateIntegrationSchema>;
@@ -294,5 +301,7 @@ export type CredentialsInput = z.infer<typeof CredentialsInputSchema>;
 export const TestResultSchema = z.object({
   ok: z.boolean(),
   detail: z.string(),
+  /** Token expiry the probe observed (see `Integration.tokenExpiresAt`); absent = not reported. */
+  tokenExpiresAt: IsoDateTimeSchema.nullable().optional(),
 });
 export type TestResult = z.infer<typeof TestResultSchema>;

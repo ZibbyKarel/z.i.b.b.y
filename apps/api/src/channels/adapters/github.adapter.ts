@@ -26,6 +26,17 @@ function tokenOf(creds: CredentialsInput): string | null {
 }
 
 /**
+ * GitHub's `github-authentication-token-expiration` response header
+ * (`2026-12-11 10:00:00 UTC`) → ISO. Absent (`null`) means the token never
+ * expires → `null`; an unparseable value is unknown → `undefined`.
+ */
+export function parseTokenExpiration(value: string | null): string | null | undefined {
+  if (value === null) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+/**
  * GitHub adapter over plain `fetch` (Node 20+ global). Polls `/repos/{repo}/issues`
  * (the API returns issues *and* PRs; the `pull_request` field distinguishes them) with
  * `since` = the cursor, normalizes each to an {@link InboundMessage} with a
@@ -117,7 +128,13 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       const res = await this.fetchImpl(`${GITHUB_API}/user`, { headers: this.headers(creds) });
       if (!res.ok) return { ok: false, detail: `github /user: HTTP ${res.status}` };
       const body = (await res.json()) as { login?: string };
-      return { ok: true, detail: `authenticated${body.login ? ` as ${body.login}` : ""}` };
+      return {
+        ok: true,
+        detail: `authenticated${body.login ? ` as ${body.login}` : ""}`,
+        tokenExpiresAt: parseTokenExpiration(
+          res.headers.get("github-authentication-token-expiration"),
+        ),
+      };
     } catch (err) {
       return { ok: false, detail: (err as Error).message };
     }

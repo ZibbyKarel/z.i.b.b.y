@@ -51,6 +51,8 @@ export interface SyncStamp {
   status: IntegrationStatus;
   lastSyncAt?: string;
   lastError?: string;
+  /** Token expiry from the connection test; `null` = never. Omitted → the previous value is kept. */
+  tokenExpiresAt?: string | null;
 }
 
 /**
@@ -59,7 +61,7 @@ export interface SyncStamp {
  * The entity file holds only the versioned config (`id`/`kind`/`projectId`/
  * `name`/`enabled`/`config`). Two kinds of fields are intentionally kept OUT of it
  * so a watcher tick never churns a git-tracked file:
- *  - `status`/`lastSyncAt`/`lastError` — volatile connection health, stamped on
+ *  - `status`/`lastSyncAt`/`lastError`/`tokenExpiresAt` — volatile connection health, stamped on
  *    every poll/test. Persisted to a separate, gitignored sidecar
  *    (`<stateDir>/<id>.json`) and re-attached at read time, the same way runs are
  *    kept out of version control. Schema defaults (`disconnected`/`undefined`)
@@ -68,10 +70,7 @@ export interface SyncStamp {
  *    credentials store; stripped on serialize, defaulted on parse.
  */
 @Injectable()
-export class IntegrationsStorageService
-  extends EntityFileStore<Integration>
- 
-{
+export class IntegrationsStorageService extends EntityFileStore<Integration> {
   protected readonly fileExt = ".json";
   protected readonly idRegex = AGENT_ID_REGEX;
   private readonly stateDir: string;
@@ -85,9 +84,7 @@ export class IntegrationsStorageService
   }
 
   async create(input: CreateIntegrationInput): Promise<Integration> {
-    const created = await this.createEntity(input.id, () =>
-      IntegrationSchema.parse({ ...input }),
-    );
+    const created = await this.createEntity(input.id, () => IntegrationSchema.parse({ ...input }));
     if (created === null) throw new IntegrationConflictError(input.id);
     return created;
   }
@@ -130,6 +127,8 @@ export class IntegrationsStorageService
       lastSyncAt: stamp.lastSyncAt ?? existing.lastSyncAt,
       // An explicit undefined clears a prior error on a successful sync.
       lastError: "lastError" in stamp ? stamp.lastError : existing.lastError,
+      tokenExpiresAt:
+        stamp.tokenExpiresAt !== undefined ? stamp.tokenExpiresAt : existing.tokenExpiresAt,
     };
     await this.writeSyncState(id, next);
     return { ...existing, ...next };
@@ -147,6 +146,7 @@ export class IntegrationsStorageService
     delete persisted.status;
     delete persisted.lastSyncAt;
     delete persisted.lastError;
+    delete persisted.tokenExpiresAt;
     return JSON.stringify(persisted);
   }
 
@@ -168,9 +168,9 @@ export class IntegrationsStorageService
     try {
       const parsed = safeJson(await fs.readFile(this.syncStateFile(id), "utf8"));
       if (!parsed || typeof parsed !== "object") return null;
-      const { status, lastSyncAt, lastError } = parsed as Partial<SyncStamp>;
+      const { status, lastSyncAt, lastError, tokenExpiresAt } = parsed as Partial<SyncStamp>;
       if (status === undefined) return null;
-      return { status, lastSyncAt, lastError };
+      return { status, lastSyncAt, lastError, tokenExpiresAt };
     } catch (error) {
       if (isErrnoException(error) && error.code === "ENOENT") return null;
       throw error;
