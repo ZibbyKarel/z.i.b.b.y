@@ -7,6 +7,7 @@ import {
   assertOpencodeReady,
   clearOpencodeCache,
   resolveAiEngine,
+  spendsClaudeSubscription,
 } from "./ai-engine";
 import { ClaudeUnavailableError } from "./claude-preflight.service";
 
@@ -33,6 +34,19 @@ describe("resolveAiEngine", () => {
       engine: "opencode",
       model: "",
     });
+  });
+});
+
+describe("spendsClaudeSubscription", () => {
+  it("is true for claude (and pre-engine runs) and opencode claude-agent models only", () => {
+    expect(spendsClaudeSubscription("claude")).toBe(true);
+    expect(spendsClaudeSubscription(undefined)).toBe(true);
+    expect(spendsClaudeSubscription("opencode", "claude-agent/haiku")).toBe(true);
+    expect(spendsClaudeSubscription("opencode", "claude-agent/sonnet#high")).toBe(true);
+    expect(spendsClaudeSubscription("opencode", "opencode/big-pickle")).toBe(false);
+    expect(spendsClaudeSubscription("opencode", "anthropic/claude-sonnet-4")).toBe(false);
+    expect(spendsClaudeSubscription("opencode", "")).toBe(false);
+    expect(spendsClaudeSubscription("opencode")).toBe(false);
   });
 });
 

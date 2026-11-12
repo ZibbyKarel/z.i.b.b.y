@@ -106,7 +106,8 @@ function OpencodeBody({ available, model }: OpencodeBodyProps) {
     );
   }
   const compact = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 });
-  const cost = (usd: number) => (usd === 0 ? t("free") : formatCostUsd(usd));
+  const cost = (usd: number, providerId?: string) =>
+    usd !== 0 ? formatCostUsd(usd) : providerId === "claude-agent" ? t("subscription") : t("free");
   const line = (u: NonNullable<typeof usage>["opencode"]["totals"]) =>
     t("line", {
       steps: u.steps,
@@ -142,7 +143,9 @@ function OpencodeBody({ available, model }: OpencodeBodyProps) {
                 </BoardText>
                 <BoardText kind="meta" tone="ink3">
                   {`${line(m)} · `}
-                  <span data-testid={AiUsageSectionTestId.Cost}>{cost(m.costUsd)}</span>
+                  <span data-testid={AiUsageSectionTestId.Cost}>
+                    {cost(m.costUsd, m.providerId)}
+                  </span>
                 </BoardText>
               </BoardLine>
             </span>

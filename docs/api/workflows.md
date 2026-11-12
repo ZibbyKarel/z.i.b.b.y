@@ -372,7 +372,8 @@ servers and approval gate. The phase's `model`/`thinking`, escalation rungs and 
 `--agents` catalog apply only to claude; an opencode stage logs one
 `ℹ opencode stage on <model>: ignoring the phase/escalation model settings (…)` line
 instead. The boundary pause on an exhausted Claude window is skipped before an opencode
-stage. The resulting
+stage, except on a `claude-agent/*` model, which spends the Claude subscription (A18).
+The resulting
 `StageRun` carries `engine` / `engineModel`. The phase advisor never receives an opencode
 stage's session id. The text-only `openaiModel` stage below is unchanged and takes
 precedence. See [ai-engines.md](./ai-engines.md).

@@ -886,6 +886,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     agentsStore.listActive.mockResolvedValue([
       { id: "oc", name: "OC", engine: "opencode", engineModel: "opencode/big-pickle" },
       { id: "cl", name: "CL" },
+      { id: "ca", name: "CA", engine: "opencode", engineModel: "claude-agent/haiku" },
     ]);
     const oc = await service.createTask({
       text: "do",
@@ -898,6 +899,12 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       target: { kind: "agent", id: "cl", name: "CL" },
     });
     expect(cl.outcome).toBe("scheduled");
+    // opencode's claude-agent provider spends the same Claude subscription (A18).
+    const ca = await service.createTask({
+      text: "do",
+      target: { kind: "agent", id: "ca", name: "CA" },
+    });
+    expect(ca.outcome).toBe("scheduled");
   });
 
   it("treats a workflow as all-opencode only without sub-workflow phases", async () => {
@@ -915,7 +922,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
       },
     ]);
     const onOpencode = (id: string) =>
-      (service as unknown as { targetOnOpencode(t: unknown): Promise<boolean> }).targetOnOpencode({
+      (service as unknown as { targetOffClaude(t: unknown): Promise<boolean> }).targetOffClaude({
         kind: "workflow",
         id,
         name: id,

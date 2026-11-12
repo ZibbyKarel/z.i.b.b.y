@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import type { AiEngines, AiProvidersUsage, AiUsage } from "@zibby/contracts";
+import type { AiEngineModel, AiEngines, AiProvidersUsage, AiUsage } from "@zibby/contracts";
 import { opencodeCached, opencodeModels } from "../runner/ai-engine";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 
@@ -55,12 +55,13 @@ export class AiEnginesService {
 const STATS_ARGS = (days: number) => ["stats", "--json", "--days", String(days), "--models"];
 
 /**
- * `opencode api GET /api/model` → `provider/model` → is it free. Free only when the
+ * `opencode api GET /api/model` → `provider/model` → its price tags. Free only when the
  * provider is the built-in `opencode` one AND the catalog lists a `cost` AND every
- * price component is 0 — a missing or partial price is not free. `null` when the
- * catalog can't be read.
+ * price component is 0 — a missing or partial price is not free. Subscription when the
+ * provider is `claude-agent` and `cost` is an empty array (a Claude Code login; an
+ * API-key login lists prices). `null` when the catalog can't be read.
  */
-export function freeInCatalog(out: string | null): Map<string, boolean> | null {
+export function freeInCatalog(out: string | null): Map<string, Omit<AiEngineModel, "id">> | null {
   let raw: unknown;
   try {
     raw = JSON.parse(out ?? "");
@@ -70,7 +71,7 @@ export function freeInCatalog(out: string | null): Map<string, boolean> | null {
   const data = isRecord(raw) && Array.isArray(raw.data) ? raw.data.filter(isRecord) : [];
   if (!data.length) return null;
   const zero = (v: unknown): boolean => v === 0;
-  const free = new Map<string, boolean>();
+  const free = new Map<string, Omit<AiEngineModel, "id">>();
   for (const m of data) {
     const provider = str(m.providerID);
     const costs = Array.isArray(m.cost) ? m.cost : [];
@@ -85,7 +86,10 @@ export function freeInCatalog(out: string | null): Map<string, boolean> | null {
           zero(c.cache.read) &&
           zero(c.cache.write),
       );
-    free.set(`${provider}/${str(m.id)}`, provider === "opencode" && allZero);
+    free.set(`${provider}/${str(m.id)}`, {
+      free: provider === "opencode" && allZero,
+      subscription: provider === "claude-agent" && Array.isArray(m.cost) && !m.cost.length,
+    });
   }
   return free;
 }
@@ -93,15 +97,18 @@ export function freeInCatalog(out: string | null): Map<string, boolean> | null {
 /**
  * Tag each model `free` from the priced catalog ({@link freeInCatalog}). A model the
  * catalog doesn't list (or no catalog at all) is free only by the `opencode/…-free`
- * id convention; anything else counts as paid.
+ * id convention and never a subscription; anything else counts as paid.
  */
 export function markFree(
   models: readonly string[],
-  catalog: Map<string, boolean> | null,
-): { id: string; free: boolean }[] {
+  catalog: Map<string, Omit<AiEngineModel, "id">> | null,
+): AiEngineModel[] {
   return models.map((id) => ({
     id,
-    free: catalog?.get(id) ?? (id.startsWith("opencode/") && id.endsWith("-free")),
+    ...(catalog?.get(id) ?? {
+      free: id.startsWith("opencode/") && id.endsWith("-free"),
+      subscription: false,
+    }),
   }));
 }
 

@@ -24,6 +24,7 @@ AI. Second: Czech dictation inside ZibbyOS (earlier attempts failed; colleague s
 | I2  | Dictation: contract, `SttService`, recorder hook, new-task mic, Electron mic permission | sonnet | implemented, uncommitted; e2e proof: Czech clip → exact transcript, 2.1 s cold / 0.5 s warm. Opus review: 11 findings, all fixed (tmp-dir for `--convert`, spawn `error` handler, lost transcripts, orphaned server, `clipboard-read` dropped, 180 s / 32 kbps cap). Uncommitted — waiting for I1 so the pre-commit typecheck sees a consistent tree |
 | I3  | Engine UI: settings switch + model picker (free first), dashboard usage widget | sonnet | implemented, uncommitted (783/783 web-component tests, web typecheck clean, not viewed in a browser). Settings → AI models card, per-agent override, usage rows inside the Budgets widget (no separate widget type), engine shown on workflow stages only. Follow-up after I1 fixes: show engine in the dashboard run list once `TaskRun` carries it |
 | V1  | Reviews, fixes, commit                                       | opus review + orchestrator | done — see "Resume notes" |
+| C1  | opencode 2.2.7 `claude-agent` provider: gate proof, Claude limits for `claude-agent/*`, `OPENCODE_CLAUDE_PATH`, `subscription` flag, PWD fix (A18) | opus | implemented, uncommitted (backend + docs; UI in parallel). See "opencode 2.2.7 + Claude Agent" |
 
 Installed on the machine (2026-11-12): `brew install whisper.cpp ffmpeg`; model
 `~/Library/Application Support/ZibbyOS/models/ggml-large-v3-turbo.bin` (1.5 GB).
@@ -33,7 +34,10 @@ Open for manual check: the microphone prompt and MediaRecorder in a **packaged**
 
 ## Verified facts (local machine)
 
-- `opencode` v2.0.12 is already installed at `/opt/homebrew/bin/opencode`; `opencode auth list`
+- **Now `opencode` v2.2.7** (2026-11-12, later the same day); the items below were
+  first found on v2.0.12. Every CLI shape the engine relies on was re-checked on 2.2.7
+  (see "opencode 2.2.7 + Claude Agent").
+- `opencode` v2.0.12 was already installed at `/opt/homebrew/bin/opencode`; `opencode auth list`
   → "No authenticated integrations" (only the free `opencode/*` models are usable until the
   operator logs in).
 - Headless run works without a TTY:
@@ -104,6 +108,46 @@ Each item below was checked with a real run. See `docs/api/ai-engines.md`.
   default 10, suspended while awaiting approval) that kills such a run as `error`. The
   deny proof was re-run with the final plugin and passed.
 
+### opencode 2.2.7 + Claude Agent (C1, 2026-11-12, each item run live)
+
+- Built-in provider **Claude Agent** (`claude-agent/*`: `haiku`, `sonnet`, `opus`,
+  `fable`, `claude-sonnet-5`, …) runs the installed `claude` through the Claude Agent SDK
+  on the Claude Code login. Connected by the operator with
+  `opencode auth login claude-agent --method claude-login` (no secret entered). It
+  supersedes the R1 note "Claude Pro/Max through opencode is prohibited" (A18).
+- Unchanged on 2.2.7: `--version`, `models` (one id per line), `run --standalone
+  --format json -m … --agent … --`, the JSONL events (`step_start` / `tool_use` /
+  `step_finish` / `text` / `error`), `stats --json --days N --models` (same keys; a
+  `claude-agent` row: `{"model":{"id":"haiku","providerID":"claude-agent","variant":"default"},…,"cost":0}`),
+  `api GET /api/model` (`claude-agent` entries have `cost: []` on a subscription login).
+  `auth list --format json` now returns `[{"id":"claude-agent","name":…,"connections":[…]}]`;
+  `parseProviders` reads `id`. The real `AiEnginesService` on live output:
+  `claude-agent/haiku {free:false, subscription:true}`, `opencode/big-pickle {free:true,
+  subscription:false}`; both schemas parse.
+- Gate on `claude-agent/haiku` with the real builder config + `agentSpawnEnv` + the real
+  hook (and the same on `opencode/big-pickle`): denied `rm` outside the free zone → tool
+  error "Blocked by the ZibbyOS gate: Blocked by the gate (denied).", file kept, log
+  `⛨ gate shell rm … → denied: …`; allowed → file gone, `→ allowed`; both wrote an
+  `intent-request.json` `{"action":"delete",…}`. Toolset (as Claude sees it,
+  `mcp__opencode__<tool>`): no `execute`; a `tools: [read]` agent had only read / glob /
+  grep / `opencode_*` / `skill` and no shell. `execute.before` gets the plain names
+  (`shell`, `skill`, …).
+- **2.2.7 still offers `skill`** although the config denies it (other denied tools are
+  removed). The plugin refuses it: `⛨ gate skill → denied: the agent is not allowed to
+  use "skill".`; `opencode_worktree_create` and `opencode_session_move` likewise denied.
+- **opencode takes its project dir from `$PWD`**, not the process cwd. The inherited PWD
+  (the API's dir) put every opencode session there (both models answered
+  `…/apps/api` when spawned in a sandbox), while the gate plugin judges relative paths
+  against `ZIBBY_GATE_CWD`. Fixed: `agentSpawnEnv` pins `PWD` to the spawn dir; re-run
+  showed the sandbox path and `workdir` = sandbox. A relative-path bypass was inferred
+  from this mismatch, not demonstrated.
+- `OPENCODE_CLAUDE_PATH` is honoured: `/nonexistent/claude` →
+  `{"type":"error","error":{"type":"provider.unknown","message":"Claude Code native binary not found at /nonexistent/claude. …"}}`;
+  the real path (`~/.local/bin/claude`) works. The env strip of `OPENCODE_*` used to
+  drop an operator-set value; it is now set from the API's
+  `OPENCODE_CLAUDE_PATH ?? CLAUDE_BIN` after the strip.
+- `step_finish.cost` is 0 on `claude-agent` (subscription), so run `costUsd` is 0.
+
 ## opencode research (R1, web — unverified items marked)
 
 - Two lines exist: V1 (v1.19.5, latest GitHub release) and V2 (what opencode.ai/docs documents).
@@ -124,9 +168,9 @@ Each item below was checked with a real run. See `docs/api/ai-engines.md`.
 - Auth: `opencode auth login <provider> [--method key]`, `opencode auth list --format json`.
   `ANTHROPIC_API_KEY` etc. in the process env also work. OpenAI supports "Sign in with ChatGPT"
   (cost shows as 0 — counted against the plan).
-- **Claude Pro/Max through opencode is prohibited by Anthropic** (opencode's own docs say so and
-  dropped the plugin). Claude via opencode = API key only. → the native `claude` CLI must stay
-  as the Claude engine for the subscription.
+- ~~**Claude Pro/Max through opencode is prohibited by Anthropic**~~ — outdated: opencode
+  2.2 ships the Claude Agent provider (subscription via the Claude Agent SDK), see A18.
+  The native `claude` CLI stays the default Claude engine.
 - **No rate-limit / quota data** is exposed by opencode — only recorded tokens and cost
   (`opencode stats --json`). Plan limits for non-Claude providers cannot be shown as a
   percentage; show usage (tokens, cost, steps) instead.
@@ -157,6 +201,12 @@ toggle --print`, `hex model list`) and a local HTTP API (port + token in
 - Known baseline failure: 3 tests in `autopilot pr-review gate` fail on clean `main` too.
 
 ## Next (not done in this run)
+
+- C1 not verified: the exact text of a Claude limit error inside opencode's JSONL on
+  `claude-agent/*` (the runner's limit-line scan relies on `detectLimit` matching it;
+  the snapshot-based reclassification does not need it). Not tried: a real ZibbyOS agent
+  run from the app on `claude-agent/*`. Installed Claude Code is 2.1.322 (needs ≥ 2.1.248); there
+  is no version check in ZibbyOS — opencode reports the error.
 
 - **Manual check in a packaged build** (`pnpm desktop:dist`): microphone prompt + MediaRecorder
   dictation in ZibbyOS.app; the UI (settings card, Budgets widget rows, run header) was never

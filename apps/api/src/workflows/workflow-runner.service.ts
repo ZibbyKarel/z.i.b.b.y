@@ -53,7 +53,11 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
-import { type ResolvedAiEngine, assertOpencodeReady } from "../runner/ai-engine";
+import {
+  type ResolvedAiEngine,
+  assertOpencodeReady,
+  spendsClaudeSubscription,
+} from "../runner/ai-engine";
 import {
   ClaudeRunCommandService,
   type ClaudeRunOptions,
@@ -1530,9 +1534,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // earliest reset as `resumeAt` and return without spawning. Auto-resume re-drives
       // from this same cursor. Fail-open: a stale/headroom reading just proceeds, and a
       // wrongly-dispatched stage that dies on a limit is caught by the mid-stage path.
-      // An opencode stage never waits on Claude's window.
+      // A stage that doesn't spend the Claude subscription never waits on its window.
       const boundary =
-        !settled && (await this.phaseOnOpencode(phase))
+        !settled && !(await this.phaseSpendsClaude(phase))
           ? { exhausted: false, resumeAt: null }
           : await this.limits.windowExhausted();
       if (!settled && boundary.exhausted) {
@@ -2944,11 +2948,16 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * when no phase names an agent, as before engines), each distinct opencode model
    * once. An agent that can't be loaded is skipped — its stage fails at build time.
    */
-  /** The phase runs on opencode (its agent resolves there) — Claude's window doesn't apply. */
-  private async phaseOnOpencode(phase: WorkflowPhase): Promise<boolean> {
-    if (!phase.agent) return false;
+  /**
+   * The phase spends the Claude subscription, so Claude's window applies: everything
+   * except an agent that resolves to a non-`claude-agent/*` opencode model (A16/A18).
+   */
+  private async phaseSpendsClaude(phase: WorkflowPhase): Promise<boolean> {
+    if (!phase.agent) return true;
     const agent = await this.agents.get(phase.agent).catch(() => null);
-    return !!agent && this.claude.resolveEngine(agent).engine === "opencode";
+    if (!agent) return true;
+    const engine = this.claude.resolveEngine(agent);
+    return spendsClaudeSubscription(engine.engine, engine.model);
   }
 
   private async preflightEngines(workflow: Workflow): Promise<void> {

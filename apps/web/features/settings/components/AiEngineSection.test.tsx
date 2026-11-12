@@ -29,8 +29,8 @@ const opencode = (over: Partial<AiEngineStatus> = {}): AiEngineStatus => ({
   version: "1.2.3",
   providers: [],
   models: [
-    { id: "anthropic/claude-x", free: false },
-    { id: "opencode/big-pickle", free: true },
+    { id: "anthropic/claude-x", free: false, subscription: false },
+    { id: "opencode/big-pickle", free: true, subscription: false },
   ],
   ...over,
 });

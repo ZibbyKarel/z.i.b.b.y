@@ -102,6 +102,11 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
 
         {opencode?.available && (
           <>
+            <Typography leading="snug" size="sm" type="note" variant="secondary">
+              {models.some((m) => m.id.startsWith("claude-agent/"))
+                ? t("claudeAgentConnected")
+                : t("claudeAgentHint")}
+            </Typography>
             {opencode.providers && opencode.providers.length > 0 ? (
               <Typography data-testid={AiEngineSectionTestId.Providers} size="sm" type="text">
                 {t("providers", { list: opencode.providers.join(", ") })}

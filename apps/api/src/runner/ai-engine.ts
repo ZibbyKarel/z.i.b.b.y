@@ -24,6 +24,15 @@ export function resolveAiEngine(
   return { engine, model: agent.engineModel ?? config?.opencodeModel ?? "" };
 }
 
+/**
+ * The run spends the operator's Claude subscription, so Claude's 5h / weekly window
+ * applies (A18): the native claude engine (absent = a run from before engines), or
+ * opencode on its `claude-agent/*` provider (Claude Code login through the Agent SDK).
+ */
+export function spendsClaudeSubscription(engine: AiEngine | undefined, model?: string): boolean {
+  return engine !== "opencode" || !!model?.startsWith("claude-agent/");
+}
+
 /** `OPENCODE_BIN` is the test seam (mirrors `CLAUDE_BIN`); production runs `opencode`. */
 export function opencodeBin(): string {
   return process.env.OPENCODE_BIN ?? "opencode";

@@ -80,6 +80,9 @@ const CATALOG = JSON.stringify({
     { id: "no-price", providerID: "opencode" },
     { id: "gpt-5", providerID: "openai", cost: price(0) },
     { id: "claude-sonnet-4", providerID: "anthropic", cost: price(3) },
+    // claude-agent on a Claude Code login: `cost: []` (v2.2.7); an API-key login is priced.
+    { id: "haiku", providerID: "claude-agent", cost: [] },
+    { id: "sonnet", providerID: "claude-agent", cost: price(3) },
   ],
 });
 
@@ -95,17 +98,23 @@ describe("markFree", () => {
           "anthropic/claude-sonnet-4",
           "opencode/unlisted-free",
           "opencode/unlisted",
+          "claude-agent/haiku",
+          "claude-agent/sonnet",
+          "claude-agent/unlisted",
         ],
         freeInCatalog(CATALOG),
       ),
     ).toEqual([
-      { id: "opencode/big-pickle", free: true },
-      { id: "opencode/beam-free", free: false }, // priced, despite the -free id
-      { id: "opencode/no-price", free: false }, // no cost = unknown = not free
-      { id: "openai/gpt-5", free: false }, // zero cost but not the opencode provider
-      { id: "anthropic/claude-sonnet-4", free: false },
-      { id: "opencode/unlisted-free", free: true }, // not in the catalog → id rule
-      { id: "opencode/unlisted", free: false },
+      { id: "opencode/big-pickle", free: true, subscription: false },
+      { id: "opencode/beam-free", free: false, subscription: false }, // priced, despite -free
+      { id: "opencode/no-price", free: false, subscription: false }, // no cost = not free
+      { id: "openai/gpt-5", free: false, subscription: false }, // zero cost, not opencode
+      { id: "anthropic/claude-sonnet-4", free: false, subscription: false },
+      { id: "opencode/unlisted-free", free: true, subscription: false }, // id rule
+      { id: "opencode/unlisted", free: false, subscription: false },
+      { id: "claude-agent/haiku", free: false, subscription: true }, // Claude login
+      { id: "claude-agent/sonnet", free: false, subscription: false }, // API key = paid
+      { id: "claude-agent/unlisted", free: false, subscription: false }, // unknown = paid
     ]);
   });
 
@@ -114,9 +123,9 @@ describe("markFree", () => {
       expect(freeInCatalog(out)).toBeNull();
     }
     expect(markFree(["opencode/a-free", "opencode/big-pickle", "openai/x-free"], null)).toEqual([
-      { id: "opencode/a-free", free: true },
-      { id: "opencode/big-pickle", free: false },
-      { id: "openai/x-free", free: false },
+      { id: "opencode/a-free", free: true, subscription: false },
+      { id: "opencode/big-pickle", free: false, subscription: false },
+      { id: "openai/x-free", free: false, subscription: false },
     ]);
   });
 });

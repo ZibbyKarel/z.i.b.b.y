@@ -39,10 +39,16 @@ export function AiEngineModelPicker({
   loaded = true,
 }: AiEngineModelPickerProps) {
   const t = useTranslations("aiEngine");
-  const sorted = [...models].sort((a, b) => Number(b.free) - Number(a.free));
+  // Groups: free, Claude subscription, other (paid). Array sort is stable within a group.
+  const rank = (m: AiEngineModel) => (m.free ? 0 : m.subscription ? 1 : 2);
+  const sorted = [...models].sort((a, b) => rank(a) - rank(b));
   const options = sorted.map((m) => ({
     value: m.id,
-    label: m.free ? `${m.id} · ${t("free")}` : m.id,
+    label: m.free
+      ? `${m.id} · ${t("free")}`
+      : m.subscription
+        ? `${m.id} · ${t("subscription")}`
+        : m.id,
   }));
   const missing = loaded && isModelMissing(models, value);
   // Keep a no-longer-listed choice visible so the control does not look empty.
@@ -88,7 +94,7 @@ export function AiEngineModelPicker({
           {t("modelMissing")}
         </Typography>
       )}
-      {chosen && !chosen.free && (
+      {chosen && !chosen.free && !chosen.subscription && (
         <Typography
           data-testid={AiEngineModelPickerTestId.Notice}
           size="sm"

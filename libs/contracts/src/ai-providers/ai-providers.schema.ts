@@ -49,10 +49,16 @@ export type AiEngine = z.infer<typeof AiEngineSchema>;
 
 /** One engine's availability, from `GET /api/ai-providers/engines`. */
 /**
- * One opencode model. `free` is true for an `opencode/…-free` id (the opencode
- * provider's free tier naming) or a model `opencode stats` shows used at zero cost.
+ * One opencode model. `free`: provider `opencode` with an all-zero price list in
+ * opencode's model catalog (or, without a catalog, an `opencode/…-free` id).
+ * `subscription`: provider `claude-agent` with an empty price list — covered by the
+ * operator's Claude login, so neither free nor paid per token.
  */
-export const AiEngineModelSchema = z.object({ id: z.string(), free: z.boolean() });
+export const AiEngineModelSchema = z.object({
+  id: z.string(),
+  free: z.boolean(),
+  subscription: z.boolean(),
+});
 export type AiEngineModel = z.infer<typeof AiEngineModelSchema>;
 
 export const AiEngineStatusSchema = z.object({

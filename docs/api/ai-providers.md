@@ -51,7 +51,7 @@ Every route requires the operator token.
     { id: "claude", available: boolean, version?: string },
     { id: "opencode", available: boolean, version?: string,
       providers?: string[],                     // `auth list` + model prefixes
-      models?: { id: string; free: boolean }[] } // `opencode models`
+      models?: { id: string; free: boolean; subscription: boolean }[] } // `opencode models`
   ] }
   ```
 
@@ -59,6 +59,8 @@ Every route requires the operator token.
   (`opencode api GET /api/model`, every input/output/cache component) is 0. A zero-cost
   model of another provider is not free. When the catalog can't be read (the call needs
   opencode's background service), only an `opencode/…-free` id counts as free.
+  `subscription` is true for a `claude-agent` model whose catalog `cost` is an empty
+  array: it runs on the operator's Claude Code login (neither free nor paid per token).
 
 - `GET /api/ai-providers/usage?days=N` (`days` 1–365, default 30) maps
   `opencode stats --json --days N --models`:
@@ -71,7 +73,9 @@ Every route requires the operator token.
   // AiUsage = { steps, costUsd, tokens: { input, output, reasoning, cacheRead, cacheWrite } }
   ```
 
-  When stats can't be read, it returns `available: false` with zeros.
+  When stats can't be read, it returns `available: false` with zeros. Verified on 2.2.7:
+  `claude-agent` rows come through (`providerId: "claude-agent"`, `costUsd: 0` on a
+  subscription login).
 
 ## How keys reach work
 

@@ -5,10 +5,11 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { AiEngineModelPicker, AiEngineModelPickerTestId } from "./AiEngineModelPicker";
 
 const MODELS = [
-  { id: "anthropic/claude-x", free: false },
-  { id: "opencode/big-pickle", free: true },
-  { id: "openai/gpt-y", free: false },
-  { id: "opencode/other-free", free: true },
+  { id: "anthropic/claude-x", free: false, subscription: false },
+  { id: "opencode/big-pickle", free: true, subscription: false },
+  { id: "openai/gpt-y", free: false, subscription: false },
+  { id: "opencode/other-free", free: true, subscription: false },
+  { id: "claude-agent/sonnet", free: false, subscription: true },
 ];
 
 describe("AiEngineModelPicker", () => {
@@ -19,6 +20,7 @@ describe("AiEngineModelPicker", () => {
     expect(labels).toEqual([
       "opencode/big-pickle · zdarma",
       "opencode/other-free · zdarma",
+      "claude-agent/sonnet · předplatné Claude",
       "anthropic/claude-x",
       "openai/gpt-y",
     ]);
@@ -41,6 +43,10 @@ describe("AiEngineModelPicker", () => {
       <AiEngineModelPicker models={MODELS} onChange={vi.fn()} value="opencode/big-pickle" />,
     );
     expect(screen.queryByTestId(AiEngineModelPickerTestId.Notice)).not.toBeInTheDocument();
+    rerender(
+      <AiEngineModelPicker models={MODELS} onChange={vi.fn()} value="claude-agent/sonnet" />,
+    );
+    expect(screen.queryByTestId(AiEngineModelPickerTestId.Notice)).not.toBeInTheDocument();
   });
 
   it("flags a chosen model that vanished from the list, but not while loading", () => {
@@ -59,7 +65,7 @@ describe("AiEngineModelPicker", () => {
     expect(screen.getByTestId(AiEngineModelPickerTestId.NoModels)).toBeInTheDocument();
     rerender(
       <AiEngineModelPicker
-        models={[{ id: "openai/gpt-y", free: false }]}
+        models={[{ id: "openai/gpt-y", free: false, subscription: false }]}
         onChange={vi.fn()}
         value=""
       />,

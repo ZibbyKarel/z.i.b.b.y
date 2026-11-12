@@ -3519,6 +3519,7 @@
         "activeModel": "Active model: {model}",
         "empty": "Nothing used in the last {days} days.",
         "free": "free",
+        "subscription": "subscription",
         "line": "{steps} steps · {input} in / {output} out",
         "totals": "Total, {days} days"
       }
@@ -3854,6 +3855,9 @@
     "model": "opencode model",
     "modelPlaceholder": "Choose a model…",
     "free": "free",
+    "subscription": "Claude subscription",
+    "claudeAgentHint": "Claude can also run through opencode (claude-agent/* models) once you connect it in a terminal: opencode auth login claude-agent. Such runs still count against the Claude limits.",
+    "claudeAgentConnected": "The claude-agent/* models run through your Claude subscription and count against the Claude limits.",
     "paidNotice": "This model is not confirmed free and may cost money.",
     "modelMissing": "The chosen model is no longer in the opencode list.",
     "blockedUnavailable": "the opencode binary is not installed",

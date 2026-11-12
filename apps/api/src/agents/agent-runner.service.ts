@@ -13,7 +13,11 @@ import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
-import { type ResolvedAiEngine, assertOpencodeReady } from "../runner/ai-engine";
+import {
+  type ResolvedAiEngine,
+  assertOpencodeReady,
+  spendsClaudeSubscription,
+} from "../runner/ai-engine";
 import {
   ClaudeRunCommandService,
   type ClaudeRunOptions,
@@ -139,8 +143,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // usage window exhausted (a fresh, non-stale snapshot at ≥ 100 %) is a pause,
       // not a failure — even if no limit line was printed. Reclassify before the
       // error is treated as terminal anywhere downstream.
-      // The window is Claude's: an opencode run's error is never a Claude limit pause.
-      if (rec.status === "error" && rec.engine !== "opencode") {
+      // The window is Claude's: only a run that spends the Claude subscription (claude,
+      // or opencode's `claude-agent/*`) can be a Claude limit pause.
+      if (rec.status === "error" && spendsClaudeSubscription(rec.engine, rec.engineModel)) {
         void this.maybePauseOnExhaustedWindow(rec.runId);
       }
       const terminal =

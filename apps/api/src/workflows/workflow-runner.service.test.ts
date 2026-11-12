@@ -2493,6 +2493,14 @@ describe("operator pause (D-PAUSE)", () => {
     await svc().drive(again, threePhases);
     expect(order).toEqual([]);
     expect(again.status).toBe("paused-limit");
+
+    // So does opencode's claude-agent provider: it spends the Claude subscription (A18).
+    internals.claude.resolveEngine = () => ({ engine: "opencode", model: "claude-agent/haiku" });
+    const third = { ...runOf(), status: "running" as const, stageRuns: [] };
+    h.runs.set(WORKFLOW_RUN_ID, third);
+    await svc().drive(third, threePhases);
+    expect(order).toEqual([]);
+    expect(third.status).toBe("paused-limit");
   });
 
   it("rejecting a stage's approval interrupts the run, no retry", async () => {

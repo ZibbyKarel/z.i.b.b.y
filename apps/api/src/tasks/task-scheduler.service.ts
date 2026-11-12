@@ -49,7 +49,7 @@ import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
-import { resolveAiEngine } from "../runner/ai-engine";
+import { resolveAiEngine, spendsClaudeSubscription } from "../runner/ai-engine";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -1815,9 +1815,10 @@ export class TaskSchedulerService
     now: number,
     target: TaskTarget | undefined,
   ): Promise<{ resumeAt: number } | null> {
-    // The window is Claude's: a task whose known target runs wholly on opencode is not
-    // deferred. An unrouted task still needs the (Claude) classifier, so it is.
-    if (target && (await this.targetOnOpencode(target).catch(() => false))) return null;
+    // The window is Claude's: a task whose known target runs wholly off the Claude
+    // subscription is not deferred. An unrouted task still needs the (Claude)
+    // classifier, so it is.
+    if (target && (await this.targetOffClaude(target).catch(() => false))) return null;
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,
       resumeAt: null,
@@ -1826,22 +1827,27 @@ export class TaskSchedulerService
     return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) };
   }
 
-  /** An agent target on opencode, or a workflow whose every agent phase is. */
-  private async targetOnOpencode(target: TaskTarget): Promise<boolean> {
+  /**
+   * An agent target on an opencode model that isn't `claude-agent/*`, or a workflow
+   * whose every agent phase is (A16/A18).
+   */
+  private async targetOffClaude(target: TaskTarget): Promise<boolean> {
     if (target.kind !== "agent" && target.kind !== "workflow") return false;
     const config = this.systemConfig.current();
     const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
-    const onOpencode = (id: string) => {
+    const offClaude = (id: string) => {
       const agent = agents.find((a) => a.id === id);
-      return !!agent && resolveAiEngine(agent, config).engine === "opencode";
+      if (!agent) return false;
+      const engine = resolveAiEngine(agent, config);
+      return !spendsClaudeSubscription(engine.engine, engine.model);
     };
-    if (target.kind === "agent") return onOpencode(target.id);
+    if (target.kind === "agent") return offClaude(target.id);
     const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
     const phases = workflows.find((w) => w.id === target.id)?.phases ?? [];
     // A sub-workflow's engines aren't known here — it may spend the Claude window.
     if (phases.some((p) => p.type === "workflow")) return false;
     const ids = phases.flatMap((p) => p.agent ?? []);
-    return ids.length > 0 && ids.every(onOpencode);
+    return ids.length > 0 && ids.every(offClaude);
   }
 
   /** Record a window-deferred task (Tier 1 — silent, recorded; the briefing reads it). */

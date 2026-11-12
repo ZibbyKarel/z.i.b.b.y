@@ -442,8 +442,10 @@ Agent runs and workflow agent stages run on `claude -p` (unchanged) or on
   `OPENCODE_CONFIG`. It is never written to `~/.config/opencode` or put in the env
   (`OPENCODE_CONFIG_CONTENT` would leak MCP secrets to every shell command). Inherited
   `OPENCODE_*` vars are stripped from the child env; `OPENCODE_DISABLE_PROJECT_CONFIG=1`
-  keeps a repo's `opencode.json` from loading. `--standalone` is required, because the
-  background service ignores per-run config.
+  keeps a repo's `opencode.json` from loading. `PWD` is pinned to the spawn dir (opencode
+  takes its project dir from `$PWD`), and `OPENCODE_CLAUDE_PATH` is set from the API's
+  `OPENCODE_CLAUDE_PATH ?? CLAUDE_BIN` for the `claude-agent/*` provider. `--standalone`
+  is required, because the background service ignores per-run config.
 - **Gate.** `opencode-gate-plugin/index.mjs` runs `tool.hook("execute.before")` on every
   tool call, default deny. It maps a known call to a Claude PreToolUse event (shell→Bash,
   write/edit/read/grep/glob, list→Glob, patch→per-file Write/Edit/`rm`, task→Task,
@@ -464,8 +466,9 @@ Agent runs and workflow agent stages run on `claude -p` (unchanged) or on
 - **RunnerCore.** `RunSpec.engine` / `engineModel` are copied onto the run. In `wire()`,
   `run.engine === "opencode"` swaps in `formatOpencodeStreamLine`, sums the cost over
   `step_finish.part.cost`, and takes the session id from `sessionID`. Every other run keeps
-  the core's `formatLine` and the claude extractors. An opencode run is never scanned for
-  Claude limit lines, and has an idle watchdog: no output byte, gate log line or gate log
+  the core's `formatLine` and the claude extractors. An opencode run is scanned for
+  Claude limit lines only on a `claude-agent/*` model (`spendsClaudeSubscription`, A18),
+  and has an idle watchdog: no output byte, gate log line or gate log
   mtime change for `ZIBBY_OPENCODE_IDLE_MINUTES` (default 10) kills the group and ends it
   as `error`. The plugin touches the gate log every 30 s while an allowed tool runs, so a
   long silent tool is not idle. The watchdog is suspended while the run awaits an

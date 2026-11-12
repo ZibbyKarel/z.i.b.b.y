@@ -42,7 +42,9 @@ update) needs the operator token (401 without it). The resolved engine is record
 and on runs from before engines). A re-run resumes the captured session only when the
 engine is the same; otherwise it starts fresh. An opencode run that can't start (no
 binary, no model, model not in `opencode models`) is refused with a 503 before any run
-record exists. It never falls back to claude. See [ai-engines.md](./ai-engines.md).
+record exists. It never falls back to claude. An errored run is reclassified as
+`paused-limit` on an exhausted Claude window only when it spent the Claude subscription:
+claude, or opencode on a `claude-agent/*` model (A18). See [ai-engines.md](./ai-engines.md).
 
 `plugins` is how a run gets a plugin at all: runs spawn with
 `--setting-sources ""`, so nothing from `~/.claude/plugins` loads ambiently

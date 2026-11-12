@@ -718,6 +718,11 @@ value the parent/subtask read model above uses.
 agent run's own, a workflow run's latest stage that recorded one; absent = claude. See
 [ai-engines.md](./ai-engines.md).
 
+An exhausted Claude window defers a task unless its known target runs wholly off the
+Claude subscription: an agent on an opencode model other than `claude-agent/*`, or a
+workflow whose every agent phase is (no sub-workflow phases). A `claude-agent/*` target
+defers like a claude one (A18).
+
 Workflow runs also expose per-stage timing: every non-synthetic `stageRuns[]` entry
 carries `startedAt` / `finishedAt` (ISO; absent on old runs and on the synthetic
 `.escalated` marker), and `TaskRun.currentStageStartedAt` is the start of the stage

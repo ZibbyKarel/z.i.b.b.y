@@ -496,5 +496,14 @@ describe("AgentRunnerService limit reclassification is Claude-only", () => {
 
     onStatus?.({ runId: "cl", status: "error" });
     await vi.waitFor(() => expect(reclassify).toHaveBeenCalledWith("cl", 1));
+
+    // opencode's claude-agent provider spends the Claude subscription (A18).
+    onStatus?.({
+      runId: "ca",
+      status: "error",
+      engine: "opencode",
+      engineModel: "claude-agent/haiku",
+    });
+    await vi.waitFor(() => expect(reclassify).toHaveBeenCalledWith("ca", 1));
   });
 });

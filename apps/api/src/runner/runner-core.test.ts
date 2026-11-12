@@ -1145,6 +1145,36 @@ describe("RunnerCore", () => {
     }
   }
 
+  it("a Claude limit line pauses an opencode claude-agent run but not another opencode model (A18)", async () => {
+    const epoch = Math.floor(Date.now() / 1000) + 3600;
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      async (detected) => detected ?? 1,
+    );
+    await core.init();
+    const start = (model: string) =>
+      core.start({
+        kind: "agent",
+        ownerId: "lim",
+        command: NODE,
+        args: limitScript(epoch),
+        cwd: path.join(dir, `limit_${model.replace("/", "_")}`),
+        opencodeConfig: "{}",
+        engine: "opencode",
+        engineModel: model,
+        extra: { label: "x" },
+      });
+    const claudeAgent = await start("claude-agent/haiku");
+    const other = await start("opencode/big-pickle");
+    await waitForStatus(core, claudeAgent.runId, "paused-limit");
+    await waitForStatus(core, other.runId, "error");
+  });
+
   it("classifies a child that dies on a usage limit as paused-limit with resumeAt + a pending spec", async () => {
     const epoch = Math.floor(Date.now() / 1000) + 3600;
     // resolveResumeAt echoes the detected reset (else a fallback) — the priority chain.
@@ -1546,6 +1576,29 @@ describe("operator token never reaches agent processes", () => {
     expect(env.ZIBBY_OPERATOR_TOKEN_FILE).toBeUndefined();
     expect("ZIBBY_OPERATOR_TOKEN" in env).toBe(false);
     expect(env.PATH).toBe(process.env.PATH);
+  });
+
+  it("agentSpawnEnv pins opencode's PWD to the spawn dir and passes the claude binary", () => {
+    const saved = { pwd: process.env.PWD, bin: process.env.CLAUDE_BIN };
+    process.env.PWD = "/api/dir";
+    process.env.CLAUDE_BIN = "/opt/claude";
+    try {
+      const spec = {
+        cwd: "/tmp/run",
+        spawnCwd: "/repo",
+        args: [],
+        env: { OPENCODE_CLAUDE_PATH: "/evil" },
+      };
+      const env = agentSpawnEnv({ ...spec, engine: "opencode" });
+      expect(env.PWD).toBe("/repo");
+      // The API's binary, never a project's override.
+      expect(env.OPENCODE_CLAUDE_PATH).toBe("/opt/claude");
+      expect(agentSpawnEnv(spec).PWD).toBe("/api/dir");
+    } finally {
+      process.env.PWD = saved.pwd;
+      if (saved.bin === undefined) delete process.env.CLAUDE_BIN;
+      else process.env.CLAUDE_BIN = saved.bin;
+    }
   });
 
   it("agentSpawnEnv also strips them when spec.env reintroduces them", () => {

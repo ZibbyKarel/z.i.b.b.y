@@ -9,6 +9,7 @@ import { type IntendedAction, IntendedActionSchema } from "@zibby/contracts";
 import { agentBaseEnv } from "../shared/agent-env";
 import { writeFileAtomic } from "../shared/file-storage";
 import type { ScopedLogger } from "../shared/logging/logger.service";
+import { spendsClaudeSubscription } from "./ai-engine";
 import { detectLimit } from "./detect-limit";
 import {
   extractOpencodeCost,
@@ -122,13 +123,20 @@ export function agentSpawnEnv(
     [FREE_DIRS_ENV]: freeDirs(spec),
   });
   if (spec.engine !== "opencode") return env;
+  const claudePath = process.env.OPENCODE_CLAUDE_PATH ?? process.env.CLAUDE_BIN;
   // No inherited or project OPENCODE_* reaches the run; only ours.
   for (const key of Object.keys(env)) if (key.startsWith("OPENCODE_")) delete env[key];
   return {
     ...env,
     OPENCODE_DISABLE_PROJECT_CONFIG: "1",
-    // The gate judges paths against the dir the run really spawned in.
+    // The gate judges paths against the dir the run really spawned in. opencode takes
+    // its project dir from $PWD (verified 2.2.7), not from the process cwd, so an
+    // inherited PWD would put the session in the API's dir while the gate judges here.
     ZIBBY_GATE_CWD: spec.spawnCwd ?? spec.cwd,
+    PWD: spec.spawnCwd ?? spec.cwd,
+    // The `claude-agent/*` provider runs `claude`: the same binary the native engine
+    // spawns (`CLAUDE_BIN` ?? PATH). Only the API's own env, never a project's.
+    ...(claudePath ? { OPENCODE_CLAUDE_PATH: claudePath } : {}),
     ...(opencode ? { OPENCODE_CONFIG: opencode.config, ZIBBY_GATE_LOG: opencode.gateLog } : {}),
   };
 }
@@ -1093,6 +1101,8 @@ export class RunnerCore<R extends BaseRun> {
     // (cost per `step_finish`, `sessionID` on every event); everything else keeps the
     // core's formatter and the claude stream-json extractors.
     const opencode = run.engine === "opencode";
+    // Claude's window applies to claude and to opencode's `claude-agent/*` (A18).
+    const claudeWindow = spendsClaudeSubscription(run.engine, run.engineModel);
     const formatLine = opencode ? formatOpencodeStreamLine : this.formatLine;
     const costOf = opencode ? extractOpencodeCost : (raw: string) => this.extractResultCost(raw);
     const sessionOf = opencode
@@ -1162,8 +1172,8 @@ export class RunnerCore<R extends BaseRun> {
       // — Phase 9 — is stashed so {@link finalize} can classify a child that dies on
       // it as `paused-limit` rather than `error`. Run detection whenever either
       // consumer is wired (the workflow runner now wires onLimitHit too).
-      // Claude's usage window only: an opencode run never pauses on it.
-      if (!opencode && !limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
+      // Claude's usage window only: a non-Claude opencode run never pauses on it.
+      if (claudeWindow && !limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
         const { hit, resetsAt } = detectLimit(text);
         if (hit) {
           limitSeen = true;

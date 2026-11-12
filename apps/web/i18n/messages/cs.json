@@ -3519,6 +3519,7 @@
         "activeModel": "Aktivní model: {model}",
         "empty": "Za posledních {days} dní nic nepoužito.",
         "free": "zdarma",
+        "subscription": "předplatné Claude",
         "line": "{steps} kroků · {input} vstup / {output} výstup",
         "totals": "Celkem, {days} dní"
       }
@@ -3854,6 +3855,9 @@
     "model": "Model opencode",
     "modelPlaceholder": "Vyber model…",
     "free": "zdarma",
+    "subscription": "předplatné Claude",
+    "claudeAgentHint": "Claude může běžet i přes opencode (modely claude-agent/*), jakmile ho v terminálu připojíš: opencode auth login claude-agent. Takové běhy se stále počítají do limitů Claude.",
+    "claudeAgentConnected": "Modely claude-agent/* běží přes předplatné Claude a počítají se do limitů Claude.",
     "paidNotice": "Tento model není ověřený jako zdarma a může stát peníze.",
     "modelMissing": "Vybraný model už není v seznamu opencode.",
     "blockedUnavailable": "opencode není nainstalovaný",
