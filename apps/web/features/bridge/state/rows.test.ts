@@ -133,6 +133,24 @@ describe("pull requests", () => {
   const flat = (nodes: PrNodeVm[], depth = 0): [string, number][] =>
     nodes.flatMap((n) => [[n.row.number, depth] as [string, number], ...flat(n.kids, depth + 1)]);
 
+  it("todo-14: my draft with a colleague's approval and red CI passes an 'action needed' pick", () => {
+    // shoptet/cms4#47977: draft, approved by one colleague (team review still pending), CI failing.
+    const draft = pr({ number: 47977, draft: true, review: "approved", ci: "failing" });
+    const actionNeeded = {
+      review: ["waiting", "changes"],
+      ci: ["failing"],
+      owner: "mine",
+    } as const;
+    const readyToMerge = { review: ["approved"], ci: ["passing"], owner: "mine" } as const;
+    const shown = (p: InboxPr, pick: typeof actionNeeded | typeof readyToMerge) =>
+      flat(
+        prTree("w", [p], none, { ...pick, review: [...pick.review], ci: [...pick.ci] }, ago).nodes,
+      );
+    expect(shown(draft, actionNeeded)).toEqual([["#47977", 0]]);
+    // A draft can't be merged: an approval on it never lands it in "ready to merge".
+    expect(shown({ ...draft, ci: "passing" }, readyToMerge)).toEqual([]);
+  });
+
   it("prRow conversations counts unresolved threads only on my PRs", () => {
     const conv = (p: InboxPr) => prTree("w", [p], none, {}, ago).nodes[0]?.row.conversations;
     expect(conv(pr({ number: 1, unresolvedThreads: 2 }))).toBe(2);

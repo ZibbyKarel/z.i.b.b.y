@@ -77,6 +77,7 @@ export function prCiState(pr: InboxPr): PrCiState {
  * The PR card's review slot, from the operator's seat. Own PR: changes requested > approved
  * (by a colleague) > awaiting review. Someone else's: approved by me (current) > awaiting my
  * review (a request, a re-request, or new commits since my approval) > changes requested > waiting.
+ * An own draft is never `approved`: it can't merge, and GitHub doesn't count an early approval.
  */
 export type PrReviewState = "review" | "approved" | "changes" | "waiting";
 
@@ -102,7 +103,7 @@ export function prApprovalStale(pr: InboxPr): boolean {
 export function prReviewState(pr: InboxPr): PrReviewState {
   if (pr.bucket === "mine") {
     if (pr.review === "changes-requested") return "changes";
-    return pr.review === "approved" ? "approved" : "review";
+    return pr.review === "approved" && !pr.draft ? "approved" : "review";
   }
   // GitHub drops my direct request when I review and re-adds it on a re-request.
   const reRequested = pr.bucket === "to-review" && pr.reviewReason === "direct";
