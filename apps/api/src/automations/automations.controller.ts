@@ -1,6 +1,6 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { automationsContract } from "@zibby/contracts";
+import { type Automation, type AutomationView, automationsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import {
   AutomationConflictError,
@@ -9,12 +9,15 @@ import {
   InvalidAutomationIdError,
   SystemAutomationError,
 } from "./automations.storage.service";
+import { AutomationFireNotFoundError, AutomationFiresStore } from "./automation-fires.store";
 import { SchedulerService } from "./scheduler.service";
 
 const errors = makeErrorMapper("Automation", {
   missing: [AutomationNotFoundError, InvalidAutomationIdError],
   conflict: [AutomationConflictError],
 });
+
+const fireErrors = makeErrorMapper("Automation fire", { missing: [AutomationFireNotFoundError] });
 
 /** A system automation can't be deleted/retargeted — map that to a 409. */
 const system409 = (error: unknown) =>
@@ -28,21 +31,32 @@ export class AutomationsController {
   constructor(
     private readonly storage: AutomationsStorageService,
     private readonly scheduler: SchedulerService,
+    private readonly fires: AutomationFiresStore,
   ) {}
+
+  /** Response-only read model: `lastFire` is never written into the automation file. */
+  private async withLastFire(automation: Automation): Promise<AutomationView> {
+    const lastFire = await this.fires.latest(automation.id);
+    return lastFire ? { ...automation, lastFire } : automation;
+  }
 
   @TsRestHandler(automationsContract)
   handler() {
     return tsRestHandler(automationsContract, {
       createAutomation: ({ body }) => errors.created(() => this.storage.create(body)),
 
-      listAutomations: async () => ({ status: 200, body: await this.storage.list() }),
+      listAutomations: async () => ({
+        status: 200,
+        body: await Promise.all((await this.storage.list()).map((a) => this.withLastFire(a))),
+      }),
 
       searchAutomations: async ({ query: { q } }) => ({
         status: 200,
         body: await this.storage.search(q),
       }),
 
-      getAutomation: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
+      getAutomation: ({ params: { id } }) =>
+        errors.or404(id, async () => this.withLastFire(await this.storage.get(id))),
 
       updateAutomation: ({ params: { id }, body }) =>
         errors.or404(id, () => this.storage.update(id, body), system409),
@@ -60,9 +74,14 @@ export class AutomationsController {
       triggerAutomation: ({ params: { id } }) =>
         errors.or404(id, async () => ({ runRef: await this.scheduler.trigger(id) })),
 
-      // Placeholder until the fire store lands (todo-4, Task 3).
-      listAutomationFires: async () => ({ status: 404, body: { message: "Not implemented" } }),
-      getAutomationFireLog: async () => ({ status: 404, body: { message: "Not implemented" } }),
+      listAutomationFires: ({ params: { id } }) =>
+        errors.or404(id, async () => {
+          await this.storage.get(id);
+          return this.fires.list(id);
+        }),
+
+      getAutomationFireLog: ({ params: { id, fireId }, query: { offset } }) =>
+        fireErrors.or404(fireId, () => this.fires.readLog(id, fireId, offset)),
     });
   }
 }

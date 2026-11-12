@@ -18,6 +18,7 @@ import { SignalBusModule } from "./signal-bus.module";
 import { AUTOMATION_FIRES_DIR, AutomationFiresStore } from "./automation-fires.store";
 import { AUTOMATIONS_DIR, AutomationsStorageService } from "./automations.storage.service";
 import { AutomationsController } from "./automations.controller";
+import { AutomationFireLogsController } from "./automation-fire-logs.controller";
 import { SchedulerService } from "./scheduler.service";
 
 /** Default automations dir, anchored to `apps/api/data/automations`. */
@@ -69,7 +70,7 @@ export function resolveAutomationsDir(): string {
     SignalBusModule,
     TasksModule,
   ],
-  controllers: [AutomationsController],
+  controllers: [AutomationsController, AutomationFireLogsController],
   providers: [
     { provide: AUTOMATIONS_DIR, useFactory: resolveAutomationsDir },
     AutomationsStorageService,

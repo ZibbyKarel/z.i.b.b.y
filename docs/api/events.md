@@ -41,6 +41,10 @@ ts-rest models.
   refetch off it alone can read the pre-decision state. The web refetches the run feeds,
   the approvals queue, scheduled tasks and task detail off it (and, for `pr-*` kinds,
   the inbox PRs).
+- The **`automation-fires`** scope (todo-4): `{ scope, automationId, fireId, status }`
+  from `AutomationFiresStore.onChange`, once when a fire starts (`running`) and once
+  when it finishes (`done` / `error`). The web refetches the automations list
+  (`lastFire`) and that automation's fire history off it.
 - A merged **heartbeat** (`heartbeats()`) so the connection survives idle periods
   through intermediary proxies.
 
