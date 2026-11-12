@@ -51,7 +51,9 @@ describe("AutomationFiresStore", () => {
   it(`prunes beyond ${AUTOMATION_FIRES_KEEP} fires (json and log removed)`, async () => {
     const ids: string[] = [];
     for (let i = 0; i < AUTOMATION_FIRES_KEEP + 2; i++) {
-      ids.push((await store.begin("nightly", "cron", at(i * 1000))).id);
+      const fire = await store.begin("nightly", "cron", at(i * 1000));
+      await store.finish("nightly", fire.id, { status: "done" }, at(i * 1000 + 1));
+      ids.push(fire.id);
     }
     const kept = await store.list("nightly");
     expect(kept).toHaveLength(AUTOMATION_FIRES_KEEP);
@@ -117,5 +119,31 @@ describe("AutomationFiresStore", () => {
     await store.finish("nightly", fire.id, { status: "done" }, at(5));
     expect(changes).toEqual(["nightly:running", "nightly:done"]);
     expect(appended).toBe(1);
+  });
+
+  it("never prunes a fire that is still running", async () => {
+    const running = await store.begin("nightly", "cron", at(0));
+    for (let i = 1; i <= AUTOMATION_FIRES_KEEP + 1; i++) {
+      const fire = await store.begin("nightly", "cron", at(i * 1000));
+      await store.finish("nightly", fire.id, { status: "done" }, at(i * 1000 + 1));
+    }
+    expect((await store.list("nightly")).map((f) => f.id)).toContain(running.id);
+  });
+
+  it("reconcile marks fires left running by a crash as interrupted errors", async () => {
+    const stuck = await store.begin("nightly", "cron", at(0));
+    const done = await store.begin("other", "manual", at(0));
+    await store.finish("other", done.id, { status: "done" }, at(10));
+
+    await new AutomationFiresStore(dir).reconcile(at(5000));
+
+    expect(await store.latest("nightly")).toMatchObject({
+      id: stuck.id,
+      status: "error",
+      error: "interrupted (process restart)",
+      finishedAt: at(5000).toISOString(),
+      durationMs: 5000,
+    });
+    expect(await store.latest("other")).toMatchObject({ status: "done", durationMs: 10 });
   });
 });

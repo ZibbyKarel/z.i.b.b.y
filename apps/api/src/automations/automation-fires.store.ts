@@ -69,7 +69,7 @@ export class AutomationFiresStore {
     await ensureDir(folder);
     await writeFileAtomic(path.join(folder, `${fire.id}.json`), JSON.stringify(fire, null, 2));
     await fs.writeFile(path.join(folder, `${fire.id}.log`), "");
-    await this.prune(folder);
+    await this.prune(folder, automationId);
     this.emitChange(fire);
     return fire;
   }
@@ -115,8 +115,29 @@ export class AutomationFiresStore {
       .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
   }
 
+  // ponytail: reads all (≤50) records per call, so a list of N automations costs N×50 reads;
+  // cache the newest per automation in memory if the automations list gets slow.
   async latest(automationId: string): Promise<AutomationFire | undefined> {
     return (await this.list(automationId))[0];
+  }
+
+  /**
+   * Boot-time sweep: a fire still `running` that started before `now` was cut off by a
+   * process restart — its handler is gone, so it would read as running forever.
+   */
+  async reconcile(now: Date = new Date()): Promise<void> {
+    const folders = await fs.readdir(this.dir).catch(() => []);
+    for (const automationId of folders) {
+      for (const fire of await this.list(automationId)) {
+        if (fire.status !== "running" || Date.parse(fire.startedAt) >= now.getTime()) continue;
+        await this.finish(
+          automationId,
+          fire.id,
+          { status: "error", error: "interrupted (process restart)" },
+          now,
+        );
+      }
+    }
   }
 
   async readLog(automationId: string, fireId: string, offset: number): Promise<RunLogChunk> {
@@ -180,13 +201,18 @@ export class AutomationFiresStore {
 
   /**
    * Drop the oldest record+log pairs beyond the keep limit. Ordered by the epoch-ms
-   * embedded in the id (`fire_<ms>_<hex>`), so a corrupt record is pruned too.
+   * embedded in the id (`fire_<ms>_<hex>`), so a corrupt record is pruned too; a fire
+   * still `running` is never pruned (its handler is still writing to it).
    */
-  private async prune(folder: string): Promise<void> {
+  private async prune(folder: string, automationId: string): Promise<void> {
     const epoch = (id: string) => Number(id.split("_")[1]) || 0;
-    const stale = (await this.recordIds(folder))
+    const candidates = (await this.recordIds(folder))
       .sort((a, b) => epoch(b) - epoch(a))
       .slice(AUTOMATION_FIRES_KEEP);
+    const stale: string[] = [];
+    for (const id of candidates) {
+      if ((await this.read(automationId, id))?.status !== "running") stale.push(id);
+    }
     await Promise.all(
       stale.flatMap((id) => [
         fs.rm(path.join(folder, `${id}.json`), { force: true }),
