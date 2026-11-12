@@ -432,6 +432,29 @@ describe("ProjectPrService", () => {
       expect(changed).toEqual(["acme/app#42"]);
     });
 
+    it("records pr-closed on success, nothing on a refusal", async () => {
+      const record = vi.fn(async () => {});
+      const ok = build({
+        fetchImpl: (async () => jsonResponse(200, { state: "closed" })) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await ok.close("acme", 42);
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "pr-closed",
+          summary: "Closed PR #42 in acme/app without merging",
+          refs: { projectId: "acme", itemId: "pr-42" },
+        }),
+      );
+      record.mockClear();
+      const refused = build({
+        fetchImpl: (async () => jsonResponse(422, {})) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await expect(refused.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      expect(record).not.toHaveBeenCalled();
+    });
+
     it("a GitHub 422 is a refusal", async () => {
       const service = build({
         fetchImpl: (async () =>
@@ -479,6 +502,48 @@ describe("ProjectPrService", () => {
       await service.setDraft("acme", 42, false);
       const [, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
       expect(String(init.body)).toContain("markPullRequestReadyForReview");
+    });
+
+    it("records pr-draft-changed for both directions", async () => {
+      const record = vi.fn(async () => {});
+      const toDraft = build({
+        fetchImpl: route({ draft: false }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await toDraft.setDraft("acme", 42, true);
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: "pr-draft-changed",
+          summary: "Converted PR #42 in acme/app to draft",
+          refs: { projectId: "acme", itemId: "pr-42" },
+        }),
+      );
+      const toReady = build({
+        fetchImpl: route({ draft: true }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await toReady.setDraft("acme", 42, false);
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: "pr-draft-changed",
+          summary: "Marked PR #42 in acme/app ready for review",
+        }),
+      );
+    });
+
+    it("records nothing for a no-op or a GraphQL refusal", async () => {
+      const record = vi.fn(async () => {});
+      const noop = build({
+        fetchImpl: route({ draft: true }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await noop.setDraft("acme", 42, true);
+      const failing = build({
+        fetchImpl: route({ draft: false, errors: [{ message: "no" }] }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await expect(failing.setDraft("acme", 42, true)).rejects.toThrow();
+      expect(record).not.toHaveBeenCalled();
     });
 
     it("is a no-op when the PR is already in the requested state", async () => {

@@ -294,6 +294,11 @@ export class ProjectPrService {
     }
     if (!res.ok) throw new Error(`github close PR #${number}: HTTP ${res.status}`);
     const pull = (await res.json()) as { state?: string; draft?: boolean; html_url?: string };
+    void this.activity.record({
+      kind: "pr-closed",
+      summary: `Closed PR #${number} in ${link.repo} without merging`,
+      refs: { projectId, itemId: `pr-${number}` },
+    });
     this.notifyChanged(link.repo, number);
     return {
       url: pull.html_url ?? `https://github.com/${link.repo}/pull/${number}`,
@@ -345,6 +350,13 @@ export class ProjectPrService {
     if (body.errors?.length) {
       throw new PrUpdateRefusedError(projectId, number, body.errors[0]?.message);
     }
+    void this.activity.record({
+      kind: "pr-draft-changed",
+      summary: draft
+        ? `Converted PR #${number} in ${link.repo} to draft`
+        : `Marked PR #${number} in ${link.repo} ready for review`,
+      refs: { projectId, itemId: `pr-${number}` },
+    });
     this.notifyChanged(link.repo, number);
     return { url, state: "open", draft };
   }

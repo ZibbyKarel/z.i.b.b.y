@@ -85,6 +85,8 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // NS2 F7b-2: a merged PR — reads with the other watcher discoveries
   // (monitor-alert/department-scan). `post-merge-outcome` is legacy (historic entries only).
   "merge-completed": "integrations",
+  "pr-closed": "integrations",
+  "pr-draft-changed": "integrations",
   "post-merge-outcome": "integrations",
   // A signal-triggered automation's dispatch report (and the legacy handoff kind) —
   // reads with the other watcher discoveries rather than a new group.

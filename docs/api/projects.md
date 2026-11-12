@@ -175,8 +175,9 @@ rate-limit error, injectable `fetchImpl` for tests).
   a confirm dialog), denied to the chat self-API (`DENIED_ROUTES`), never called by a
   scheduler/monitor/runner. Close is a REST `PATCH state=closed`; the draft toggle reads the
   PR's `node_id` and runs GraphQL `convertPullRequestToDraft` / `markPullRequestReadyForReview`
-  (no-op when already in that state). Both return `{ url, state, draft }`, fire
-  `onPrChanged`, and map to 404 / 422 (no link) / 409 (`PrUpdateRefusedError`).
+  (no-op when already in that state). On success both record an activity entry like merge
+  does (`pr-closed` / `pr-draft-changed`, refs `pr-<n>`; nothing on a no-op or refusal),
+  return `{ url, state, draft }`, fire `onPrChanged`, and map to 404 / 422 (no link) / 409 (`PrUpdateRefusedError`).
 - `getPr(projectId, number)` / `isMerged(projectId, number)` (phase 125e) — one PR's
   live state, for the roadmap gate's merge poll. `getPr` mirrors `listOpen`'s error
   posture exactly (404 → `null`, 429/403 → rate-limit error, other non-2xx → throws).
