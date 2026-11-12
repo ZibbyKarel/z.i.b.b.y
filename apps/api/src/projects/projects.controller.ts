@@ -1,6 +1,11 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import type { Project, ProjectProfile, ResolvedProjectContext } from "@zibby/contracts";
+import type {
+  Project,
+  ProjectPrUpdateResult,
+  ProjectProfile,
+  ResolvedProjectContext,
+} from "@zibby/contracts";
 import { projectsContract } from "@zibby/contracts";
 import { makeErrorMapper } from "../shared/http/error-mapping";
 import { ProjectLocalService } from "./project-local.service";
@@ -10,6 +15,7 @@ import { ProjectVaultService } from "./project-vault.service";
 import {
   NoGithubLinkError,
   PrNotMergeableError,
+  PrUpdateRefusedError,
   ProjectAlreadyClonedError,
   ProjectConflictError,
   ProjectNoRemoteError,
@@ -205,6 +211,30 @@ export class ProjectsController {
           throw error;
         }
       },
+
+      // todo-15 — explicit operator close / draft toggle, same guard and error mapping as merge.
+      closeProjectPr: ({ params: { id, number } }) =>
+        prUpdate(() => this.projectPrs.close(id, number)),
+      setProjectPrDraft: ({ params: { id, number }, body }) =>
+        prUpdate(() => this.projectPrs.setDraft(id, number, body.draft)),
     });
+  }
+}
+
+/** Shared error mapping of the operator PR updates (close / draft toggle). */
+async function prUpdate(run: () => Promise<ProjectPrUpdateResult>) {
+  try {
+    return { status: 200 as const, body: await run() };
+  } catch (error) {
+    if (error instanceof ProjectNotFoundError) {
+      return { status: 404 as const, body: { message: error.message } };
+    }
+    if (error instanceof NoGithubLinkError) {
+      return { status: 422 as const, body: { message: error.message } };
+    }
+    if (error instanceof PrUpdateRefusedError) {
+      return { status: 409 as const, body: { message: error.message } };
+    }
+    throw error;
   }
 }

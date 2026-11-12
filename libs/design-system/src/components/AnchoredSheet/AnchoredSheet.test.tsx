@@ -95,6 +95,25 @@ describe("AnchoredSheet", () => {
     expect(actions).toHaveTextContent("Go");
   });
 
+  it("renders the meta line in the header only when given", () => {
+    const { unmount } = render(
+      <AnchoredSheet
+        closeLabel="x"
+        kind="k"
+        meta={<span>feat → main</span>}
+        onClose={() => {}}
+        title="t"
+        {...geo}
+      />,
+    );
+    const meta = screen.getByTestId(AnchoredSheetTestId.Meta);
+    expect(screen.getByTestId(AnchoredSheetTestId.Header)).toContainElement(meta);
+    expect(meta).toHaveTextContent("feat → main");
+    unmount();
+    render(<AnchoredSheet closeLabel="x" kind="k" onClose={() => {}} title="t" {...geo} />);
+    expect(screen.queryByTestId(AnchoredSheetTestId.Meta)).toBeNull();
+  });
+
   it("no actions container without actions", () => {
     render(<AnchoredSheet closeLabel="x" kind="k" onClose={() => {}} title="t" {...geo} />);
     expect(screen.queryByTestId(AnchoredSheetTestId.Actions)).toBeNull();

@@ -1,6 +1,11 @@
 import type { Integration, Project } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { NoGithubLinkError, PrNotMergeableError, ProjectNotFoundError } from "./projects.errors";
+import {
+  NoGithubLinkError,
+  PrNotMergeableError,
+  PrUpdateRefusedError,
+  ProjectNotFoundError,
+} from "./projects.errors";
 import { ProjectPrService } from "./project-pr.service";
 
 const PROJECT: Project = { id: "acme", name: "acme", path: "~/Projects/acme" };
@@ -402,11 +407,194 @@ describe("ProjectPrService", () => {
       const fetchImpl = route({});
       const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
       const merged: string[] = [];
-      service.onMerged((repo, n) => merged.push(`${repo}#${n}`));
+      service.onPrChanged((repo, n) => merged.push(`${repo}#${n}`));
       const result = await service.merge("acme", 42, "squash");
       expect(result.branchDeleted).toBeUndefined();
       expect(fetchImpl).toHaveBeenCalledTimes(1);
       expect(merged).toEqual(["acme/app#42"]);
+    });
+  });
+
+  describe("close (todo-15)", () => {
+    // GET reads the current state; PATCH answers `patch` (status, body).
+    const closeRoute = (opts: { state?: string; readStatus?: number; patch?: [number, unknown] }) =>
+      vi.fn(async (_url: string, init?: RequestInit) =>
+        init?.method === "PATCH"
+          ? jsonResponse(
+              ...(opts.patch ?? [
+                200,
+                { state: "closed", draft: false, html_url: "https://x/pull/42" },
+              ]),
+            )
+          : jsonResponse(opts.readStatus ?? 200, {
+              state: opts.state ?? "open",
+              draft: false,
+              html_url: "https://x/pull/42",
+            }),
+      );
+
+    it("PATCHes state=closed and notifies listeners", async () => {
+      const fetchImpl = closeRoute({});
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const changed: string[] = [];
+      service.onPrChanged((repo, n) => changed.push(`${repo}#${n}`));
+      const result = await service.close("acme", 42);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "closed", draft: false });
+      const patch = fetchImpl.mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(patch?.[0]).toBe("https://api.github.com/repos/acme/app/pulls/42");
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ state: "closed" });
+      expect(changed).toEqual(["acme/app#42"]);
+    });
+
+    it("records pr-closed on success, nothing on a refusal", async () => {
+      const record = vi.fn(async () => {});
+      const ok = build({
+        fetchImpl: closeRoute({}) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await ok.close("acme", 42);
+      expect(record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "pr-closed",
+          summary: "Closed PR #42 in acme/app without merging",
+          refs: { projectId: "acme", itemId: "pr-42" },
+        }),
+      );
+      record.mockClear();
+      const refused = build({
+        fetchImpl: closeRoute({ patch: [422, {}] }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await expect(refused.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("an already-closed PR is a no-op: no PATCH, no activity entry", async () => {
+      const record = vi.fn(async () => {});
+      const fetchImpl = closeRoute({ state: "closed" });
+      const service = build({
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        activity: { record },
+      });
+      const result = await service.close("acme", 42);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "closed", draft: false });
+      expect(fetchImpl.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("a GitHub 404 or 422 is a refusal", async () => {
+      for (const fetchImpl of [
+        closeRoute({ readStatus: 404 }),
+        closeRoute({ patch: [404, {}] }),
+        closeRoute({ patch: [422, { message: "nope" }] }),
+      ]) {
+        const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+        await expect(service.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      }
+    });
+
+    it("without a github link it never calls GitHub", async () => {
+      const fetchImpl = vi.fn();
+      const service = build({ token: null, fetchImpl: fetchImpl as never });
+      await expect(service.close("acme", 42)).rejects.toBeInstanceOf(NoGithubLinkError);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setDraft (todo-15)", () => {
+    const route = (opts: { draft: boolean; state?: string; errors?: unknown[] }) =>
+      vi.fn(async (url: string) =>
+        url.endsWith("/graphql")
+          ? jsonResponse(200, opts.errors ? { errors: opts.errors } : { data: {} })
+          : jsonResponse(200, {
+              node_id: "PR_node",
+              state: opts.state ?? "open",
+              draft: opts.draft,
+              html_url: "https://x/pull/42",
+            }),
+      );
+
+    it("converts a ready PR to draft through the GraphQL mutation", async () => {
+      const fetchImpl = route({ draft: false });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const result = await service.setDraft("acme", 42, true);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "open", draft: true });
+      const [url, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+      expect(url).toBe("https://api.github.com/graphql");
+      const body = JSON.parse(String(init.body)) as { query: string; variables: unknown };
+      expect(body.query).toContain("convertPullRequestToDraft");
+      expect(body.variables).toEqual({ id: "PR_node" });
+    });
+
+    it("marks a draft ready for review", async () => {
+      const fetchImpl = route({ draft: true });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      await service.setDraft("acme", 42, false);
+      const [, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+      expect(String(init.body)).toContain("markPullRequestReadyForReview");
+    });
+
+    it("records pr-draft-changed for both directions", async () => {
+      const record = vi.fn(async () => {});
+      const toDraft = build({
+        fetchImpl: route({ draft: false }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await toDraft.setDraft("acme", 42, true);
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: "pr-draft-changed",
+          summary: "Converted PR #42 in acme/app to draft",
+          refs: { projectId: "acme", itemId: "pr-42" },
+        }),
+      );
+      const toReady = build({
+        fetchImpl: route({ draft: true }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await toReady.setDraft("acme", 42, false);
+      expect(record).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: "pr-draft-changed",
+          summary: "Marked PR #42 in acme/app ready for review",
+        }),
+      );
+    });
+
+    it("records nothing for a no-op or a GraphQL refusal", async () => {
+      const record = vi.fn(async () => {});
+      const noop = build({
+        fetchImpl: route({ draft: true }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await noop.setDraft("acme", 42, true);
+      const failing = build({
+        fetchImpl: route({ draft: false, errors: [{ message: "no" }] }) as unknown as typeof fetch,
+        activity: { record },
+      });
+      await expect(failing.setDraft("acme", 42, true)).rejects.toThrow();
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("is a no-op when the PR is already in the requested state", async () => {
+      const fetchImpl = route({ draft: true });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      expect(await service.setDraft("acme", 42, true)).toMatchObject({ draft: true });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses a closed PR and surfaces GraphQL errors as a refusal", async () => {
+      const closed = build({
+        fetchImpl: route({ draft: false, state: "closed" }) as unknown as typeof fetch,
+      });
+      await expect(closed.setDraft("acme", 42, true)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      const failing = build({
+        fetchImpl: route({
+          draft: false,
+          errors: [{ message: "not allowed" }],
+        }) as unknown as typeof fetch,
+      });
+      await expect(failing.setDraft("acme", 42, true)).rejects.toThrow(/not allowed/);
     });
   });
 });

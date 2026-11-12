@@ -216,6 +216,8 @@ const DENIED_ROUTES = new Set([
   "projects.deleteProjectSecrets",
   "projects.updateProjectProfile",
   "projects.mergeProjectPr",
+  "projects.closeProjectPr",
+  "projects.setProjectPrDraft",
   "tasks.createTask",
   "automations.triggerAutomation",
   "taskRuns.stopTaskRun",

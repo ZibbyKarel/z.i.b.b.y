@@ -88,6 +88,9 @@ without one drops a stale override.
 For every distinct repo of a project with a GitHub integration (token via
 `resolveGithubToken`), using GitHub Search:
 
+Each PR carries its description as `body` (todo-15), capped at 20,000 chars (a surrogate pair is
+never split); a capped one also sets `descriptionTruncated: true` and the UI links to GitHub.
+
 - **mine** — `is:pr is:open repo:<repo> author:@me`
 - **to review, direct** — `user-review-requested:@me`
 - **to review, team** — `team-review-requested:<org>/<slug>` for each of the user's
@@ -123,7 +126,7 @@ and passing = `ready-to-merge` → `awaiting-review`.
 `blocker` stay for back-compat.
 
 A failing repo lands in `errors` and never fails the request. The GitHub part is
-cached in memory for 30 s; any successful merge (`ProjectPrService.onMerged`) clears
+cached in memory for 30 s; any successful merge / close / draft toggle (`ProjectPrService.onPrChanged`) clears
 it. `codeReview` (the latest review task, of any level, per `repo#number`, from the tasks
 store) is joined on every read, uncached. A `running` review whose task failed or
 whose run errored reads `failed`. `runs` lists every ZIBBY run of the PR (`kind`: review,

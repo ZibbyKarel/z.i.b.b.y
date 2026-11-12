@@ -15,6 +15,7 @@ export enum AnchoredSheetTestId {
   TitleLink = "anchored-sheet-title-link",
   Actions = "anchored-sheet-actions",
   Chip = "anchored-sheet-chip",
+  Meta = "anchored-sheet-meta",
   Body = "anchored-sheet-body",
   Footer = "anchored-sheet-footer",
   FooterNote = "anchored-sheet-footer-note",
@@ -37,6 +38,8 @@ export interface AnchoredSheetProps {
    * its buttons here so they sit in the same place whatever the body shows. Wraps as one group.
    */
   actions?: ReactNode;
+  /** Free-form line under the title (e.g. `head → base` with copy buttons and a diffstat). */
+  meta?: ReactNode;
   /** Meta chips under the title. */
   chips?: readonly string[];
   /** Colour of the 4px top border. */
@@ -75,6 +78,7 @@ export function AnchoredSheet({
   onTitleClick,
   titleHref,
   actions,
+  meta,
   chips = [],
   tone = "neutral",
   onClose,
@@ -177,6 +181,14 @@ export function AnchoredSheet({
               </div>
             ) : null}
           </div>
+          {meta ? (
+            <div
+              className="flex flex-wrap items-center gap-[8px] font-sans text-[12px] text-ink-2"
+              data-testid={AnchoredSheetTestId.Meta}
+            >
+              {meta}
+            </div>
+          ) : null}
           {chips.length > 0 ? (
             <div className="flex flex-wrap gap-[6px]">
               {chips.map((c) => (

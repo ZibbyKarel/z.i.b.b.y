@@ -164,7 +164,12 @@ export function RunDetailHeader({
                   /
                 </Typography>
                 <Typography as="span" type="code">
-                  <CopyableText copyLabel={tCommon("copyId")} text={run.runId} />
+                  <CopyableText
+                    copiedLabel={tCommon("copied")}
+                    copyFailedLabel={tCommon("copyFailed")}
+                    copyLabel={tCommon("copyId")}
+                    text={run.runId}
+                  />
                 </Typography>
                 <Sep />
                 <Typography as="span" type="labelSm">

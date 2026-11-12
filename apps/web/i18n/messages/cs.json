@@ -195,7 +195,9 @@
     "retry": "Zkusit znovu",
     "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
     "back": "Zpět",
-    "skipToContent": "Přeskočit na obsah"
+    "skipToContent": "Přeskočit na obsah",
+    "copied": "Zkopírováno",
+    "copyFailed": "Kopírování selhalo"
   },
   "tasks": {
     "dialogTitle": "Nový task",
@@ -3571,7 +3573,11 @@
         "noDescription": "Zdroj nemá žádný popis.",
         "process": "Zpracovat do úkolu",
         "respond": "Odpovědět",
-        "viewRun": "Zobrazit běh"
+        "viewRun": "Zobrazit běh",
+        "state": "Stav",
+        "zibby": "ZIBBY",
+        "project": "Projekt",
+        "updatedLabel": "Aktualizováno"
       },
       "task": {
         "chain": "Řetězec · {n}",
@@ -3584,7 +3590,6 @@
         "openApproval": "Otevřít schválení ↗"
       },
       "pr": {
-        "review": "Review",
         "checks": "Kontroly",
         "changes": "Změny",
         "stack": "Stack",
@@ -3602,8 +3607,6 @@
           "unknown": "Neznámé"
         },
         "diff": "Diff · vůči {base}",
-        "by": "Od {who}",
-        "mine": "Tvoje",
         "note": {
           "ready": "Připraveno ke sloučení",
           "approved": "Schváleno",
@@ -3614,7 +3617,27 @@
           "needsApproval": "Vyžaduje schválení",
           "reviewRequested": "Žádost o review",
           "draft": "Draft"
-        }
+        },
+        "state": "Stav",
+        "issue": "Issue",
+        "author": "Autor",
+        "project": "Projekt",
+        "files": "{count, plural, one {# soubor} few {# soubory} other {# souborů}}",
+        "convertToDraft": "Převést na draft",
+        "readyForReview": "Připravit k review",
+        "draftFailed": "Změna stavu draftu selhala: {reason}",
+        "moreActions": "Další akce",
+        "closePr": "Zavřít pull request",
+        "closeConfirmTitle": "Zavřít PR #{number}?",
+        "closeConfirmBody": "PR #{number} se na GitHubu zavře bez sloučení. Později jde znovu otevřít.",
+        "closeFailed": "Zavření PR selhalo: {reason}",
+        "copyBranch": "Kopírovat větev",
+        "copyNumber": "Kopírovat číslo PR",
+        "tabOverview": "Přehled",
+        "noDescription": "PR nemá žádný popis.",
+        "draftFailedNoReason": "Změna stavu draftu selhala.",
+        "closeFailedNoReason": "Zavření PR selhalo.",
+        "descriptionTruncated": "Popis je zkrácený, zobrazit na GitHubu ↗"
       },
       "run": {
         "open": "Otevřít běh ↗",

@@ -99,6 +99,9 @@ export const ActivityKindSchema = z.enum([
   "department-scan",
   // NS2 F7b-2. An operator-merged PR (through ZIBBY's gated endpoint).
   "merge-completed",
+  // todo-15. An operator-closed PR / an operator draft toggle (through ZIBBY's gated endpoints).
+  "pr-closed",
+  "pr-draft-changed",
   // legacy: historic entries only — the post-merge watch that wrote it was removed;
   // kept so old activity history still parses.
   "post-merge-outcome",

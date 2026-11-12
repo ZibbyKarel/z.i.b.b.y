@@ -5,6 +5,7 @@ import {
   type MergeProjectPrResult,
   type Project,
   type ProjectPr,
+  type ProjectPrUpdateResult,
   githubRepoFor,
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
@@ -17,7 +18,7 @@ import { CredentialsStore } from "../integrations/credentials.store";
 // constructor injection, exactly like the pre-existing `ResolvedProjectModule` <->
 // `IntegrationsModule` <-> `ProjectsModule` triangle.
 import { RoadmapGateService } from "../roadmap/roadmap-gate.service";
-import { NoGithubLinkError, PrNotMergeableError } from "./projects.errors";
+import { NoGithubLinkError, PrNotMergeableError, PrUpdateRefusedError } from "./projects.errors";
 import { ProjectsStorageService } from "./projects.storage.service";
 import { ResolvedProjectService } from "./resolved-project.service";
 
@@ -99,8 +100,8 @@ function toProjectPr(pull: GitHubPull): ProjectPr | null {
 @Injectable()
 export class ProjectPrService {
   private readonly fetchImpl: typeof fetch;
-  /** Phase 129 P3 — merge listeners (the PR inbox drops its cache); registered at startup. */
-  private readonly mergedListeners: ((repo: string, number: number) => void)[] = [];
+  /** Phase 129 P3 — PR change listeners (the PR inbox drops its cache); registered at startup. */
+  private readonly changedListeners: ((repo: string, number: number) => void)[] = [];
 
   constructor(
     private readonly projects: ProjectsStorageService,
@@ -117,9 +118,19 @@ export class ProjectPrService {
     this.fetchImpl = fetchImpl ?? fetch;
   }
 
-  /** Register a callback fired after every successful merge (no module cycle). */
-  onMerged(listener: (repo: string, number: number) => void): void {
-    this.mergedListeners.push(listener);
+  /** Register a callback fired after every successful merge / close / draft toggle (no module cycle). */
+  onPrChanged(listener: (repo: string, number: number) => void): void {
+    this.changedListeners.push(listener);
+  }
+
+  private notifyChanged(repo: string, number: number): void {
+    for (const listener of this.changedListeners) {
+      try {
+        listener(repo, number);
+      } catch {
+        // a listener failure must never surface as a failure of the change itself
+      }
+    }
   }
 
   /** The project's effective github integration's repo + stored token, or `null`. */
@@ -254,13 +265,7 @@ export class ProjectPrService {
       // itself is unconditional and un-gated by this: a recording failure must
       // NEVER surface as a merge failure (the merge already happened on GitHub).
       await this.recordMerge(projectId, link.repo, number, body.sha).catch(() => {});
-      for (const listener of this.mergedListeners) {
-        try {
-          listener(link.repo, number);
-        } catch {
-          // a listener failure must never surface as a merge failure
-        }
-      }
+      this.notifyChanged(link.repo, number);
     }
     const cleanup = merged && deleteBranch ? await this.deleteHeadBranch(link, number) : {};
 
@@ -269,6 +274,121 @@ export class ProjectPrService {
       url: `https://github.com/${link.repo}/pull/${number}`,
       ...(body.sha ? { sha: body.sha } : {}),
       ...cleanup,
+    };
+  }
+
+  /**
+   * todo-15 — close an open PR without merging (`PATCH /repos/{repo}/pulls/{number}`).
+   * Like `merge`, reached ONLY from the operator-triggered controller route (the UI confirms
+   * first) and denied to the chat self-API; no scheduler, monitor or runner calls it.
+   */
+  async close(projectId: string, number: number): Promise<ProjectPrUpdateResult> {
+    const link = await this.requireLink(projectId);
+    const headers = this.ghHeaders(link.token);
+    const read = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+      headers,
+    });
+    if (read.status === 404) throw new PrUpdateRefusedError(projectId, number, "PR not found");
+    if (!read.ok) throw new Error(`github read PR #${number}: HTTP ${read.status}`);
+    const current = (await read.json()) as { state?: string; draft?: boolean; html_url?: string };
+    // Already closed (or merged): nothing to do, nothing to record.
+    if (current.state !== "open") {
+      return {
+        url: current.html_url ?? `https://github.com/${link.repo}/pull/${number}`,
+        state: "closed",
+        draft: current.draft === true,
+      };
+    }
+    const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+      method: "PATCH",
+      headers,
+      body: JSON.stringify({ state: "closed" }),
+    });
+    if ([403, 404, 409, 422].includes(res.status)) {
+      throw new PrUpdateRefusedError(projectId, number, await ghMessage(res));
+    }
+    if (!res.ok) throw new Error(`github close PR #${number}: HTTP ${res.status}`);
+    const pull = (await res.json()) as { state?: string; draft?: boolean; html_url?: string };
+    void this.activity.record({
+      kind: "pr-closed",
+      summary: `Closed PR #${number} in ${link.repo} without merging`,
+      refs: { projectId, itemId: `pr-${number}` },
+    });
+    this.notifyChanged(link.repo, number);
+    return {
+      url: pull.html_url ?? `https://github.com/${link.repo}/pull/${number}`,
+      state: pull.state === "open" ? "open" : "closed",
+      draft: pull.draft === true,
+    };
+  }
+
+  /**
+   * todo-15 — convert a PR to draft (`draft: true`) or mark it ready for review. GitHub's REST
+   * API cannot do either, so this reads the PR's `node_id` and runs the GraphQL
+   * `convertPullRequestToDraft` / `markPullRequestReadyForReview` mutation. Operator-only, same
+   * guard as `close`. A PR already in the requested state is a no-op.
+   */
+  async setDraft(
+    projectId: string,
+    number: number,
+    draft: boolean,
+  ): Promise<ProjectPrUpdateResult> {
+    const link = await this.requireLink(projectId);
+    const headers = this.ghHeaders(link.token);
+    const read = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+      headers,
+    });
+    if (read.status === 404) throw new PrUpdateRefusedError(projectId, number, "PR not found");
+    if (!read.ok) throw new Error(`github read PR #${number}: HTTP ${read.status}`);
+    const pull = (await read.json()) as {
+      node_id?: string;
+      state?: string;
+      draft?: boolean;
+      html_url?: string;
+    };
+    const url = pull.html_url ?? `https://github.com/${link.repo}/pull/${number}`;
+    if (pull.state !== "open")
+      throw new PrUpdateRefusedError(projectId, number, "the PR is not open");
+    if ((pull.draft === true) === draft) return { url, state: "open", draft };
+    if (!pull.node_id) throw new Error(`github read PR #${number}: no node_id`);
+
+    const mutation = draft ? "convertPullRequestToDraft" : "markPullRequestReadyForReview";
+    const res = await this.fetchImpl(`${GITHUB_API}/graphql`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        query: `mutation($id: ID!) { ${mutation}(input: { pullRequestId: $id }) { pullRequest { isDraft } } }`,
+        variables: { id: pull.node_id },
+      }),
+    });
+    if (!res.ok) throw new Error(`github ${mutation} PR #${number}: HTTP ${res.status}`);
+    const body = (await res.json()) as { errors?: { message?: string }[] };
+    if (body.errors?.length) {
+      throw new PrUpdateRefusedError(projectId, number, body.errors[0]?.message);
+    }
+    void this.activity.record({
+      kind: "pr-draft-changed",
+      summary: draft
+        ? `Converted PR #${number} in ${link.repo} to draft`
+        : `Marked PR #${number} in ${link.repo} ready for review`,
+      refs: { projectId, itemId: `pr-${number}` },
+    });
+    this.notifyChanged(link.repo, number);
+    return { url, state: "open", draft };
+  }
+
+  private async requireLink(projectId: string): Promise<{ repo: string; token: string }> {
+    const project = await this.projects.get(projectId); // 404 before anything else
+    const link = await this.resolveGithubLink(project);
+    if (!link) throw new NoGithubLinkError(projectId);
+    return link;
+  }
+
+  private ghHeaders(token: string): Record<string, string> {
+    return {
+      authorization: `Bearer ${token}`,
+      accept: "application/vnd.github+json",
+      "content-type": "application/json",
     };
   }
 
@@ -345,4 +465,12 @@ export class ProjectPrService {
     // merge failure — the merge already happened on GitHub.
     void this.roadmapGate.onMerge(projectId, number).catch(() => {});
   }
+}
+
+/** GitHub's error `message`, or undefined when the body is not JSON. */
+async function ghMessage(res: Response): Promise<string | undefined> {
+  return res
+    .json()
+    .then((b: { message?: string }) => b.message)
+    .catch(() => undefined);
 }

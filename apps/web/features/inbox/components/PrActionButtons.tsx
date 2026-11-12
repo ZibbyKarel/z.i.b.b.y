@@ -62,6 +62,56 @@ export interface PrActionButtonsProps {
   pr: InboxPr;
   /** What the PR sits on (`prBaseLabel`): `#12` or a branch — "Rebase on …". */
   baseLabel: string;
+  /** Leave "Fix CI" out — the PR detail renders `PrFixCiButton` in its checks summary instead. */
+  hideFixCi?: boolean;
+}
+
+export interface PrFixCiButtonProps {
+  pr: InboxPr;
+}
+
+/**
+ * "Fix CI" — a `pr-fix-ci` task. ZIBBY fast-forwards the fix (never force) — right away for
+ * `Fixed: all` on my own PR (Tier-2), after a Tier-3 approval otherwise. Renders nothing unless
+ * `isFixCi` and no ZIBBY run of the PR is in flight.
+ */
+export function PrFixCiButton({ pr }: PrFixCiButtonProps) {
+  const t = useTranslations("inboxPage.prs.actions");
+  const fixCi = useFixInboxPrCiMutation();
+  const [message, setMessage] = useState<string | null>(null);
+  if (!isFixCi(pr) || runsOf(pr).some(inFlight)) return null;
+  const onFixCi = () =>
+    fixCi.mutate(
+      { body: { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title } },
+      {
+        onSuccess: () => setMessage(null),
+        onError: (err) =>
+          setMessage(
+            "status" in err && err.status === 422
+              ? t("fixCiRefused", { reason: err.body.message })
+              : t("fixCiFailed"),
+          ),
+      },
+    );
+  return (
+    <>
+      <Button
+        data-testid={PrActionsTestId.FixCi}
+        disabled={fixCi.isPending}
+        intent="primary"
+        loading={fixCi.isPending}
+        onClick={onFixCi}
+        size="sm"
+      >
+        {t("fixCi")}
+      </Button>
+      {message && (
+        <Typography data-testid={PrActionsTestId.Message} type="label" variant="secondary">
+          {message}
+        </Typography>
+      )}
+    </>
+  );
 }
 
 /**
@@ -80,13 +130,12 @@ export interface PrActionButtonsProps {
  * a failed run keeps the buttons and adds a link to the failed task. Review / Address / Fix CI hide once
  * their latest run succeeded after the PR's last GitHub change (`updatedAt` ≤ `finishedAt`).
  */
-export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
+export function PrActionButtons({ pr, baseLabel, hideFixCi = false }: PrActionButtonsProps) {
   const t = useTranslations("inboxPage.prs.actions");
   const qc = useQueryClient();
   const review = useReviewInboxPrMutation();
   const merge = useMergeProjectPrMutation();
   const rebase = useRebaseInboxPrMutation();
-  const fixCi = useFixInboxPrCiMutation();
   const address = useAddressInboxPrCommentsMutation();
   const [deleteBranch, setDeleteBranch] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -144,20 +193,6 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
             "status" in err && err.status === 422
               ? t("addressRefused", { reason: err.body.message })
               : t("addressFailed"),
-          ),
-      },
-    );
-
-  const onFixCi = () =>
-    fixCi.mutate(
-      { body: target },
-      {
-        onSuccess: () => setMessage(null),
-        onError: (err) =>
-          setMessage(
-            "status" in err && err.status === 422
-              ? t("fixCiRefused", { reason: err.body.message })
-              : t("fixCiFailed"),
           ),
       },
     );
@@ -237,18 +272,7 @@ export function PrActionButtons({ pr, baseLabel }: PrActionButtonsProps) {
               {t("address")}
             </Button>
           )}
-          {isFixCi(pr) && (
-            <Button
-              data-testid={PrActionsTestId.FixCi}
-              disabled={fixCi.isPending}
-              intent="primary"
-              loading={fixCi.isPending}
-              onClick={onFixCi}
-              size="sm"
-            >
-              {t("fixCi")}
-            </Button>
-          )}
+          {!hideFixCi && <PrFixCiButton pr={pr} />}
           {isRebase(pr) && (
             <Button
               data-testid={PrActionsTestId.Rebase}

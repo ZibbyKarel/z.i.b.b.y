@@ -5,6 +5,8 @@ import {
   MergeProjectPrBodySchema,
   MergeProjectPrResultSchema,
   ProjectPrSchema,
+  ProjectPrUpdateResultSchema,
+  SetProjectPrDraftBodySchema,
 } from "./project-pr.schema";
 import {
   CreateProjectSchema,
@@ -169,6 +171,37 @@ export const projectsContract = c.router(
       summary:
         "Merge an open PR — ALWAYS an explicit operator action from the UI; ZIBBY never " +
         "auto-merges (Phase 78, CLAUDE.md Law 'Never: Auto-merge')",
+    },
+    closeProjectPr: {
+      method: "POST",
+      path: "/projects/:id/prs/:number/close",
+      pathParams: z.object({ id: ProjectIdSchema, number: z.coerce.number().int() }),
+      body: EmptyBodySchema,
+      responses: {
+        200: ProjectPrUpdateResultSchema,
+        404: ErrorSchema,
+        // 409: GitHub refused the change (already closed, merged, …).
+        409: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary:
+        "Close an open PR without merging (todo-15) — ALWAYS an explicit, confirmed operator " +
+        "action from the UI; never called by ZIBBY on its own",
+    },
+    setProjectPrDraft: {
+      method: "POST",
+      path: "/projects/:id/prs/:number/draft",
+      pathParams: z.object({ id: ProjectIdSchema, number: z.coerce.number().int() }),
+      body: SetProjectPrDraftBodySchema,
+      responses: {
+        200: ProjectPrUpdateResultSchema,
+        404: ErrorSchema,
+        409: ErrorSchema,
+        422: ErrorSchema,
+      },
+      summary:
+        "Convert a PR to draft or mark it ready for review (todo-15) — ALWAYS an explicit " +
+        "operator action from the UI; never called by ZIBBY on its own",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

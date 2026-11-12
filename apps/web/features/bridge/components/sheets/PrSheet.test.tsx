@@ -1,10 +1,15 @@
 import type { InboxPr, InboxPrReviewers } from "@zibby/contracts";
 import {
   AnchoredSheetTestId,
+  CopyableTestId,
+  DialogTestId,
   IconTestId,
+  MarkdownTestId,
+  MenuButtonTestId,
+  MetricStripTestId,
   StackCrumbsTestId,
   StatCellTestId,
-  TypographyTestId,
+  TabsTestId,
 } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
@@ -13,9 +18,11 @@ import { fireEvent, renderWithProviders, screen, within } from "../../../../test
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
 import { PrReviewersTestId } from "../../../inbox/components/PrReviewers";
 import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
-import { PrSheet } from "./PrSheet";
+import { PrSheet, PrSheetTestId } from "./PrSheet";
 
-const { hooks } = vi.hoisted(() => ({
+const { hooks, setDraft, closePr } = vi.hoisted(() => ({
+  setDraft: vi.fn(),
+  closePr: vi.fn(),
   hooks: {
     prs: [] as InboxPr[],
     diff: "",
@@ -39,6 +46,11 @@ vi.mock("../../../inbox/mutations", () => ({
 }));
 vi.mock("../../../projects/mutations", () => ({
   useMergeProjectPrMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useSetProjectPrDraftMutation: () => ({ mutate: setDraft, isPending: false }),
+  useCloseProjectPrMutation: () => ({ mutate: closePr, isPending: false }),
+}));
+vi.mock("../../../projects/queries", () => ({
+  useProjectsQuery: () => ({ data: [{ id: "api", name: "API service" }] }),
 }));
 vi.mock("../../../inbox/queries", () => ({
   useInboxItemsQuery: () => ({ data: { items: hooks.items, epics: [] } }),
@@ -83,12 +95,49 @@ function pr(number: number, over: Partial<InboxPr>): InboxPr {
   };
 }
 
-const show = (p: InboxPr, all: InboxPr[] = [p]) => {
+/** An inbox issue whose run opened `p`. */
+const linkedIssue = (p: InboxPr) => ({
+  id: "i1",
+  projectId: "api",
+  name: "Fix",
+  lifecycle: "pr-open",
+  source: { kind: "jira", externalKey: "ZB-9", url: null },
+  project: { id: "api", name: "API" },
+  runs: [
+    {
+      taskId: "t",
+      startedAt: "2026-01-01T00:00:00.000Z",
+      outcome: "awaiting-merge",
+      prNumber: p.number,
+      prUrl: p.url,
+    },
+  ],
+  hidden: false,
+  updatedAt: "2026-01-01T00:00:00.000Z",
+});
+
+const show = (p: InboxPr, all: InboxPr[] = [p], onClose: () => void = () => {}) => {
   hooks.prs = all;
-  return renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={() => {}} />);
+  return renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={onClose} />);
+};
+
+type MutateOpts = { onSuccess?: () => void; onError?: (err: unknown) => void };
+
+const confirmClose = () => {
+  fireEvent.click(
+    within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(MenuButtonTestId.Trigger),
+  );
+  fireEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-close`));
+  fireEvent.click(
+    within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", {
+      name: "Zavřít pull request",
+    }),
+  );
 };
 
 afterEach(() => {
+  setDraft.mockReset();
+  closePr.mockReset();
   hooks.prs = [];
   hooks.diff = "";
   hooks.items = [];
@@ -152,9 +201,9 @@ describe("PrSheet action buttons", () => {
 
 describe("PrSheet header actions", () => {
   it("puts the action buttons in the sheet header, not the footer", () => {
-    show(pr(14, { ci: "failing", headRef: "feat" }));
+    show(pr(14, { behind: true, headRef: "feat" }));
     expect(
-      within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(PrActionsTestId.FixCi),
+      within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(PrActionsTestId.Rebase),
     ).toBeInTheDocument();
     expect(
       within(screen.getByTestId(AnchoredSheetTestId.Footer)).queryAllByRole("button"),
@@ -163,8 +212,7 @@ describe("PrSheet header actions", () => {
 });
 
 describe("PrSheet content", () => {
-  it("renders status, stat cells, the diff file list and the stack breadcrumb", () => {
-    hooks.diff = ["diff --git a/x.ts b/x.ts", "@@ -1 +1,2 @@", "-a", "+b", "+c"].join("\n");
+  it("renders status, the stack breadcrumb and no stat cells", () => {
     const base = pr(10, { headRef: "base", baseRef: "main" });
     const top = pr(11, {
       headRef: "top",
@@ -174,50 +222,217 @@ describe("PrSheet content", () => {
     });
     show(top, [base, top]);
     expect(screen.getByTestId(AnchoredSheetTestId.State)).toHaveTextContent("CI FAILING");
-    const values = screen.getAllByTestId(StatCellTestId.Value).map((v) => v.textContent);
-    expect(values).toEqual(["Požadovány změny", "Selhává", "+2 −1"]);
+    expect(screen.queryByTestId(StatCellTestId.Root)).toBeNull();
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`)).toHaveTextContent("#11");
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`)).toHaveTextContent("#10");
-    expect(screen.getByTestId("pr-diff")).toBeInTheDocument();
   });
 
-  it("shows green approved/passing cells with status icons and coloured +/- counts", () => {
+  it("makes the PR number in the header copyable", () => {
+    show(pr(11, {}));
+    const kind = screen.getByTestId(AnchoredSheetTestId.Kind);
+    expect(within(kind).getByTestId(CopyableTestId.Root)).toHaveTextContent("#11");
+    expect(within(kind).getByTestId(CopyableTestId.Copy)).toHaveAccessibleName(
+      "Kopírovat číslo PR",
+    );
+  });
+
+  it("shows only head → base under the title, both copyable, then the coloured diffstat", () => {
     hooks.diff = ["diff --git a/x.ts b/x.ts", "@@ -1 +1,2 @@", "-a", "+b", "+c"].join("\n");
+    show(pr(11, { headRef: "feat/x", baseRef: "main" }));
+    const meta = screen.getByTestId(AnchoredSheetTestId.Meta);
+    expect(within(meta).getByTestId(PrSheetTestId.HeadRef)).toHaveTextContent("feat/x");
+    expect(within(meta).getByTestId(PrSheetTestId.BaseRef)).toHaveTextContent("main");
+    expect(within(meta).getAllByTestId(CopyableTestId.Copy)).toHaveLength(2);
+    expect(within(meta).getByTestId(PrSheetTestId.Added)).toHaveTextContent("+2");
+    expect(within(meta).getByTestId(PrSheetTestId.Added).className).toContain("text-ok");
+    expect(within(meta).getByTestId(PrSheetTestId.Removed)).toHaveTextContent("−1");
+    expect(within(meta).getByTestId(PrSheetTestId.Removed).className).toContain("text-bad");
+    expect(within(meta).getByTestId(PrSheetTestId.Files)).toHaveTextContent("1 soubor");
+    expect(screen.queryByTestId(AnchoredSheetTestId.Chip)).toBeNull();
+  });
+
+  it("orders the summary Stav | Kontroly | Issue | Autor | Projekt", () => {
+    const p = pr(32, { authorName: "Me Myself", author: "me" });
+    hooks.items = [linkedIssue(p)];
+    show(p);
+    const items = within(screen.getByTestId(PrSheetTestId.Summary))
+      .getAllByTestId(/^metric-strip-item-/)
+      .map((el) => el.getAttribute("data-testid"));
+    expect(items).toEqual(
+      ["state", "checks", "issue", "author", "project"].map(
+        (id) => `${MetricStripTestId.Item}-${id}`,
+      ),
+    );
+    const author = screen.getByTestId(`${MetricStripTestId.Item}-author`);
+    expect(author).toHaveTextContent("Autor");
+    expect(author).toHaveTextContent("Me Myself");
+    const project = screen.getByTestId(`${MetricStripTestId.Item}-project`);
+    expect(project).toHaveTextContent("API service");
+    expect(project).toHaveTextContent("acme/api");
+    expect(screen.getByTestId(`${MetricStripTestId.Item}-issue`)).toHaveTextContent("ZB-9");
+  });
+
+  it("drops the Issue column when no issue is linked", () => {
+    show(pr(33, {}));
+    expect(screen.queryByTestId(`${MetricStripTestId.Item}-issue`)).toBeNull();
+    expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-4");
+  });
+
+  it("shows review state and checks with status icons", () => {
     show(pr(30, { ci: "passing", review: "approved" }));
-    const [review, checks, changes] = screen.getAllByTestId(StatCellTestId.Root) as [
-      HTMLElement,
-      HTMLElement,
-      HTMLElement,
-    ];
-    for (const cell of [review, checks]) {
-      expect(cell.className).toContain("border-b-state-done");
-      expect(within(cell).getByTestId(StatCellTestId.Icon)).toContainElement(
-        within(cell).getByTestId(IconTestId.Root),
-      );
-      expect(within(cell).getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-ok");
-    }
-    expect(within(changes).queryByTestId(StatCellTestId.Icon)).toBeNull();
-    const [add, del] = within(changes).getAllByTestId(TypographyTestId.Root);
-    expect(add).toHaveTextContent("+2");
-    expect(add?.className).toContain("text-ok");
-    expect(del).toHaveTextContent("−1");
-    expect(del?.className).toContain("text-bad");
+    const state = screen.getByTestId(`${MetricStripTestId.Item}-state`);
+    expect(state).toHaveTextContent("Schváleno");
+    expect(within(state).getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-ok");
+    const checks = screen.getByTestId(`${MetricStripTestId.Item}-checks`);
+    expect(checks).toHaveTextContent("Prošlo");
+    expect(within(checks).getByTestId(IconTestId.Root).getAttribute("class")).toContain("text-ok");
   });
 
   it("uses bad/run icons for failing/pending checks", () => {
     const { unmount } = show(pr(31, { ci: "failing" }));
-    expect(
-      within(screen.getAllByTestId(StatCellTestId.Root)[1]!)
+    const icon = () =>
+      within(screen.getByTestId(`${MetricStripTestId.Item}-checks`))
         .getByTestId(IconTestId.Root)
-        .getAttribute("class"),
-    ).toContain("text-bad");
+        .getAttribute("class");
+    expect(icon()).toContain("text-bad");
     unmount();
     show(pr(32, { ci: "pending" }));
+    expect(icon()).toContain("text-run");
+  });
+
+  it("puts Fix CI into the checks summary when CI is red, not into the header", () => {
+    const { unmount } = show(pr(14, { ci: "failing", headRef: "feat" }));
+    const checks = screen.getByTestId(`${MetricStripTestId.Item}-checks`);
+    expect(within(checks).getByTestId(PrActionsTestId.FixCi)).toBeInTheDocument();
     expect(
-      within(screen.getAllByTestId(StatCellTestId.Root)[1]!)
-        .getByTestId(IconTestId.Root)
-        .getAttribute("class"),
-    ).toContain("text-run");
+      within(screen.getByTestId(AnchoredSheetTestId.Actions)).queryByTestId(PrActionsTestId.FixCi),
+    ).toBeNull();
+    unmount();
+    show(pr(15, { ci: "passing", headRef: "feat" }));
+    expect(screen.queryByTestId(PrActionsTestId.FixCi)).toBeNull();
+  });
+
+  it("offers convert-to-draft / ready-for-review on my PR by its draft state", () => {
+    const { unmount } = show(pr(40, {}));
+    const state = screen.getByTestId(`${MetricStripTestId.Item}-state`);
+    fireEvent.click(within(state).getByTestId(PrSheetTestId.DraftToggle));
+    expect(screen.getByTestId(PrSheetTestId.DraftToggle)).toHaveTextContent("Převést na draft");
+    expect(setDraft).toHaveBeenCalledWith(
+      { params: { id: "api", number: 40 }, body: { draft: true } },
+      expect.anything(),
+    );
+    unmount();
+    const second = show(pr(41, { draft: true }));
+    fireEvent.click(screen.getByTestId(PrSheetTestId.DraftToggle));
+    expect(screen.getByTestId(PrSheetTestId.DraftToggle)).toHaveTextContent("Připravit k review");
+    expect(setDraft).toHaveBeenLastCalledWith(
+      { params: { id: "api", number: 41 }, body: { draft: false } },
+      expect.anything(),
+    );
+    second.unmount();
+    show(pr(42, { bucket: "to-review", section: "needs-your-review" }));
+    expect(screen.queryByTestId(PrSheetTestId.DraftToggle)).toBeNull();
+  });
+
+  it("closes the PR from the ⋯ menu only after confirming", () => {
+    show(pr(50, {}));
+    fireEvent.click(
+      within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(MenuButtonTestId.Trigger),
+    );
+    fireEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-close`));
+    expect(closePr).not.toHaveBeenCalled();
+    const dialog = screen.getByTestId(DialogTestId.Root);
+    expect(dialog).toHaveTextContent("Zavřít PR #50?");
+    fireEvent.click(
+      within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", {
+        name: "Zavřít pull request",
+      }),
+    );
+    expect(closePr).toHaveBeenCalledWith(
+      { params: { id: "api", number: 50 }, body: {} },
+      expect.anything(),
+    );
+  });
+
+  it("closes the sheet after a successful close", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) => opts.onSuccess?.());
+    const onClose = vi.fn();
+    show(pr(52, {}), undefined, onClose);
+    confirmClose();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("a failed close without a message has no dangling colon", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) =>
+      opts.onError?.({ status: 500, body: {} }),
+    );
+    show(pr(53, {}));
+    confirmClose();
+    expect(screen.getByTestId(AnchoredSheetTestId.FooterNote)).toHaveTextContent(
+      /^Zavření PR selhalo\.$/,
+    );
+  });
+
+  it("a failed close with a message shows it", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) =>
+      opts.onError?.({ status: 409, body: { message: "nope" } }),
+    );
+    show(pr(54, {}));
+    confirmClose();
+    expect(screen.getByTestId(AnchoredSheetTestId.FooterNote)).toHaveTextContent(
+      "Zavření PR selhalo: nope",
+    );
+  });
+
+  it("has no ⋯ menu on someone else's PR", () => {
+    show(pr(51, { bucket: "to-review", section: "needs-your-review" }));
+    expect(screen.queryByTestId(MenuButtonTestId.Trigger)).toBeNull();
+  });
+
+  it("tabs: Overview renders the description, Changes the diff", () => {
+    hooks.diff = ["diff --git a/x.ts b/x.ts", "@@ -1 +1 @@", "-a", "+b"].join("\n");
+    show(pr(60, { body: "## What\n\nFixes **it**." }));
+    const overview = screen.getByTestId(PrSheetTestId.Overview);
+    expect(overview).toHaveTextContent("What");
+    expect(overview).toHaveTextContent("Fixes it.");
+    expect(screen.queryByTestId("pr-diff")).toBeNull();
+    fireEvent.click(screen.getByTestId(`${TabsTestId.Tab}-changes`));
+    expect(screen.getByTestId(PrSheetTestId.Changes)).toContainElement(
+      screen.getByTestId("pr-diff"),
+    );
+    expect(screen.queryByTestId(PrSheetTestId.Overview)).toBeNull();
+  });
+
+  it("a truncated description links to GitHub", () => {
+    const p = pr(62, { body: "Long text", descriptionTruncated: true });
+    show(p);
+    const link = screen.getByTestId(PrSheetTestId.DescriptionTruncated);
+    expect(link).toHaveAttribute("href", p.url);
+    expect(link).toHaveTextContent("zobrazit na GitHubu");
+  });
+
+  it("Overview shows GitHub-hosted images only; others become links", () => {
+    show(
+      pr(63, {
+        body: "![a](https://user-images.githubusercontent.com/1.png) ![b](https://github.com/x.png) ![c](https://evil.example/p.png)",
+      }),
+    );
+    const imgs = Array.from(
+      screen.getByTestId(PrSheetTestId.Overview).getElementsByTagName("img"),
+    ).map((i) => i.getAttribute("src"));
+    expect(imgs).toEqual([
+      "https://user-images.githubusercontent.com/1.png",
+      "https://github.com/x.png",
+    ]);
+    expect(screen.getByTestId(MarkdownTestId.BlockedImage)).toHaveAttribute(
+      "href",
+      "https://evil.example/p.png",
+    );
+  });
+
+  it("Overview says so when the PR has no description", () => {
+    show(pr(61, {}));
+    expect(screen.getByTestId(PrSheetTestId.Overview)).toHaveTextContent("PR nemá žádný popis.");
   });
 
   it("title links to GitHub in a new tab; no open-on-GitHub button", () => {
@@ -229,11 +444,9 @@ describe("PrSheet content", () => {
     expect(screen.queryByText(/Otevřít na GitHubu/)).toBeNull();
   });
 
-  it("has no details or checks panel", () => {
+  it("has no details panel", () => {
     show(pr(13, { ci: "failing" }));
     expect(screen.queryByText("Detaily")).toBeNull();
-    expect(screen.queryByText(/Větev/)).toBeNull();
-    expect(screen.getAllByTestId(StatCellTestId.Value)).toHaveLength(3);
   });
 
   it("renders nothing for an unknown PR", () => {
@@ -320,31 +533,11 @@ describe("PrSheet runs and issue link", () => {
 
   it("links the issue that owns the PR and opens its sheet", () => {
     const p = pr(32, {});
-    hooks.items = [
-      {
-        id: "i1",
-        projectId: "api",
-        name: "Fix",
-        lifecycle: "pr-open",
-        source: { kind: "jira", externalKey: "ZB-9", url: null },
-        project: { id: "api", name: "API" },
-        runs: [
-          {
-            taskId: "t",
-            startedAt: "2026-01-01T00:00:00.000Z",
-            outcome: "awaiting-merge",
-            prNumber: 32,
-            prUrl: p.url,
-          },
-        ],
-        hidden: false,
-        updatedAt: "2026-01-01T00:00:00.000Z",
-      },
-    ];
+    hooks.items = [linkedIssue(p)];
     hooks.prs = [p];
     const onOpen = vi.fn();
     renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={() => {}} onOpen={onOpen} />);
-    fireEvent.click(screen.getByText(/ZB-9/));
+    fireEvent.click(screen.getByTestId(PrSheetTestId.IssueLink));
     expect(onOpen).toHaveBeenCalledWith(
       expect.objectContaining({ kind: "issue", id: "api/i1", widgetId: "issues" }),
     );

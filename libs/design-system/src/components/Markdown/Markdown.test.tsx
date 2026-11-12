@@ -22,6 +22,22 @@ describe("Markdown", () => {
     expect(screen.getByTestId(MarkdownTestId.Strong)).toHaveTextContent("bold");
   });
 
+  it("allowImage: a disallowed image renders as a link, an allowed one as an image", () => {
+    render(
+      <Markdown
+        allowImage={(src) => src.startsWith("https://ok.test/")}
+        source={"![shot](https://ok.test/a.png) ![pixel](https://evil.test/p.png)"}
+      />,
+    );
+    const root = screen.getByTestId(MarkdownTestId.Root);
+    const images = root.getElementsByTagName("img");
+    expect(images).toHaveLength(1);
+    expect(images[0]).toHaveAttribute("src", "https://ok.test/a.png");
+    const link = screen.getByTestId(MarkdownTestId.BlockedImage);
+    expect(link).toHaveAttribute("href", "https://evil.test/p.png");
+    expect(link).toHaveTextContent("pixel");
+  });
+
   it("exposes the root testid", () => {
     render(<Markdown source="text" />);
     const root = screen.getByTestId(MarkdownTestId.Root);
