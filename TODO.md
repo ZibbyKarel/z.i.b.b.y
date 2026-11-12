@@ -1,8 +1,8 @@
 # TODO
 
 1. [x] Widgetu návrhy - V dialogu schvalování automatizace musím mít předvyplněný prompt podle návrhu. (main@004c748a7)
-2. [ ] Widget Běhy automatizací - v detailu automatizace název bude link na detail automatizace
-3. [ ] Widget Běhy automatizací - místo textu "tuto minutu" budeme ukazovat "< 1 min"
+2. [x] Widget Běhy automatizací - v detailu automatizace název bude link na detail automatizace (main@34517c3ae)
+3. [x] Widget Běhy automatizací - místo textu "tuto minutu" budeme ukazovat "< 1 min" (main@533911e10)
 4. [ ] Widget Běhy automatizací - v detailu automatizace musím mít seznam běhů automatizace s možností zobrazit si log z jednotlivých běhů tzn všechny automatizace musí někam logovat.
 5. [ ] Widget Běhy automatizací - Pokud se automatizace spustila, místo odpočtu do dalšího spuštění zobrazujeme kartu automatizace ve stavu "running". stejně tak i stavy kdy automatizace selže. Stejně jako u Widgetu Běhy. V detailu automatizace pak vidím živý steam logu jako v detailu Behu
 6. [ ] ve zbuildované desktop aplikaci nefunguje swipování left/right jako gesta na zpět/vpřed jako v browseru
