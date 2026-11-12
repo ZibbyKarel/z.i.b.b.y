@@ -2,6 +2,7 @@
 
 import { type Ref, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDismissOnOutside } from "../../hooks/useDismissOnOutside";
 import { DENSITIES, type Density } from "../../tokens";
 import { cn } from "../../utils/cn";
 
@@ -56,12 +57,10 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
   const [rect, setRect] = useState<DOMRect | null>(null);
   const menuId = useId();
 
+  useDismissOnOutside({ open, refs: [rootRef, menuRef], onDismiss: () => setOpen(false) });
+
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (!rootRef.current?.contains(target) && !menuRef.current?.contains(target)) setOpen(false);
-    };
     const reposition = () => {
       if (rootRef.current) setRect(rootRef.current.getBoundingClientRect());
     };
@@ -71,10 +70,8 @@ export function DensityMenu({ value, onChange, labels, label, ref }: DensityMenu
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("mousedown", onDown);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);

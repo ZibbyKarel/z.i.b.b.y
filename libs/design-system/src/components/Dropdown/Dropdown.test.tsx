@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Dropdown, DropdownTestId } from "./Dropdown";
@@ -450,5 +451,78 @@ describe("Dropdown", () => {
   it("has an opaque default trigger background", () => {
     render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
     expect(screen.getByTestId(DropdownTestId.Trigger).className).not.toMatch(/bg-transparent/);
+  });
+});
+
+describe("Dropdown outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    expect(screen.getByTestId(DropdownTestId.Panel)).toBeInTheDocument();
+    await user.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(DropdownTestId.Panel)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("still selects an option inside a dialog", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Dialog open title="T">
+        <Dropdown onChange={onChange} options={OPTIONS} value="cs" />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    await user.click(screen.getAllByTestId(DropdownTestId.Option)[1]!);
+    expect(onChange).toHaveBeenCalledWith("en");
+  });
+
+  it("closes exactly once when the trigger is clicked while open", async () => {
+    const user = userEvent.setup();
+    render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    const trigger = screen.getByTestId(DropdownTestId.Trigger);
+    await user.click(trigger);
+    await user.click(trigger);
+    expect(screen.queryByTestId(DropdownTestId.Panel)).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes on a pointerdown on the document body", async () => {
+    const user = userEvent.setup();
+    render(<Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />);
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId(DropdownTestId.Panel)).not.toBeInTheDocument();
+  });
+
+  it("keeps a multi menu open when a chip is removed", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Dropdown multi onChange={onChange} options={OPTIONS} value={["cs", "en"]} />);
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    const chip = screen.getByTestId(`${DropdownTestId.Chip}-cs`);
+    fireEvent.pointerDown(chip);
+    expect(screen.getByTestId(DropdownTestId.Panel)).toBeInTheDocument();
+  });
+
+  it("closes the first menu when a second one opens", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Dropdown onChange={vi.fn()} options={OPTIONS} value="cs" />
+        <Dropdown onChange={vi.fn()} options={OPTIONS} value="en" />
+      </>,
+    );
+    const [first, second] = screen.getAllByTestId(DropdownTestId.Trigger);
+    await user.click(first!);
+    await user.click(second!);
+    expect(screen.getAllByTestId(DropdownTestId.Panel)).toHaveLength(1);
+    expect(first).toHaveAttribute("aria-expanded", "false");
   });
 });

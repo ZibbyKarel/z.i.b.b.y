@@ -16,6 +16,7 @@ import { Checkbox } from "../Checkbox/Checkbox";
 import { Chip } from "../Chip/Chip";
 import { Icon } from "../Icon/Icon";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
+import { useDismissOnOutside } from "../../hooks/useDismissOnOutside";
 
 export interface DropdownOption<T extends string = string> {
   value: T;
@@ -239,6 +240,9 @@ export function Dropdown<T extends string = string>(props: DropdownProps<T>) {
   const optionId = (i: number) => `${baseId}-opt-${i}`;
 
   const close = useCallback(() => setOpen(false), []);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The trigger is "inside", so clicking it while open is handled by its own toggle.
+  useDismissOnOutside({ open, refs: [triggerRef, menuRef], onDismiss: close });
 
   const updateRect = useCallback(() => {
     const el = triggerRef.current;
@@ -569,102 +573,100 @@ export function Dropdown<T extends string = string>(props: DropdownProps<T>) {
       {open &&
         typeof document !== "undefined" &&
         createPortal(
-          <>
-            <div className="fixed inset-0 z-40" onClick={close} />
-            <MenuSurface
-              scroll
-              align={isField ? "stretch" : "end"}
-              aria-multiselectable={props.multi ? true : undefined}
-              data-testid={DropdownTestId.Panel}
-              id={`${baseId}-listbox`}
-              placement="fixed"
-              role="listbox"
-              style={menuStyle}
-            >
-              <div className="p-1">
-                {rows.map((row, i) => {
-                  const active = i === activeRow;
-                  const rowClasses = cn(
-                    "w-full flex items-center gap-2.5 px-[11px] py-[9px]",
-                    "rounded-sm cursor-pointer border-none text-left",
-                    focusRingInset,
-                    "transition-colors duration-100",
-                    active ? "bg-surface" : "bg-transparent hover:bg-surface",
-                    active && "ring-1 ring-inset ring-border-strong",
-                  );
+          <MenuSurface
+            scroll
+            align={isField ? "stretch" : "end"}
+            aria-multiselectable={props.multi ? true : undefined}
+            data-testid={DropdownTestId.Panel}
+            id={`${baseId}-listbox`}
+            placement="fixed"
+            ref={menuRef}
+            role="listbox"
+            style={menuStyle}
+          >
+            <div className="p-1">
+              {rows.map((row, i) => {
+                const active = i === activeRow;
+                const rowClasses = cn(
+                  "w-full flex items-center gap-2.5 px-[11px] py-[9px]",
+                  "rounded-sm cursor-pointer border-none text-left",
+                  focusRingInset,
+                  "transition-colors duration-100",
+                  active ? "bg-surface" : "bg-transparent hover:bg-surface",
+                  active && "ring-1 ring-inset ring-border-strong",
+                );
 
-                  if (row.kind === "all") {
-                    // The select-all row only exists in multi mode (see `hasSelectAll`),
-                    // so reading the multi-only labels here is sound.
-                    const customLabel = props.multi
-                      ? allSelected
-                        ? props.deselectAllLabel
-                        : props.selectAllLabel
-                      : undefined;
-                    const label = customLabel ?? (allSelected ? "Clear all" : "Select all");
-                    return (
-                      <button
-                        aria-selected={allSelected}
-                        className={cn(rowClasses, "border-b border-border")}
-                        data-testid={DropdownTestId.SelectAll}
-                        id={optionId(i)}
-                        key="__select_all__"
-                        onClick={() => activate(i)}
-                        onPointerMove={() => setActiveIndex(i)}
-                        role="option"
-                        type="button"
-                      >
-                        <Checkbox presentational checked={allSelected} size="sm" />
-                        <span className="text-md text-foreground flex-1 font-medium">{label}</span>
-                      </button>
-                    );
-                  }
-
-                  const { opt } = row;
-                  const selectedOpt = isSelected(opt.value);
+                if (row.kind === "all") {
+                  // The select-all row only exists in multi mode (see `hasSelectAll`),
+                  // so reading the multi-only labels here is sound.
+                  const customLabel = props.multi
+                    ? allSelected
+                      ? props.deselectAllLabel
+                      : props.selectAllLabel
+                    : undefined;
+                  const label = customLabel ?? (allSelected ? "Clear all" : "Select all");
                   return (
                     <button
-                      aria-selected={selectedOpt}
-                      className={cn(
-                        rowClasses,
-                        selectedOpt && !props.multi && "bg-accent-dim hover:bg-accent-dim",
-                      )}
-                      data-testid={DropdownTestId.Option}
+                      aria-selected={allSelected}
+                      className={cn(rowClasses, "border-b border-border")}
+                      data-testid={DropdownTestId.SelectAll}
                       id={optionId(i)}
-                      key={opt.value}
+                      key="__select_all__"
                       onClick={() => activate(i)}
                       onPointerMove={() => setActiveIndex(i)}
                       role="option"
                       type="button"
                     >
-                      {props.multi && <Checkbox presentational checked={selectedOpt} size="sm" />}
-                      {opt.code !== undefined && (
-                        <span
-                          className={cn(
-                            "font-mono text-base font-semibold w-[22px]",
-                            selectedOpt ? "text-accent" : "text-foreground-dim",
-                          )}
-                        >
-                          {opt.code}
-                        </span>
-                      )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block truncate text-md text-foreground">{opt.label}</span>
-                        {opt.description && (
-                          <span className="block truncate text-xs text-foreground-faint">
-                            {opt.description}
-                          </span>
-                        )}
-                      </span>
-                      {selectedOpt && !props.multi && (
-                        <Icon name="check" size="sm" stroke="medium" tone="accent" />
-                      )}
+                      <Checkbox presentational checked={allSelected} size="sm" />
+                      <span className="text-md text-foreground flex-1 font-medium">{label}</span>
                     </button>
                   );
-                })}
-              </div>
-            </MenuSurface>
-          </>,
+                }
+
+                const { opt } = row;
+                const selectedOpt = isSelected(opt.value);
+                return (
+                  <button
+                    aria-selected={selectedOpt}
+                    className={cn(
+                      rowClasses,
+                      selectedOpt && !props.multi && "bg-accent-dim hover:bg-accent-dim",
+                    )}
+                    data-testid={DropdownTestId.Option}
+                    id={optionId(i)}
+                    key={opt.value}
+                    onClick={() => activate(i)}
+                    onPointerMove={() => setActiveIndex(i)}
+                    role="option"
+                    type="button"
+                  >
+                    {props.multi && <Checkbox presentational checked={selectedOpt} size="sm" />}
+                    {opt.code !== undefined && (
+                      <span
+                        className={cn(
+                          "font-mono text-base font-semibold w-[22px]",
+                          selectedOpt ? "text-accent" : "text-foreground-dim",
+                        )}
+                      >
+                        {opt.code}
+                      </span>
+                    )}
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-md text-foreground">{opt.label}</span>
+                      {opt.description && (
+                        <span className="block truncate text-xs text-foreground-faint">
+                          {opt.description}
+                        </span>
+                      )}
+                    </span>
+                    {selectedOpt && !props.multi && (
+                      <Icon name="check" size="sm" stroke="medium" tone="accent" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </MenuSurface>,
           document.body,
         )}
     </div>

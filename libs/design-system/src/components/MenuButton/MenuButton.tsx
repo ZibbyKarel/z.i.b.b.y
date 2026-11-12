@@ -7,6 +7,7 @@ import { Button, type ButtonIntent, type ButtonSize, buttonClasses } from "../Bu
 import { Divider } from "../Divider/Divider";
 import { Icon, type IconName } from "../Icon/Icon";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
+import { useDismissOnOutside } from "../../hooks/useDismissOnOutside";
 import type { SubNavLinkComponent } from "../SubNav/SubNav";
 
 export enum MenuButtonTestId {
@@ -78,7 +79,7 @@ export interface MenuButtonProps {
  * split button with a mandatory primary segment). Shares `DropDownButton`'s
  * proven mechanics: fixed-position portal, `updateRect` on scroll/resize,
  * ArrowUp/Down + Enter/Escape/Tab keyboard nav via `aria-activedescendant`,
- * the `fixed inset-0` click-catcher, and the menu-row markup with
+ * `useDismissOnOutside` outside-pointerdown close, and the menu-row markup with
  * `focusRingInset`. Keyboard `Enter` activates a row by clicking its real DOM
  * node (`document.getElementById`) rather than calling `onSelect` directly —
  * for an `href` row this makes the link's own navigation (e.g. Next's
@@ -118,6 +119,9 @@ export function MenuButton({
   const itemId = (i: number) => `${baseId}-item-${i}`;
 
   const close = useCallback(() => setOpen(false), []);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The trigger is "inside", so clicking it while open is handled by its own toggle.
+  useDismissOnOutside({ open, refs: [triggerRef, menuRef], onDismiss: close });
 
   const updateRect = useCallback(() => {
     const el = triggerRef.current;
@@ -260,91 +264,72 @@ export function MenuButton({
       {open &&
         typeof document !== "undefined" &&
         createPortal(
-          <>
-            <div className="fixed inset-0 z-40" onClick={close} />
-            <MenuSurface
-              scroll
-              align="end"
-              data-testid={MenuButtonTestId.Menu}
-              id={`${baseId}-menu`}
-              placement="fixed"
-              role="menu"
-              style={menuStyle}
-            >
-              <div className="p-1">
-                {items.map((entry, i) => {
-                  if (isDivider(entry)) {
-                    return (
-                      <div
-                        className="my-1"
-                        data-testid={`${MenuButtonTestId.Divider}-${entry.id}`}
-                        key={entry.id}
-                      >
-                        <Divider />
-                      </div>
-                    );
-                  }
-
-                  const item = entry;
-                  const active = i === activeRow;
-                  const danger = item.danger && !item.disabled;
-                  const toneClass = danger ? "text-bad" : bordered ? "text-ink" : "text-foreground";
-                  const rowClass = cn(
-                    "w-full flex items-center gap-2.5 rounded-sm cursor-pointer border-none text-left",
-                    focusRingInset,
-                    "transition-colors duration-100",
-                    bordered ? "px-3 py-[9px] font-sans text-[13px]" : "px-[11px] py-[9px]",
-                    item.disabled
-                      ? "cursor-not-allowed opacity-50"
-                      : cn(
-                          active
-                            ? bordered
-                              ? "bg-panel-2"
-                              : "bg-surface"
-                            : cn(
-                                "bg-transparent",
-                                bordered ? "hover:bg-panel-2" : "hover:bg-surface",
-                              ),
-                        ),
-                    active && !item.disabled && "ring-1 ring-inset ring-border-strong",
-                  );
-                  const content = (
-                    <>
-                      {item.icon && (
-                        <Icon name={item.icon} size="sm" tone={danger ? "bad" : undefined} />
-                      )}
-                      <span className={cn("flex-1", !bordered && "text-md", toneClass)}>
-                        {item.label}
-                      </span>
-                      {item.trailing && <span className="text-ink-3">{item.trailing}</span>}
-                    </>
-                  );
-
-                  if (item.href) {
-                    return (
-                      <Link
-                        aria-disabled={item.disabled || undefined}
-                        className={rowClass}
-                        data-testid={`${MenuButtonTestId.Item}-${item.id}`}
-                        href={item.href}
-                        id={itemId(i)}
-                        key={item.id}
-                        onClick={() => selectItem(item)}
-                        onPointerMove={() =>
-                          !item.disabled && setActiveIndex(navigableIndices.indexOf(i))
-                        }
-                        role="menuitem"
-                      >
-                        {content}
-                      </Link>
-                    );
-                  }
-
+          <MenuSurface
+            scroll
+            align="end"
+            data-testid={MenuButtonTestId.Menu}
+            id={`${baseId}-menu`}
+            placement="fixed"
+            ref={menuRef}
+            role="menu"
+            style={menuStyle}
+          >
+            <div className="p-1">
+              {items.map((entry, i) => {
+                if (isDivider(entry)) {
                   return (
-                    <button
+                    <div
+                      className="my-1"
+                      data-testid={`${MenuButtonTestId.Divider}-${entry.id}`}
+                      key={entry.id}
+                    >
+                      <Divider />
+                    </div>
+                  );
+                }
+
+                const item = entry;
+                const active = i === activeRow;
+                const danger = item.danger && !item.disabled;
+                const toneClass = danger ? "text-bad" : bordered ? "text-ink" : "text-foreground";
+                const rowClass = cn(
+                  "w-full flex items-center gap-2.5 rounded-sm cursor-pointer border-none text-left",
+                  focusRingInset,
+                  "transition-colors duration-100",
+                  bordered ? "px-3 py-[9px] font-sans text-[13px]" : "px-[11px] py-[9px]",
+                  item.disabled
+                    ? "cursor-not-allowed opacity-50"
+                    : cn(
+                        active
+                          ? bordered
+                            ? "bg-panel-2"
+                            : "bg-surface"
+                          : cn(
+                              "bg-transparent",
+                              bordered ? "hover:bg-panel-2" : "hover:bg-surface",
+                            ),
+                      ),
+                  active && !item.disabled && "ring-1 ring-inset ring-border-strong",
+                );
+                const content = (
+                  <>
+                    {item.icon && (
+                      <Icon name={item.icon} size="sm" tone={danger ? "bad" : undefined} />
+                    )}
+                    <span className={cn("flex-1", !bordered && "text-md", toneClass)}>
+                      {item.label}
+                    </span>
+                    {item.trailing && <span className="text-ink-3">{item.trailing}</span>}
+                  </>
+                );
+
+                if (item.href) {
+                  return (
+                    <Link
                       aria-disabled={item.disabled || undefined}
                       className={rowClass}
                       data-testid={`${MenuButtonTestId.Item}-${item.id}`}
+                      href={item.href}
                       id={itemId(i)}
                       key={item.id}
                       onClick={() => selectItem(item)}
@@ -352,15 +337,32 @@ export function MenuButton({
                         !item.disabled && setActiveIndex(navigableIndices.indexOf(i))
                       }
                       role="menuitem"
-                      type="button"
                     >
                       {content}
-                    </button>
+                    </Link>
                   );
-                })}
-              </div>
-            </MenuSurface>
-          </>,
+                }
+
+                return (
+                  <button
+                    aria-disabled={item.disabled || undefined}
+                    className={rowClass}
+                    data-testid={`${MenuButtonTestId.Item}-${item.id}`}
+                    id={itemId(i)}
+                    key={item.id}
+                    onClick={() => selectItem(item)}
+                    onPointerMove={() =>
+                      !item.disabled && setActiveIndex(navigableIndices.indexOf(i))
+                    }
+                    role="menuitem"
+                    type="button"
+                  >
+                    {content}
+                  </button>
+                );
+              })}
+            </div>
+          </MenuSurface>,
           document.body,
         )}
     </div>

@@ -1,12 +1,13 @@
 "use client";
 
-import { type Ref, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type Ref, useId, useMemo, useRef, useState } from "react";
 import { cn } from "../../utils/cn";
 import { focusRingInset } from "../../utils/focus";
 import { mergeRefs } from "../../utils/refs";
 import { Icon, type IconName } from "../Icon/Icon";
 import { Kbd } from "../Kbd/Kbd";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
+import { useDismissOnOutside } from "../../hooks/useDismissOnOutside";
 
 export enum SearchMenuTestId {
   Root = "searchmenu-root",
@@ -106,17 +107,7 @@ export function SearchMenu({
   // the highlight out of range (no state-syncing effect needed).
   const activeRow = flat.length === 0 ? -1 : Math.min(activeIndex, flat.length - 1);
 
-  // Close on outside pointerdown.
-  useEffect(() => {
-    if (!open) return;
-    const onPointerDown = (e: PointerEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        onOpenChange(false);
-      }
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open, onOpenChange]);
+  useDismissOnOutside({ open, refs: [rootRef], onDismiss: () => onOpenChange(false) });
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
