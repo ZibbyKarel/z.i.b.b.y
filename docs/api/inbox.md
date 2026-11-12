@@ -102,6 +102,11 @@ never split); a capped one also sets `descriptionTruncated: true` and the UI lin
   returned the PR (deduped, any bucket); `reviewTeam` stays the first/display team.
   `authorTeams` lists every configured-slug team the PR author is a member of
   (`GET /orgs/{org}/teams/{slug}/members`, first 100; a failed read → none).
+- **stacked drafts** (todo-19) — GitHub requests no review on a draft, so a colleague's
+  draft matches none of the searches above. For every listed same-repo PR head,
+  `GET /repos/<repo>/pulls?state=open&base=<headRef>` adds the open drafts based on it
+  (level by level, so deeper stacks too) as `bucket: "reviewed"` with no `commented`
+  fallback verdict; they show as DRAFT. A failed read → none. Ready PRs are not followed.
 
 Direct beats team; mine is never in to-review. GitHub drops a review request once the
 user reviews and re-adds it on a re-request, so a PR leaves/returns to "to review"

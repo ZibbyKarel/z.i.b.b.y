@@ -225,6 +225,8 @@ describe("InboxService.listPrs", () => {
       userTeamsStatus?: number;
       /** Extra team-review searches keyed by team (`shoptet/x`): HTTP status and/or hit numbers. */
       teamSearches?: Record<string, { status?: number; numbers?: number[] }>;
+      /** Open PRs no search returns, by number: their base branch and draft flag. */
+      stack?: Record<number, { base: string; draft: boolean }>;
     } = {},
   ) {
     const calls: string[] = [];
@@ -286,9 +288,18 @@ describe("InboxService.listPrs", () => {
         }
         throw new Error(`unexpected search ${q}`);
       }
+      if (u.pathname === "/repos/Acme/app/pulls") {
+        const base = u.searchParams.get("base");
+        return json(
+          Object.entries(opts.stack ?? {})
+            .filter(([, s]) => s.base === base)
+            .map(([n, s]) => ({ number: Number(n), draft: s.draft })),
+        );
+      }
       const pull = u.pathname.match(/^\/repos\/Acme\/app\/pulls\/(\d+)$/);
       if (pull) {
         const n = Number(pull[1]);
+        const stacked = opts.stack?.[n];
         return json({
           number: n,
           title: `PR ${n}`,
@@ -299,7 +310,7 @@ describe("InboxService.listPrs", () => {
                 ? "   "
                 : `${"x".repeat(19_999)}\u{1F600}tail`,
           html_url: `https://github.com/Acme/app/pull/${n}`,
-          draft: n === 3,
+          draft: n === 3 || stacked?.draft === true,
           mergeable: n === 2 ? false : true,
           mergeable_state: n === 3 ? "behind" : "clean",
           created_at: "2026-10-01T10:00:00Z",
@@ -310,7 +321,7 @@ describe("InboxService.listPrs", () => {
             // #2 comes from a fork: its head branch must not take part in stacking.
             repo: { full_name: n === 2 ? "someone/app" : "acme/APP" },
           },
-          base: { ref: n === 3 ? "feat-1" : "main" },
+          base: { ref: stacked?.base ?? (n === 3 ? "feat-1" : "main") },
         });
       }
       if (u.pathname.endsWith("/reviews")) {
@@ -384,6 +395,23 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[2]?.myReview).toBeUndefined();
     expect(byNumber[3]?.myReview).toBeUndefined(); // never on my own PR
     expect(byNumber[3]?.authorName).toBeUndefined(); // the profile read failed: login only
+  });
+
+  // todo-19 — GitHub requests no review on a draft, so a colleague's draft matches no search.
+  it("lists a colleague's draft stacked on a listed PR, deeper stacks too, as a draft", async () => {
+    const { service } = build([], {
+      stack: {
+        20: { base: "feat-1", draft: true },
+        21: { base: "feat-1", draft: false },
+        22: { base: "feat-20", draft: true },
+      },
+    });
+    const byNumber = Object.fromEntries((await service.listPrs()).prs.map((p) => [p.number, p]));
+    expect(byNumber[20]).toMatchObject({ draft: true, bucket: "reviewed", baseRef: "feat-1" });
+    expect(byNumber[20]?.myReview).toBeUndefined(); // no "commented" verdict made up
+    expect(byNumber[22]).toMatchObject({ draft: true, baseRef: "feat-20" });
+    expect(byNumber[21]).toBeUndefined(); // a ready PR gets its review requests: not followed
+    expect(byNumber[3]).toMatchObject({ bucket: "mine" }); // a listed PR keeps its bucket
   });
 
   describe("configured team slugs", () => {

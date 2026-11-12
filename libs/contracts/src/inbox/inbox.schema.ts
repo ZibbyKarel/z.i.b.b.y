@@ -176,7 +176,8 @@ export const InboxPrSchema = z.object({
   bucket: z.enum(["to-review", "mine", "reviewed"]),
   /**
    * Your own latest review verdict on someone else's PR. Always set on `bucket: "reviewed"`
-   * (`commented` when there is no verdict); on `to-review` only when you gave a verdict earlier
+   * (`commented` when there is no verdict) except a colleague's draft listed only for being
+   * stacked on a listed PR (todo-19), which carries a verdict only when you gave one; on `to-review` only when you gave a verdict earlier
    * (a re-request, or a team request still open after your review).
    */
   myReview: z.enum(["approved", "changes-requested", "commented"]).optional(),

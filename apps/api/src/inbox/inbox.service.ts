@@ -492,79 +492,112 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
     // One PR closed between search and fetch, or a token without Checks:read, must
     // not drop the whole repo: a failed pull fetch skips that PR, failed
     // reviews/check-runs degrade to "none"/"unknown".
-    const settled = await Promise.allSettled(
-      [...buckets].map(async ([number, bucket]) => {
-        const pull = await this.gh<GhPull>(token, `/repos/${repo}/pulls/${number}`);
-        const [reviews, checks] = await Promise.all([
-          this.gh<GhReview[]>(token, `/repos/${repo}/pulls/${number}/reviews?per_page=100`).catch(
-            () => [],
-          ),
-          pull.head?.sha
-            ? this.gh<{ check_runs?: GhCheckRun[] }>(
-                token,
-                `/repos/${repo}/commits/${pull.head.sha}/check-runs?per_page=100`,
-              ).catch(() => null)
-            : Promise.resolve({ check_runs: [] }),
-        ]);
-        const ignored = project.ciIgnoredChecks;
-        const ci = checks ? ciState(checks.check_runs ?? [], ignored) : ("unknown" as const);
-        const ciExtra = checks ? ciDetails(checks.check_runs ?? [], ignored) : {};
-        const review = reviewState(Array.isArray(reviews) ? reviews : []);
-        const mergeable = pull.mergeable ?? null;
-        const unresolvedThreads =
-          bucket.bucket === "mine"
-            ? await this.unresolvedThreads(token, repo, number).catch(() => undefined)
-            : undefined;
-        const verdict =
-          bucket.bucket === "mine"
-            ? undefined
-            : myVerdict(Array.isArray(reviews) ? reviews : [], login);
-        const author = pull.user?.login ?? "";
-        const authorName = author ? await this.userName(token, author) : undefined;
-        return {
-          source: "github" as const,
-          number,
-          title: pull.title ?? "",
-          ...(pull.body?.trim() ? capDescription(pull.body) : {}),
-          url: pull.html_url ?? `https://github.com/${repo}/pull/${number}`,
-          repo,
-          author,
-          ...(authorName ? { authorName } : {}),
-          ...(pull.user?.avatar_url?.startsWith("https://")
-            ? { authorAvatarUrl: pull.user.avatar_url }
+    const load = async (
+      number: number,
+      bucket: Pick<InboxPr, "bucket" | "reviewReason" | "reviewTeam">,
+      stacked = false,
+    ) => {
+      const pull = await this.gh<GhPull>(token, `/repos/${repo}/pulls/${number}`);
+      const [reviews, checks] = await Promise.all([
+        this.gh<GhReview[]>(token, `/repos/${repo}/pulls/${number}/reviews?per_page=100`).catch(
+          () => [],
+        ),
+        pull.head?.sha
+          ? this.gh<{ check_runs?: GhCheckRun[] }>(
+              token,
+              `/repos/${repo}/commits/${pull.head.sha}/check-runs?per_page=100`,
+            ).catch(() => null)
+          : Promise.resolve({ check_runs: [] }),
+      ]);
+      const ignored = project.ciIgnoredChecks;
+      const ci = checks ? ciState(checks.check_runs ?? [], ignored) : ("unknown" as const);
+      const ciExtra = checks ? ciDetails(checks.check_runs ?? [], ignored) : {};
+      const review = reviewState(Array.isArray(reviews) ? reviews : []);
+      const mergeable = pull.mergeable ?? null;
+      const unresolvedThreads =
+        bucket.bucket === "mine"
+          ? await this.unresolvedThreads(token, repo, number).catch(() => undefined)
+          : undefined;
+      const verdict =
+        bucket.bucket === "mine"
+          ? undefined
+          : myVerdict(Array.isArray(reviews) ? reviews : [], login);
+      const author = pull.user?.login ?? "";
+      const authorName = author ? await this.userName(token, author) : undefined;
+      return {
+        source: "github" as const,
+        number,
+        title: pull.title ?? "",
+        ...(pull.body?.trim() ? capDescription(pull.body) : {}),
+        url: pull.html_url ?? `https://github.com/${repo}/pull/${number}`,
+        repo,
+        author,
+        ...(authorName ? { authorName } : {}),
+        ...(pull.user?.avatar_url?.startsWith("https://")
+          ? { authorAvatarUrl: pull.user.avatar_url }
+          : {}),
+        createdAt: new Date(pull.created_at ?? Date.now()).toISOString(),
+        ...(pull.updated_at ? { updatedAt: new Date(pull.updated_at).toISOString() } : {}),
+        draft: pull.draft === true,
+        ci,
+        ...ciExtra,
+        review,
+        mergeable,
+        ...(pull.mergeable_state === "behind" ? { behind: true } : {}),
+        ...(pull.head?.ref && pull.head.repo?.full_name?.toLowerCase() === repo.toLowerCase()
+          ? { headRef: pull.head.ref }
+          : {}),
+        ...(pull.base?.ref ? { baseRef: pull.base.ref } : {}),
+        // todo-16 — the head the PR automation dedupes on; only a real 40-hex sha.
+        ...(pull.head?.sha && /^[0-9a-f]{40}$/.test(pull.head.sha)
+          ? { headSha: pull.head.sha }
+          : {}),
+        ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
+        ...bucket,
+        ...(requested.has(number) ? { reviewTeams: requested.get(number) } : {}),
+        ...(verdict
+          ? { myReview: verdict.state, ...(verdict.sha ? { myReviewSha: verdict.sha } : {}) }
+          : bucket.bucket === "reviewed" && !stacked
+            ? { myReview: "commented" as const }
             : {}),
-          createdAt: new Date(pull.created_at ?? Date.now()).toISOString(),
-          ...(pull.updated_at ? { updatedAt: new Date(pull.updated_at).toISOString() } : {}),
-          draft: pull.draft === true,
-          ci,
-          ...ciExtra,
-          review,
-          mergeable,
-          ...(pull.mergeable_state === "behind" ? { behind: true } : {}),
-          ...(pull.head?.ref && pull.head.repo?.full_name?.toLowerCase() === repo.toLowerCase()
-            ? { headRef: pull.head.ref }
-            : {}),
-          ...(pull.base?.ref ? { baseRef: pull.base.ref } : {}),
-          // todo-16 — the head the PR automation dedupes on; only a real 40-hex sha.
-          ...(pull.head?.sha && /^[0-9a-f]{40}$/.test(pull.head.sha)
-            ? { headSha: pull.head.sha }
-            : {}),
-          ...(unresolvedThreads !== undefined ? { unresolvedThreads } : {}),
-          ...bucket,
-          ...(requested.has(number) ? { reviewTeams: requested.get(number) } : {}),
-          ...(verdict
-            ? { myReview: verdict.state, ...(verdict.sha ? { myReviewSha: verdict.sha } : {}) }
-            : bucket.bucket === "reviewed"
-              ? { myReview: "commented" as const }
-              : {}),
-          blocker: blockerOf({ ci, review, mergeable }),
-          section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
-          projectId: project.id,
-          ...orgOf(project),
-        };
-      }),
-    );
-    return settled.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+        blocker: blockerOf({ ci, review, mergeable }),
+        section: sectionOf({ ...bucket, ci, review, mergeable, draft: pull.draft === true }),
+        projectId: project.id,
+        ...orgOf(project),
+      };
+    };
+    const loadAll = async (list: Parameters<typeof load>[]) =>
+      (await Promise.allSettled(list.map((args) => load(...args)))).flatMap((r) =>
+        r.status === "fulfilled" ? [r.value] : [],
+      );
+    const prs = await loadAll([...buckets]);
+
+    // todo-19 — GitHub requests no review on a draft, so a colleague's draft matches none of the
+    // searches above. One stacked on a listed PR is part of a stack the operator already watches:
+    // follow each stack up (base = a listed head) and add its drafts, level by level.
+    // ponytail: one pulls-list call per listed same-repo head on every refresh.
+    const listed = new Set(prs.map((p) => p.number));
+    for (let frontier = prs; frontier.length > 0; ) {
+      const found = await Promise.all(
+        frontier.flatMap((p) =>
+          p.headRef
+            ? [
+                this.gh<GhPull[]>(
+                  token,
+                  `/repos/${repo}/pulls?${new URLSearchParams({ state: "open", base: p.headRef, per_page: "100" })}`,
+                ).catch(() => []),
+              ]
+            : [],
+        ),
+      );
+      const next = found
+        .flat()
+        .flatMap((p) => (p.draft === true && p.number ? [p.number] : []))
+        .filter((n) => !listed.has(n) && listed.add(n));
+      frontier = await loadAll(next.map((n) => [n, { bucket: "reviewed" }, true]));
+      prs.push(...frontier);
+    }
+    return prs;
   }
 
   /**
