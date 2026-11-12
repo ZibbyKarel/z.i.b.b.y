@@ -448,7 +448,11 @@ export type {
 } from "./components/SegmentedControl/SegmentedControl";
 
 export { MetricStrip, MetricStripTestId } from "./components/MetricStrip/MetricStrip";
-export type { MetricStripItem, MetricStripProps } from "./components/MetricStrip/MetricStrip";
+export type {
+  MetricStripColumns,
+  MetricStripItem,
+  MetricStripProps,
+} from "./components/MetricStrip/MetricStrip";
 
 export { RailSplit, RailSplitTestId } from "./components/RailSplit/RailSplit";
 export type { RailSplitProps } from "./components/RailSplit/RailSplit";
@@ -663,5 +667,7 @@ export type {
 } from "./components/DetailTable/DetailTable";
 export { StackCrumbs, StackCrumbsTestId } from "./components/StackCrumbs/StackCrumbs";
 export type { StackCrumb, StackCrumbsProps } from "./components/StackCrumbs/StackCrumbs";
+export { Copyable, CopyableTestId } from "./components/Copyable/Copyable";
+export type { CopyableProps } from "./components/Copyable/Copyable";
 export { CopyableText, CopyableTextTestId } from "./components/CopyableText/CopyableText";
 export type { CopyableTextProps } from "./components/CopyableText/CopyableText";

@@ -39,4 +39,29 @@ describe("MetricStrip", () => {
     expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-6");
     expect(screen.getByTestId(`${MetricStripTestId.Item}-5`)).toBeInTheDocument();
   });
+
+  it("keys a column by its id and renders a node value plus an action", () => {
+    render(
+      <MetricStrip
+        columns={5}
+        items={[
+          {
+            id: "state",
+            label: "State",
+            value: <strong>Draft</strong>,
+            action: <button type="button">Ready</button>,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-5");
+    const item = screen.getByTestId(`${MetricStripTestId.Item}-state`);
+    expect(item).toHaveTextContent("Draft");
+    expect(screen.getByTestId(MetricStripTestId.Action)).toHaveTextContent("Ready");
+  });
+
+  it("renders no action slot when an item has none", () => {
+    render(<MetricStrip columns={3} items={ITEMS} />);
+    expect(screen.queryByTestId(MetricStripTestId.Action)).toBeNull();
+  });
 });
