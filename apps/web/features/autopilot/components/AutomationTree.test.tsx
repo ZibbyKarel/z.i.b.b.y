@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event";
 import { type AutopilotAutomation, type Company, NO_AUTOMATION, type Team } from "@zibby/contracts";
+import { DataTableTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { AutomationTree, AutomationTreeTestId } from "./AutomationTree";
@@ -12,10 +13,7 @@ const teams = [
 ] as Team[];
 const empty: AutopilotAutomation = { global: { ...NO_AUTOMATION }, companies: {}, teams: {} };
 
-const row = (node: string) =>
-  screen
-    .getAllByTestId(AutomationTreeTestId.Node)
-    .find((el) => el.getAttribute("data-node") === node);
+const row = (node: string) => screen.queryByTestId(`${DataTableTestId.Row}-${node}`) ?? undefined;
 const toggle = (node: string, key: string) =>
   within(row(node) as HTMLElement)
     .getAllByTestId(AutomationTreeTestId.Toggle)
@@ -64,7 +62,21 @@ describe("AutomationTree", () => {
     expect(keys("company:shoptet")).toEqual(all);
   });
 
-  it("an override deep in the tree expands every node down to it", () => {
+  it("is a table titled with the autonomy level", () => {
+    setup();
+    expect(screen.getByTestId(AutomationTreeTestId.Title)).toHaveTextContent("Level Autonomie");
+    expect(screen.getByTestId(`${DataTableTestId.HeaderCell}-autoReview`)).toHaveTextContent(
+      "Code review",
+    );
+  });
+
+  it("a company whose teams match it is collapsed even with its own override", () => {
+    setup({ ...empty, companies: { shoptet: { autoReview: true } } });
+    expect(toggle("company:shoptet", "autoReview")).toHaveAttribute("data-effective", "true");
+    expect(row("team:devrel")).toBeUndefined();
+  });
+
+  it("a team differing from its company starts expanded", () => {
     setup({ ...empty, teams: { devrel: { autoReview: true } } });
     expect(toggle("company:shoptet", "autoReview")).toHaveAttribute("data-overridden", "false");
     expect(toggle("team:devrel", "autoReview")).toHaveAttribute("data-overridden", "true");
@@ -81,19 +93,21 @@ describe("AutomationTree", () => {
     expect(toggle("company:shoptet", "autoImplement")).toHaveAttribute("data-effective", "true");
   });
 
-  it("nodes without overrides are collapsed; expanding shows toggles and teams", async () => {
+  it("a collapsed company expands and collapses its teams; childless rows have no chevron", async () => {
     setup();
     expect(row("team:devrel")).toBeUndefined();
-    expect(
-      within(row("company:shoptet") as HTMLElement).queryAllByTestId(AutomationTreeTestId.Toggle),
-    ).toHaveLength(0);
-    await userEvent.click(
-      within(row("company:shoptet") as HTMLElement).getAllByTestId(
-        AutomationTreeTestId.Expand,
-      )[0] as HTMLElement,
-    );
-    expect(row("team:devrel")).toBeDefined();
     expect(toggle("company:shoptet", "autoReview")).toBeDefined();
+    const expand = within(row("company:shoptet") as HTMLElement).getByTestId(
+      AutomationTreeTestId.Expand,
+    );
+    await userEvent.click(expand);
+    expect(expand).toHaveAttribute("aria-expanded", "true");
+    expect(row("team:devrel")).toBeDefined();
+    await userEvent.click(expand);
+    expect(row("team:devrel")).toBeUndefined();
+    expect(
+      within(row("team:solo") as HTMLElement).queryByTestId(AutomationTreeTestId.Expand),
+    ).toBeNull();
   });
 
   it("teams without a (known) company are top-level", () => {

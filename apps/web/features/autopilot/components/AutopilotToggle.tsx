@@ -154,7 +154,7 @@ export function AutopilotToggle() {
         onClose={close}
         open={confirming}
         title={t("dialogTitle")}
-        width="md"
+        width="2xl"
       >
         <Stack gap="100">
           <Row data-testid={AutopilotToggleTestId.Mode} justify="center">
