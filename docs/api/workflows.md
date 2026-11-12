@@ -18,6 +18,8 @@ requires: [web] # optional precondition on the run's project (see "Preconditions
 budget: # optional per-run spend cap (see "Budget")
   maxCostUsd: 5
   warnAtPct: 70 # default 70
+advisor: # optional phase advisor default for ask_advisor (see "Phase advisor")
+  model: opus
 phases:
   - id: architekt
     type: agent
@@ -462,6 +464,64 @@ An optional per-run spend cap: `budget: { maxCostUsd, warnAtPct }` (`maxCostUsd 
   `action: "spend-past-cap"` (risk `medium`).
 - **Approve** raises the cap by another `maxCostUsd` (new cap = spend so far +
   `maxCostUsd`, `warned` reset) and continues; **reject** fails the run.
+
+### Phase advisor (`advisor`, `ask_advisor`) — TODO 9
+
+An agent phase that wants to deviate from its plan asks a stronger model with the
+planner's context first, not the operator. Spec: `plans/phase-advisor.md`.
+
+```yaml
+advisor: # workflow-level default (absent = no advisor)
+  model: opus # default opus
+  thinking: high # default high
+  maxCalls: 3 # per phase run, default 3 (1–20)
+phases:
+  - id: koder
+    advisor: # field-by-field override, or `advisor: false` to turn it off
+      from: architekt
+```
+
+- `resolvePhaseAdvisor(workflow, phaseId)` (`@zibby/contracts`) merges
+  `ADVISOR_DEFAULTS` ← workflow ← phase. `advisor` is for agent phases only; `from`
+  must name an existing phase.
+- **Ladder** (in `OPERATING_CONTRACT`): decide mechanical adjustments alone and note
+  them in the handoff → `ask_advisor` for any outcome-changing deviation →
+  `ask_operator` only when the advisor says it changes scope or acceptance criteria,
+  or when there is no advisor.
+- **Tool:** `mcp__zibby-run__ask_advisor({ question })` on the `zibby-run` server
+  (`RunMcpController` → `PhaseAdvisorService`, resolved by the `PHASE_ADVISOR` token).
+  It is **not** gated by the approval hook (no `operator.question` floor).
+- **Source session:** `from`, else the phase that produced the handoff this phase
+  consumes, read from the `consumes` symlink (`<NN>-<phase>/<produces>` → that stage;
+  `<phase>.failure.txt` on a loop retry → the failing phase, e.g. the review). Only a
+  settled stage of that phase is used, never a running one. The advisor runs
+  `claude -p --resume <sessionId> --fork-session`, so the original session is untouched.
+  No captured session, or a resume the CLI rejects → a fresh session. The stage record
+  now keeps `sessionId` across a restart.
+- **Read-only:** `--permission-mode dontAsk`, `--allowedTools Read Grep Glob`, Bash /
+  Edit / Write / NotebookEdit / Task / Agent disallowed, no MCP servers, the approval
+  hook on `Read|Grep|Glob` only (operator-token dir stays denied). cwd = the run
+  worktree (else the project checkout, else the stage sandbox), `--add-dir <run dir>`.
+  Bash is left out on purpose (stricter than the spec): `git diff --no-index` reads any
+  file and the token guard can't cover Bash without the intent protocol.
+- **Prompt:** the question, the asking phase id, its handoff (capped at 20k chars) and
+  the advisor contract: approve, reject or propose another way within scope; reply
+  `ESCALATE: <why>` and nothing else when the answer would change scope or acceptance
+  criteria.
+- **Falls back to the operator, never around it:** no advisor configured / not a
+  workflow run, `maxCalls` reached, a failed call and every `ESCALATE:` return text
+  that tells the agent to call `ask_operator`.
+- **Audit:** every call writes `<stageDir>/advisor/NN.md` (question, answer or error,
+  model, thinking, source phase + forked session, cost, duration). The slot is claimed
+  with an exclusive create, so `maxCalls` is counted from these files.
+- **Cost:** appended as `{"costUsd", "source": "advisor"}` to `<stageDir>/costs.jsonl`,
+  so it lands in the stage's `externalCostUsd`, the run's `costUsd` and the budget.
+- **Review:** the contract tells a reviewer to read the reviewed stages'
+  `advisor/*.md`; an advisor-approved deviation is declared and not a `gap` by itself.
+- **Timeout:** measured on claude 2.1.322 — a 150 s MCP tool call completes with the
+  default timeout. Stages still pin `MCP_TOOL_TIMEOUT` to 30 min
+  (`STAGE_MCP_TOOL_TIMEOUT_MS`); the advisor's own spawn timeout is 2 min below it, so
+  the tool always answers first. No async `get_advice` variant was needed.
 
 ### Phase: qualify (an agent's verdict drives the loop, Phase 45)
 
