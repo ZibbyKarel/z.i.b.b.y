@@ -16,6 +16,7 @@ import { useAgentSymbol } from "../../agents";
 import { useAgentsQuery } from "../../agents/queries";
 import { useTierLabel } from "../../ai-providers";
 import { ModelBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
+import { stepEngineChoice } from "../../../utils/engine";
 import { toClientTarget } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows/queries";
 import { toolOpenAiImageModel } from "../../workflows/openaiImageModel";
@@ -72,8 +73,7 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
       (a) => a.id === (run.kind === "agent" ? run.owner : agentOf(row.phaseId)),
     );
     if (!model || phase?.openaiModel || toolOpenAiImageModel(phase?.commands)) return undefined;
-    const engine = phase?.engine ?? agent?.engine;
-    const exact = engine === "opencode" ? (phase?.engineModel ?? agent?.engineModel) : undefined;
+    const { engine, engineModel: exact } = stepEngineChoice(phase, agent);
     const tier = ModelTierSchema.safeParse(model).data;
     return exact ?? (tier ? tierLabel(tier, engine) : undefined);
   };

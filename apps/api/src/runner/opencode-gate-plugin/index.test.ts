@@ -253,3 +253,62 @@ describe("plugin: in-flight tools keep the gate log fresh", () => {
     expect(statSync(log).mtimeMs).toBe(0); // idle again: no heartbeat
   });
 });
+
+describe("A28 — an opencode MCP call through the real approval hook", () => {
+  const realHook = join(__dirname, "..", "claude-approval-hook.mjs");
+  const run = (tool: string, decision: string | null, registry = "") => {
+    const dir = mkdtempSync(join(tmpdir(), "oc-mcp-"));
+    if (decision) writeFileSync(join(dir, "intent-decision.json"), JSON.stringify({ decision }));
+    const env = {
+      ZIBBY_GATE_NODE: process.execPath,
+      ZIBBY_GATE_HOOK: realHook,
+      ZIBBY_GATE_CWD: dir,
+      ZIBBY_INTENT_DIR: dir,
+      ZIBBY_GATE_DEADLINE_S: "5",
+      ZIBBY_MCP_SERVERS: "serena,zibby-kb,playwright",
+      ZIBBY_MCP_REGISTRY: registry,
+      PATH: process.env.PATH ?? "",
+    };
+    return { dir, result: gate(tool, { q: 1 }, env) };
+  };
+
+  it("a write raises mcp.write and is blocked when the gate denies", async () => {
+    const { dir, result } = run("serena_replace_symbol_body", "deny");
+    expect(await result).toMatch(/denied/);
+    // the request was consumed by nobody (no RunnerCore here) — it names the call
+    const req = JSON.parse(readFileSync(join(dir, "intent-request.json"), "utf8"));
+    expect(req).toMatchObject({
+      action: "mcp.write",
+      scope: "serena",
+      tool: "mcp__serena__replace_symbol_body",
+    });
+  });
+
+  it("a read raises mcp.read and runs when the gate allows", async () => {
+    const { dir, result } = run("serena_find_symbol", "allow");
+    expect(await result).toBeNull();
+    expect(JSON.parse(readFileSync(join(dir, "intent-request.json"), "utf8")).action).toBe(
+      "mcp.read",
+    );
+  });
+
+  it("a registry server's write passes without a request (A28 amendment)", async () => {
+    const { dir, result } = run("playwright_browser_click", null, "playwright");
+    expect(await result).toBeNull();
+    expect(() => statSync(join(dir, "intent-request.json"))).toThrow();
+  });
+
+  it("the same server outside the registry list still asks", async () => {
+    const { dir, result } = run("playwright_browser_click", "deny", "context7");
+    expect(await result).toMatch(/denied/);
+    expect(JSON.parse(readFileSync(join(dir, "intent-request.json"), "utf8")).action).toBe(
+      "mcp.write",
+    );
+  });
+
+  it("ZibbyOS's own server passes without a request", async () => {
+    const { dir, result } = run("zibby-kb_search_team_kb", null);
+    expect(await result).toBeNull();
+    expect(() => statSync(join(dir, "intent-request.json"))).toThrow();
+  });
+});

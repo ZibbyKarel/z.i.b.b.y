@@ -11,6 +11,22 @@ export function formatEngine(engine?: string, model?: string): string | undefine
   return engine ? (model ? `${engine} · ${model}` : engine) : undefined;
 }
 
+/**
+ * The engine and exact model a step will really run on: the step's own override, then its
+ * agent's (backend precedence `phase.engineModel ?? agent.engineModel`). `engineModel` only
+ * applies on opencode; without one the tier mapping decides. `engine` undefined = global engine.
+ */
+export function stepEngineChoice(
+  step: { engine?: AiEngine | undefined; engineModel?: string | undefined } | undefined,
+  agent: { engine?: AiEngine | undefined; engineModel?: string | undefined } | undefined,
+): { engine: AiEngine | undefined; engineModel: string | undefined } {
+  const engine = step?.engine ?? agent?.engine;
+  return {
+    engine,
+    engineModel: engine === "opencode" ? (step?.engineModel ?? agent?.engineModel) : undefined,
+  };
+}
+
 /** The native Claude model a tier is passed to as `--model`. */
 const CLAUDE_TIER_NAME: Record<ModelTier, string> = {
   haiku: "Haiku",
@@ -36,3 +52,18 @@ export function tierConcreteModel(
 
 /** 1-based level number of a tier (haiku = 1 … fable = 4). */
 export const tierLevel = (tier: ModelTier): number => MODEL_TIERS.indexOf(tier) + 1;
+
+/**
+ * Whether an opencode model lacks the `level` thinking variant, so a run would go without it.
+ * An explicit `#variant` in the model string wins (never flagged); a model missing from the
+ * list is unknown, not flagged.
+ */
+export function lacksThinkingVariant(
+  models: { id: string; variants: string[] }[],
+  model: string,
+  level: string,
+): boolean {
+  if (!model || !level || model.includes("#")) return false;
+  const found = models.find((m) => m.id === model);
+  return found !== undefined && !found.variants.includes(level);
+}

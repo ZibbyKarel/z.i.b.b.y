@@ -89,17 +89,17 @@ or task therefore gets the same 503 / failed task, and a workflow stage gets a
 opencode run --standalone --format json -m <model> --agent zibby [--session <id>] -- <task>
 ```
 
-| Env                                                             | Purpose                                                                                                    |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `OPENCODE_CONFIG=<runsDir>/.opencode/<hash>.json` (0600)        | the per-run config below, written by RunnerCore                                                            |
-| `OPENCODE_DISABLE_PROJECT_CONFIG=1`                             | a repo's `opencode.json` never loads (like `--setting-sources ""`)                                         |
-| `ZIBBY_GATE_NODE`, `ZIBBY_GATE_HOOK`, `ZIBBY_GATE_DEADLINE_S`   | how the gate plugin runs the approval hook                                                                 |
-| `ZIBBY_GATE_CWD`                                                | the run's real spawn dir; the plugin judges paths against it, never against opencode's own cwd             |
-| `ZIBBY_GATE_LOG`                                                | the plugin's decision log (`<hash>.gate.log`), copied into the run log                                     |
-| `ZIBBY_MCP_SERVERS`, `ZIBBY_DENY_TOOLS`, `ZIBBY_SHELL_PREFIXES` | the run's MCP server ids, the tools the agent may not use, and the `Bash(<prefix>:*)` prefixes (see below) |
-| `ZIBBY_GRANT_DIRS`                                              | grant dirs + context dir; opencode has no `--add-dir`. Always set (empty included)                         |
-| `PWD=<spawn dir>`                                               | opencode takes its project dir from `$PWD`, not the process cwd (verified 2.2.7); see below                |
-| `OPENCODE_CLAUDE_PATH`                                          | the `claude` binary for `claude-agent/*`: the API's `OPENCODE_CLAUDE_PATH` ?? `CLAUDE_BIN`; unset = `PATH` |
+| Env                                                                                   | Purpose                                                                                                                                                       |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENCODE_CONFIG=<runsDir>/.opencode/<hash>.json` (0600)                              | the per-run config below, written by RunnerCore                                                                                                               |
+| `OPENCODE_DISABLE_PROJECT_CONFIG=1`                                                   | a repo's `opencode.json` never loads (like `--setting-sources ""`)                                                                                            |
+| `ZIBBY_GATE_NODE`, `ZIBBY_GATE_HOOK`, `ZIBBY_GATE_DEADLINE_S`                         | how the gate plugin runs the approval hook                                                                                                                    |
+| `ZIBBY_GATE_CWD`                                                                      | the run's real spawn dir; the plugin judges paths against it, never against opencode's own cwd                                                                |
+| `ZIBBY_GATE_LOG`                                                                      | the plugin's decision log (`<hash>.gate.log`), copied into the run log                                                                                        |
+| `ZIBBY_MCP_SERVERS`, `ZIBBY_MCP_REGISTRY`, `ZIBBY_DENY_TOOLS`, `ZIBBY_SHELL_PREFIXES` | the run's MCP server ids, the registry subset (hook argv[3], A28 amendment), the tools the agent may not use, and the `Bash(<prefix>:*)` prefixes (see below) |
+| `ZIBBY_GRANT_DIRS`                                                                    | grant dirs + context dir; opencode has no `--add-dir`. Always set (empty included)                                                                            |
+| `PWD=<spawn dir>`                                                                     | opencode takes its project dir from `$PWD`, not the process cwd (verified 2.2.7); see below                                                                   |
+| `OPENCODE_CLAUDE_PATH`                                                                | the `claude` binary for `claude-agent/*`: the API's `OPENCODE_CLAUDE_PATH` ?? `CLAUDE_BIN`; unset = `PATH`                                                    |
 
 Every inherited `OPENCODE_*` variable (from the API's env or a project's env) is removed
 from the child env before these are set, so a project cannot point the run at another
@@ -198,6 +198,15 @@ containing `!`, because git config runs arbitrary commands
 (`git -c alias.x='!sh …' x`, `git -c core.pager='…' log`). Delegation is stricter than
 Claude, where `Agent` is always offered.
 
+A run's MCP servers are the enabled registry rows plus (A27) the operator's own Claude Code
+servers its `tools`/`toolGrants` name, mapped to `local` / `remote` entries the same way and
+listed in `ZIBBY_MCP_SERVERS`; the registry subset rides `ZIBBY_MCP_REGISTRY`, which the
+gate plugin hands to the hook as argv[3]. claude.ai connectors can't exist on opencode — they belong to
+the Claude login (and don't load in claude-engine runs either, A29). Every MCP call outside
+ZibbyOS's own servers and the run's registry servers is classified by the hook as
+`mcp.read` / `mcp.write` (A28, `docs/api/runner.md`); registry servers keep the pre-A28
+pass-through.
+
 MCP servers with the id `opencode` or `browser` are never mounted on an opencode run: their
 tools would be named like opencode's own `opencode_*` / `browser_*` tools, which the gate
 always denies. The plugin ignores those ids in `ZIBBY_MCP_SERVERS` too.
@@ -230,17 +239,17 @@ The same gate as Claude, enforced in three layers:
 2. **Gate plugin** (`apps/api/src/runner/opencode-gate-plugin/index.mjs`),
    `tool.hook("execute.before")`, **default deny**. Only these tools pass:
 
-   | opencode tool                                                         | Claude event / decision                                                                   |
-   | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-   | `shell`, `bash`                                                       | `Bash`                                                                                    |
-   | `write`, `edit`, `read`, `grep`, `glob`                               | `Write`, `Edit`, `Read`, `Grep`, `Glob`                                                   |
-   | `list`, `ls`                                                          | `Glob` (`*` in the path)                                                                  |
-   | `patch`, `apply_patch`                                                | one event per file: Add → `Write`, Update → `Edit`, Move to → `Write`, Delete → `Bash rm` |
-   | `task`, `subagent`                                                    | `Task`                                                                                    |
-   | `*ask_operator`                                                       | `mcp__zibby-run__ask_operator`                                                            |
-   | `<server>_<tool>` of a server in `ZIBBY_MCP_SERVERS`                  | `mcp__<server>__<tool>`                                                                   |
-   | `webfetch`, `websearch`, `todowrite`, `todoread`                      | allowed without the hook (read-only / state tracking)                                     |
-   | anything else: `execute`, `skill`, `opencode_*`, `browser_*`, unknown | **denied**                                                                                |
+   | opencode tool                                                         | Claude event / decision                                                                                 |
+   | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+   | `shell`, `bash`                                                       | `Bash`                                                                                                  |
+   | `write`, `edit`, `read`, `grep`, `glob`                               | `Write`, `Edit`, `Read`, `Grep`, `Glob`                                                                 |
+   | `list`, `ls`                                                          | `Glob` (`*` in the path)                                                                                |
+   | `patch`, `apply_patch`                                                | one event per file: Add → `Write`, Update → `Edit`, Move to → `Write`, Delete → `Bash rm`               |
+   | `task`, `subagent`                                                    | `Task`                                                                                                  |
+   | `*ask_operator`                                                       | `mcp__zibby-run__ask_operator`                                                                          |
+   | `<server>_<tool>` of a server in `ZIBBY_MCP_SERVERS`                  | `mcp__<server>__<tool>` (A28: `mcp.read` / `mcp.write` / a Never-rule action; a registry server passes) |
+   | `webfetch`, `websearch`, `todowrite`, `todoread`                      | allowed without the hook (read-only / state tracking)                                                   |
+   | anything else: `execute`, `skill`, `opencode_*`, `browser_*`, unknown | **denied**                                                                                              |
 
    A tool input's `workdir` / `directory` is resolved against `ZIBBY_GATE_CWD`, so a call
    is judged where it really lands. That holds only because a session can't move:

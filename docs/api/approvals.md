@@ -276,6 +276,42 @@ unchanged.
 A client can never create an Approval directly — only the server (a runner or
 triage flow) generates them. This prevents forging a decision (Law 4).
 
+## MCP / connector calls (A28)
+
+An agent run's (or workflow stage's) call to an MCP server outside ZibbyOS's own
+(`zibby-entities`, `zibby-kb`, `zibby-run`) and outside the run's registry servers raises an
+intent through the approval hook on
+both engines (`docs/api/runner.md`, _The approval hook_). A read-only tool name raises
+`mcp.read` (system rule `floor-mcp.read`, **notify**: runs, recorded as a `gate-decision`
+activity entry); every other tool raises `mcp.write` (system rule `floor-mcp.write`,
+**ask**, resolve human), unless its name looks like a Never-rule action (`pr.merge`,
+`payment`, `purchase`, `delete`, `deploy`, `send_email`), which keeps that rule. An `ask`
+becomes an ordinary `agent` / `workflow-stage` approval: `action` = `mcp.write` (or the
+mapped action), `detail` = the enrichment JSON with `riskType` `odeslani` (`platba` for
+payment / purchase, `mazani` for delete, `push` for a merge), `summary` `Zápis přes MCP:
+<server> · <tool>`, a Czech `consequence`, and a `command` preview (`shell: "mcp"`,
+`cmd: "<server> · <tool> <arguments JSON, ≤600 chars>"`). The intent also carries
+`tool` (`mcp__<server>__<tool>`) and `scope` (the server id), so a gate rule can target
+one tool or server.
+
+Autopilot does **not** cover `mcp.write`: its "channel communication" class is the reply to
+an inbound channel item that ZibbyOS drafted, not an arbitrary post an agent decides to make
+mid-run — and a prompt-injected run must not get an outbound Slack post for free (Law 4).
+
+**Registry servers are exempt** (A28 amendment). A server the operator registered and
+enabled in the ZibbyOS MCP registry (`/api/mcp-servers`) and the run was granted keeps the
+pre-A28 behaviour: its calls raise no intent (e.g. `playwright` in `web-qa` /
+`pr-review-browser`). The classification above applies to servers mounted from the
+operator's Claude Code inventory (A27) and to any MCP tool the run did not get from the
+registry. Registering a server is the trust decision; to gate one again, remove it from the
+registry and grant it from the inventory instead.
+
+**Per-server exemption** (for inventory servers). The global bucket takes the strictest matching rule and an agent's
+own rules can only tighten, so a single server can't be allowed on top of an `ask` floor.
+The operator moves `floor-mcp.write` to `allow` and adds global `ask` rules for the servers
+that must still ask (`[{action: "mcp.write"}, {scope: "claude_ai_*"}]`, a trailing `*` is a
+prefix match). Proven in `gate-evaluator.service.test.ts`.
+
 ## Surfaced in the UI
 
 There is no standalone `/approvals` queue page; a pending approval surfaces

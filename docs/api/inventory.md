@@ -54,12 +54,16 @@ frontmatter. Content: frontmatter `name` (the skill id, a valid Claude Code skil
 `managed-by: zibby`, a blank line, then the skill's `instructions`. Success records a
 `skill-installed` activity entry (`refs.itemId` = skill id; display group `integrations`).
 
-## Operator MCP servers for chat (A23)
+## Operator MCP servers for chat (A23) and runs (A27)
 
 `readOperatorMcpServers(loc, cwd)` (`operator-mcp-servers.ts`) returns `{ id, config }[]` for the
 chat's `--mcp-config`: user-scope servers plus the servers of **enabled** plugins (id
 `plugin_<plugin>_<server>`, `${CLAUDE_PLUGIN_ROOT}` expanded), minus those in
 `projects[cwd].disabledMcpServers`. Unlike the inventory it returns the raw config (secrets
 included); the chat only ever writes it to a 0600 file. Not exposed over HTTP.
+
+Runs use the same reader (A27): an agent run or workflow stage mounts one of these servers
+only when its `tools`/`toolGrants` name the id; a ZibbyOS registry row with the same id wins
+and the ZibbyOS ids are never taken from here. See `docs/api/runner.md`.
 
 Out of scope: uninstalling, installing/enabling plugins or MCP servers, other agents' config.

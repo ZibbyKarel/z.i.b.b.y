@@ -3861,6 +3861,8 @@
     "subscription": "předplatné Claude",
     "claudeAgentHint": "Claude může běžet i přes opencode (modely claude-agent/*), jakmile ho v terminálu připojíš: opencode auth login claude-agent. Takové běhy se stále počítají do limitů Claude.",
     "claudeAgentConnected": "Modely claude-agent/* běží přes předplatné Claude a počítají se do limitů Claude.",
+    "thinkingTag": "myšlení",
+    "noThinkingVariant": "Tento model nemá variantu myšlení „{level}“ — poběží bez ní.",
     "paidNotice": "Tento model není ověřený jako zdarma a může stát peníze.",
     "modelMissing": "Vybraný model už není v seznamu opencode.",
     "blockedUnavailable": "opencode není nainstalovaný",

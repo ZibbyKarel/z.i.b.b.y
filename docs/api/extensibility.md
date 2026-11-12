@@ -39,6 +39,14 @@ wired in).
   `tools`/`toolGrants` reference it (heavy servers such as Playwright).
 - **allowedTools:** each enabled server adds `mcp__<id>__*` (otherwise `dontAsk`
   would deny the MCP tool call; the bare `mcp__<id>` does not match).
+- **Operator's own servers (A27):** a run whose `tools`/`toolGrants` name one of the
+  operator's Claude Code servers (user scope or an enabled plugin, `docs/api/inventory.md`)
+  gets it mounted like a `grantOnly` row; a registry row with the same id wins. See
+  `docs/api/runner.md` (_Operator MCP servers in runs_).
+- **Gate (A28):** calls to a registry server (a row here, enabled and granted) are not
+  classified — registering it is the trust decision. Every call to any other server (A27
+  inventory, unknown) goes through the approval hook as `mcp.read` (notify) or `mcp.write`
+  (ask) — see `docs/api/approvals.md`.
 
 ## Hooks (`/api/hooks`)
 
@@ -51,7 +59,7 @@ Custom Claude Code lifecycle hooks (PreToolUse/PostToolUse/Stop/…) merged into
   matcher (Fáze 2a: `Task` is delegation via the Agent tool — every handoff goes
   through the same intent-request protocol as destructive Bash, classified as
   `agent.delegate`). A custom hook with `event=PreToolUse` and a matcher on
-  `Bash`/`Task` (or an empty matcher) is **dropped**. No stored hook can bypass
+  `Bash`/`Task`/an MCP tool (`mcp` in the matcher, or an empty matcher) is **dropped**. No stored hook can bypass
   or weaken the gate this way. Other events are added normally. Fail-open onto
   approval-only.
 

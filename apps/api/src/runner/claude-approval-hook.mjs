@@ -15,6 +15,12 @@
 //          args (best-effort — can't statically know the destination exists);
 //        - moves: `mv`;
 //        - git publish: `git push` (→ git.push) and force variants (→ git.force_push);
+//        - package / image publish (`npm|pnpm|yarn publish`, `cargo publish`, `gem push`,
+//          `twine upload`, `docker|podman push`) → deploy (never autopilot-covered, no
+//          branch, no ledger exemption; `--dry-run` stays unclassified);
+//        - remote destroy: `kubectl … delete`, `aws … delete-*|terminate-*|remove-*`,
+//          `aws s3 rb` (and `aws s3 rm` via the rm token) → delete;
+//        - `jira issue create` / `jira create` → jira.create_issue;
 //        - PRs: `gh pr create` (→ pr.open) and `gh pr merge` (→ pr.merge);
 //        - mutating `gh api …` calls (Fáze 17.1): PUT/POST/PATCH/DELETE (or a field
 //          flag implying POST) → `pr.merge`/`pr.open` when the path matches, a POST
@@ -26,6 +32,12 @@
 //          no locked floor rule for it (default allow, Tier 1, just logged), but an
 //          operator's own gate-rules.json rule on `action: agent.delegate` (e.g. `ask`)
 //          takes effect immediately through the same protocol.
+//        - EVERY `mcp__<server>__<tool>` call outside ZibbyOS's own servers and the run's
+//          registry servers (A28, see `classifyMcp`): read-only by name → `mcp.read` (floor notify), Never-rule-like
+//          names → their existing action, the rest → `mcp.write` (floor ask). Unlike
+//          Bash/Task this branch fails CLOSED, and an allowed MCP call exits without a
+//          decision so Claude's own permission layer still applies.
+//      Only one request is in flight per run (`intent.lock`); parallel calls queue.
 //      Independently of all that, a Bash call that hits the approvals decision API
 //      (approve/reject/revise/answer) or touches the operator token is hard-denied
 //      (`touchesOperatorOnly`) — deciding an approval is the operator's alone.
@@ -56,8 +68,9 @@
 // would drop the request where the core never watches, stranding the gate.
 //
 // Denylist honesty: this is a best-effort matcher, not a sandbox. It does NOT catch
-// a push/merge hidden behind `$(…)` nesting it can't normalize, an aliased binary, or
-// a raw `curl` call to the GitHub API that bypasses `gh` entirely. `gh api …`
+// a push/merge hidden behind `$(…)` nesting it can't normalize, an aliased binary, a
+// wrapper (`sudo kubectl delete`, `npx …`), or a raw `curl -X POST|DELETE` to any API
+// (GitHub, Jira, a registry) that bypasses its CLI entirely. `gh api …`
 // mutations ARE now caught (Fáze 17.1): an explicit `-X`/`--method` of
 // PUT/POST/PATCH/DELETE, or a `-f`/`-F`/`--field`/`--raw-field`/`--input` field flag
 // that implies an implicit POST body — routed to `pr.merge`/`pr.open` when the path
@@ -74,6 +87,7 @@ import { pathToFileURL } from "node:url";
 const REQUEST_FILE = "intent-request.json";
 const DECISION_FILE = "intent-decision.json";
 const LEDGER_FILE = "created-files.json";
+const LOCK_FILE = "intent.lock";
 const POLL_MS = 200;
 
 /**
@@ -107,11 +121,13 @@ const ACTION_RANK = {
   overwrite: 0,
   move: 0,
   "git.push": 1,
+  "jira.create_issue": 1,
   "pr.open": 2,
   "gh.pr_comment": 3,
   "gh.api_write": 4,
   "git.force_push": 5,
-  "pr.merge": 6,
+  deploy: 6,
+  "pr.merge": 7,
 };
 
 /** Czech presentation per push/PR action (delete carries its own, target-aware copy). */
@@ -135,6 +151,16 @@ const ACTION_META = {
   "gh.pr_comment": {
     summary: "Komentář nebo review na PR (gh api)",
     consequence: "Na GitHubu se objeví komentář nebo review pod tvým účtem.",
+  },
+  publish: {
+    summary: "Publikovat balíček nebo image do registru",
+    consequence:
+      "Verze se objeví ve veřejném nebo sdíleném registru — zpravidla ji nejde vzít zpět.",
+  },
+  "jira.create_issue": {
+    riskType: "odeslani",
+    summary: "Založit Jira issue (CLI)",
+    consequence: "V Jiře vznikne nové issue pod tvým účtem.",
   },
   "gh.api_write": {
     summary: "Mutační volání GitHub API (gh api)",
@@ -364,6 +390,51 @@ function classifyGh(tokens) {
 }
 
 /**
+ * Package / image publish CLIs → `deploy` (operator decision, A28a): shipping an artifact
+ * to a registry is a release. Autopilot never covers `deploy`, it carries no branch, and
+ * it is not a file action the ownership ledger could lift.
+ * Subcommand = the first non-flag word (`pnpm -r publish` yes, `pnpm --filter x publish`
+ * no — best-effort); any `--dry-run` leaves it unclassified.
+ */
+function isPublish(tokens) {
+  const cmd = path.basename(tokens[0] ?? "");
+  const args = tokens.slice(1);
+  if (args.includes("--dry-run")) return false;
+  const [a, b] = args.filter((t) => !t.startsWith("-"));
+  if (cmd === "npm" || cmd === "pnpm") return a === "publish";
+  if (cmd === "yarn") return a === "publish" || (a === "npm" && b === "publish");
+  if (cmd === "cargo") return a === "publish";
+  if (cmd === "gem") return a === "push";
+  if (cmd === "twine") return a === "upload";
+  if (cmd === "docker" || cmd === "podman") return a === "push" || (a === "image" && b === "push");
+  return false;
+}
+
+/**
+ * Cloud / cluster resource destruction → `delete`. `aws s3 rm` is already caught by the
+ * rm-family token; `kubectl` matches a `delete` word anywhere (`kubectl -n x delete …`).
+ */
+function isRemoteDestroy(tokens) {
+  const cmd = path.basename(tokens[0] ?? "");
+  const args = tokens.slice(1);
+  if (cmd === "kubectl") return args.includes("delete");
+  if (cmd === "aws") {
+    return (
+      args.some((t) => /^(delete|terminate|remove)-/.test(t)) ||
+      (args.includes("s3") && args.includes("rb"))
+    );
+  }
+  return false;
+}
+
+/** `jira issue create` (jira-cli) / `jira create` (go-jira) → `jira.create_issue`. */
+function isJiraCreate(tokens) {
+  if (path.basename(tokens[0] ?? "") !== "jira") return false;
+  const [a, b] = tokens.slice(1).filter((t) => !t.startsWith("-"));
+  return a === "create" || (/^issues?$/.test(a ?? "") && b === "create");
+}
+
+/**
  * File-overwrite/rename commands whose destination isn't statically knowable to be
  * new vs. pre-existing — gated as best-effort (the file's own documented posture),
  * accepting some false positives over missing a real overwrite. Command identity is
@@ -421,7 +492,16 @@ function classifyRedirectOverwrite(segment) {
 }
 
 /** Build the full classification (action + display enrichment) for one action. */
-function enrich(action, { branch, command } = {}) {
+function enrich(action, { branch, command, meta: metaKey, remote } = {}) {
+  if (action === "delete" && remote) {
+    return {
+      action,
+      riskType: "mazani",
+      summary: "Smazat nebo ukončit vzdálené prostředky (cluster / cloud)",
+      consequence: "Prostředky v clusteru nebo cloudu budou nevratně odstraněny.",
+      preview: { kind: "command", shell: "bash", cmd: command, targets: [] },
+    };
+  }
   if (action === "delete") {
     const targets = parseTargets(command);
     return {
@@ -456,11 +536,11 @@ function enrich(action, { branch, command } = {}) {
       preview: { kind: "command", shell: "bash", cmd: command, targets: [] },
     };
   }
-  const meta = ACTION_META[action];
+  const meta = ACTION_META[metaKey ?? action];
   return {
     action,
     ...(branch ? { branch } : {}),
-    riskType: "push",
+    riskType: meta.riskType ?? "push",
     summary: branch ? `${meta.summary} (${branch})` : meta.summary,
     consequence: meta.consequence,
     preview: { kind: "command", shell: "bash", cmd: command, targets: [] },
@@ -483,6 +563,9 @@ function classifySegment(segment, fullCommand) {
   }
   const gh = classifyGh(tokens);
   if (gh) return enrich(gh.action, { command: fullCommand });
+  if (isPublish(tokens)) return enrich("deploy", { command: fullCommand, meta: "publish" });
+  if (isJiraCreate(tokens)) return enrich("jira.create_issue", { command: fullCommand });
+  if (isRemoteDestroy(tokens)) return enrich("delete", { command: fullCommand, remote: true });
   const fsKind = classifyFsCommand(tokens);
   if (fsKind) return enrich(fsKind, { command: fullCommand });
   if (isDestructive(segment, tokens)) return enrich("delete", { command: fullCommand });
@@ -556,7 +639,7 @@ function stripCatHeredocs(command) {
 // (`python x.py`) can still write the ledger directly — no worse than today, since
 // the same script could delete the file without any gate at all.
 
-const COORDINATION_FILES = [REQUEST_FILE, DECISION_FILE, LEDGER_FILE];
+const COORDINATION_FILES = [REQUEST_FILE, DECISION_FILE, LEDGER_FILE, LOCK_FILE];
 const FS_ACTIONS = new Set(["delete", "overwrite", "move"]);
 
 /**
@@ -902,6 +985,8 @@ export function analyzeOwnership(command, { cwd, ledger, intentDir, free = [] })
       cwds = ok ? [...new Set([...cwds, ...resolved.map((r) => r.abs)])] : null;
     }
 
+    // A cluster/cloud delete names no local path — nothing here can own it.
+    if (isRemoteDestroy(words)) exempt = false;
     const rmAt = words.findIndex((w) => RM_FAMILY_NAMES.has(path.basename(w)));
     if (rmAt !== -1) {
       const targets = positionals(words.slice(rmAt + 1));
@@ -1136,13 +1221,184 @@ export function classifyTask(toolInput) {
 }
 
 /**
+ * A28 — ZibbyOS's own in-process MCP servers (they gate themselves server-side; the
+ * run's `ask_operator` is handled before this). Exactly the seeded ids, not a `zibby-`
+ * prefix or a loopback URL: an operator-registered `zibby-foo` or a third-party server
+ * behind a loopback proxy is still gated (fail closed). Mirrors ENTITY/KB/RUN_MCP_SERVER_ID.
+ */
+export const BUILTIN_MCP_SERVERS = new Set(["zibby-entities", "zibby-kb", "zibby-run"]);
+
+/** Server id as it appears in a tool name (Claude and opencode replace other chars with `_`). */
+const toolNameId = (id) => id.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+/**
+ * A28 amendment — the run's ZibbyOS-registry MCP servers (enabled rows of
+ * `McpServersStorageService` mounted into this run), from argv[3]: a comma list baked
+ * into the hook command by the API (`--settings` on claude, the gate plugin's spawn on
+ * opencode) — never from env or a file the agent could write. Their calls keep the
+ * pre-A28 behaviour (not classified); the operator's registration is the trust decision.
+ */
+export function registryServers(arg = process.argv[3]) {
+  return new Set(
+    String(arg ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map(toolNameId),
+  );
+}
+
+/** Verbs that make a tool read-only — only as the first or second word of its name. */
+const MCP_READ_VERBS = new Set([
+  "get",
+  "list",
+  "search",
+  "read",
+  "fetch",
+  "find",
+  "view",
+  "describe",
+  "query",
+  "lookup",
+  "show",
+  "count",
+  "retrieve",
+]);
+
+/** Any of these anywhere in a tool name makes it a write, whatever else it says. */
+const MCP_WRITE_WORDS = new Set(
+  (
+    "create update delete remove destroy destructive purge erase wipe trash send post write " +
+    "edit set add put patch merge move rename upload publish run execute exec eval evaluate " +
+    "invoke call click type fill press navigate drag drop select hover install uninstall " +
+    "invite archive label mark reply comment draft schedule cancel approve reject pay payment " +
+    "charge refund transfer payout purchase buy checkout grant revoke share sync import " +
+    "trigger start stop kill restart deploy push close open assign unassign upsert insert " +
+    "modify save submit apply enable disable use generate transition subscribe unsubscribe " +
+    "follow unfollow react pin unpin star join leave kick ban mute login logout auth reset " +
+    "clear revert rollback restore lock unlock resolve reopen forward notify mention unsafe"
+  ).split(" "),
+);
+
+/** Never-rule-like tool names keep their existing action (and its floor rule), first hit wins. */
+const MCP_ACTION_WORDS = [
+  ["pr.merge", (w) => w.has("merge") && ["pull", "pr", "mr", "branch"].some((x) => w.has(x))],
+  [
+    "payment",
+    (w) => ["pay", "payment", "charge", "refund", "transfer", "payout"].some((x) => w.has(x)),
+  ],
+  ["purchase", (w) => ["purchase", "buy", "checkout"].some((x) => w.has(x))],
+  [
+    "delete",
+    (w) =>
+      ["delete", "remove", "destroy", "destructive", "purge", "erase", "wipe", "trash"].some((x) =>
+        w.has(x),
+      ),
+  ],
+  ["deploy", (w) => w.has("deploy")],
+  [
+    "send_email",
+    (w, server) =>
+      w.has("send") && ["email", "mail", "gmail", "outlook"].some((x) => w.has(x) || server.has(x)),
+  ],
+];
+
+const MCP_RISK = { "pr.merge": "push", payment: "platba", purchase: "platba", delete: "mazani" };
+
+/** `getJiraIssue` / `slack_read-channel` → `["get","jira","issue"]` / `["slack","read","channel"]`. */
+const words = (name) =>
+  String(name)
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase());
+
+/** Read-only by name: a read verb as the first or second word and no write word anywhere. */
+export function isReadOnlyMcpTool(tool) {
+  const w = words(tool);
+  return w.slice(0, 2).some((x) => MCP_READ_VERBS.has(x)) && !w.some((x) => MCP_WRITE_WORDS.has(x));
+}
+
+/** A compact, bounded rendering of the call's arguments for the approval card. */
+function mcpArgs(toolInput) {
+  let text = "";
+  try {
+    text = JSON.stringify(toolInput ?? {}) ?? "";
+  } catch {
+    text = "(unreadable arguments)";
+  }
+  return text.length > 600 ? `${text.slice(0, 600)}…` : text;
+}
+
+/**
+ * A28 — classify an `mcp__<server>__<tool>` call (any engine; the opencode plugin maps
+ * its MCP calls to this name). ZibbyOS's own servers and the run's registry servers
+ * (`registry`, see {@link registryServers}) → `null` (unchanged). Read-only by
+ * name → `mcp.read` (floor `notify`). Never-rule-like names → their existing action
+ * (`pr.merge`, `payment`, `purchase`, `delete`, `deploy`, `send_email`). Everything else
+ * → `mcp.write` (floor `ask`). A name that doesn't parse is `mcp.write` (fail closed).
+ * `scope` = the server id and `tool` = the full tool name, so a gate rule can target one.
+ */
+export function classifyMcp(toolName, toolInput, registry = new Set()) {
+  const rest = String(toolName).slice("mcp__".length);
+  const cut = rest.indexOf("__");
+  const server = cut > 0 ? rest.slice(0, cut) : "";
+  const tool = cut > 0 ? rest.slice(cut + 2) : "";
+  if (server && (BUILTIN_MCP_SERVERS.has(server) || registry.has(server))) return null;
+  const args = mcpArgs(toolInput);
+  const label = server && tool ? `${server} · ${tool}` : String(toolName);
+  const base = {
+    tool: String(toolName),
+    ...(server ? { scope: server } : {}),
+  };
+  if (tool && isReadOnlyMcpTool(tool)) {
+    return {
+      action: "mcp.read",
+      ...base,
+      context: JSON.stringify({ riskType: "odeslani", summary: `Čtení přes MCP: ${label}` }),
+    };
+  }
+  const w = new Set(words(tool || rest));
+  const serverWords = new Set(words(server));
+  const mapped = MCP_ACTION_WORDS.find(([, test]) => test(w, serverWords))?.[0];
+  const action = tool && mapped ? mapped : "mcp.write";
+  return {
+    action,
+    ...base,
+    context: JSON.stringify({
+      riskType: MCP_RISK[action] ?? "odeslani",
+      summary: `Zápis přes MCP: ${label}`,
+      consequence: `Nástroj ${tool || toolName} na serveru ${server || "?"} provede akci mimo běh (zápis, odeslání nebo změnu).`,
+      preview: { kind: "command", shell: "mcp", cmd: `${label} ${args}`, targets: [] },
+    }),
+  };
+}
+
+/** The fail-closed request for an MCP call the classifier could not handle. */
+export function unclassifiedMcpRequest(toolName) {
+  return {
+    action: "mcp.write",
+    tool: String(toolName ?? ""),
+    context: JSON.stringify({
+      riskType: "odeslani",
+      summary: `Nezařazené volání MCP: ${String(toolName ?? "?")}`,
+      consequence: "Gate volání nedokázal zařadit, proto se ptá.",
+    }),
+  };
+}
+
+const isMcpCall = (input) =>
+  typeof input?.tool_name === "string" && input.tool_name.startsWith("mcp__");
+
+/**
  * Classify a PreToolUse event into the `intent-request.json` payload, or `null`
  * when nothing is gated (Bash's classifier fell through — the caller then lets
  * Claude's own permissions decide; every `Task` call always classifies to
  * something, see {@link classifyTask}). Pure and synchronous, called inside a
- * try/catch by `main()` so a classifier bug fails OPEN, never blocks the tool.
+ * try/catch by `main()` so a classifier bug fails OPEN for Bash/Task — and CLOSED
+ * (`mcp.write`, ask) for an MCP call (A28).
  */
-export function classifyEvent(input) {
+export function classifyEvent(input, registry = new Set()) {
   if (input?.tool_name === "Bash") {
     const cls = classify(input?.tool_input?.command ?? "");
     if (!cls) return null;
@@ -1175,6 +1431,7 @@ export function classifyEvent(input) {
       }),
     };
   }
+  if (isMcpCall(input)) return classifyMcp(input.tool_name, input?.tool_input, registry);
   return null;
 }
 
@@ -1267,6 +1524,49 @@ function waitForDecision(decisionFile, deadlineMs) {
   }
 }
 
+function pidAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return e?.code === "EPERM";
+  }
+}
+
+/**
+ * Take the run's gate lock (`intent.lock`, holding this hook's pid), waiting while
+ * another hook of the same run holds it. A lock whose holder died is taken over.
+ * Released on exit (every `decide` exits). `false` = the deadline passed first.
+ * ponytail: stale-lock takeover has a small read-then-remove race between two waiters;
+ * the loser just waits for the next poll, it never skips the gate.
+ */
+export function acquireGateLock(dir, deadlineMs) {
+  const file = path.join(dir, LOCK_FILE);
+  const startedAt = Date.now();
+  for (;;) {
+    try {
+      writeFileSync(file, String(process.pid), { flag: "wx" });
+      process.on("exit", () => rmSync(file, { force: true }));
+      return true;
+    } catch (e) {
+      if (e?.code !== "EEXIST") return true; // can't lock (odd fs) → old single-slot behaviour
+    }
+    let holder = NaN;
+    try {
+      holder = Number(readFileSync(file, "utf8"));
+    } catch {
+      continue; // released between the two calls
+    }
+    // An empty file is a holder mid-write: alive.
+    if (Number.isInteger(holder) && holder > 0 && !pidAlive(holder)) {
+      rmSync(file, { force: true });
+      continue;
+    }
+    if (Date.now() - startedAt >= deadlineMs) return false;
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, POLL_MS);
+  }
+}
+
 function main() {
   let input;
   try {
@@ -1290,14 +1590,15 @@ function main() {
     );
   }
 
-  // Fail OPEN: a classifier exception must never block all Bash/Task calls (this
+  // Fail OPEN for Bash/Task: a classifier exception must never block all of them (this
   // hook sits in the spawn path of every run) — an unclassified command, or a
-  // non-Bash/Task tool, falls through to Claude's own permissions.
+  // non-Bash/Task tool, falls through to Claude's own permissions. MCP fails closed.
   let request = null;
   try {
-    request = classifyEvent(input);
+    request = classifyEvent(input, registryServers());
   } catch {
-    request = null;
+    // A28: an MCP call the classifier chokes on asks instead of passing.
+    request = isMcpCall(input) ? unclassifiedMcpRequest(input.tool_name) : null;
   }
   // The ownership ledger only ever LIFTS a gate, so it fails CLOSED: on any error
   // the classified request stands unchanged.
@@ -1315,13 +1616,26 @@ function main() {
   // The sandbox RunnerCore watches — pinned via env, not the command's cwd.
   const cwd = process.env.ZIBBY_INTENT_DIR || input.cwd || process.cwd();
 
-  writeFileSync(path.join(cwd, REQUEST_FILE), JSON.stringify(request), "utf8");
-
   const deadlineS = Number(process.argv[2]);
   const deadlineMs =
     (Number.isFinite(deadlineS) && deadlineS > 0 ? deadlineS : DEFAULT_DEADLINE_S) * 1000;
+  const startedAt = Date.now();
 
-  const decision = waitForDecision(path.join(cwd, DECISION_FILE), deadlineMs);
+  // One request in flight per run: parallel tool calls (several MCP reads, parallel
+  // `Task`s) would otherwise overwrite each other's request file and strand a hook.
+  if (!acquireGateLock(cwd, deadlineMs)) {
+    decide("deny", "Approval window elapsed with no decision — denied fail-safe.");
+  }
+
+  writeFileSync(path.join(cwd, REQUEST_FILE), JSON.stringify(request), "utf8");
+
+  const decision = waitForDecision(
+    path.join(cwd, DECISION_FILE),
+    Math.max(0, deadlineMs - (Date.now() - startedAt)),
+  );
+  // A28: an allowed MCP call is handed back to Claude's own permission layer (auto
+  // mode / allow-list) instead of overriding it — the gate only ever adds a check.
+  if (decision === "allow" && isMcpCall(input)) process.exit(0);
   if (decision === "allow") decide("allow", "Approved by the gate.");
   if (decision === "timeout") {
     rmSync(path.join(cwd, REQUEST_FILE), { force: true });

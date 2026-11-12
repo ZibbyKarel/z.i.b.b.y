@@ -275,6 +275,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
             </Stack>
           )}
           {editing && isOperatorTokenError(updateWorkflow.error) && <OperatorTokenNotice />}
+          {!editing && isOperatorTokenError(duplicateWorkflow.error) && <OperatorTokenNotice />}
           <Stack wrap align="start" direction="row" gap="200" justify="between">
             <Container minW0>
               <Stack gap="100">

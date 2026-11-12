@@ -1,9 +1,10 @@
+import { spawn } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { promises as fs } from "node:fs";
+import { promises as fs, readFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatPersona, ChatToolEvent, SystemConfig, TaskTarget } from "@zibby/contracts";
 import { clearOpencodeCache } from "../runner/ai-engine";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
@@ -25,6 +26,7 @@ import {
   ChatSessionService,
   type ChatSpawnOptions,
   type ClaudeProcess,
+  killTurnProcess,
   mergeToolEvent,
 } from "./chat-session.service";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
@@ -118,16 +120,20 @@ class TestSession extends ChatSessionService {
     );
   }
   lastSpawn: ChatSpawnOptions | undefined;
-  operatorServers: { id: string; config: Record<string, unknown> }[] = [];
+  /** The turn's `--mcp-config` as it was at spawn — the file is gone once the turn ends. */
+  lastMcpConfig: { mcpServers: Record<string, { url: string }> } | undefined;
+  /** Set to make the next spawn throw (spawn failure). */
+  spawnError: Error | undefined;
   protected createProcess(args: string[], cwd?: string, opts?: ChatSpawnOptions): ClaudeProcess {
     this.lastArgs = args;
     this.lastCwd = cwd;
     this.lastSpawn = opts;
+    const mcpConfig = args.indexOf("--mcp-config");
+    if (mcpConfig !== -1) {
+      this.lastMcpConfig = JSON.parse(readFileSync(args[mcpConfig + 1] ?? "", "utf8"));
+    }
+    if (this.spawnError) throw this.spawnError;
     return new FakeClaude(this.lines);
-  }
-  // Never read the machine's real Claude config in tests.
-  protected async operatorMcpServers(): Promise<{ id: string; config: Record<string, unknown> }[]> {
-    return this.operatorServers;
   }
 }
 
@@ -217,8 +223,11 @@ describe("ChatSessionService", () => {
     expect(args).toContain("--model");
     expect(args[args.indexOf("--model") + 1]).toBe("sonnet");
     expect(args[args.indexOf("--permission-mode") + 1]).toBe("auto");
-    // isolation: --setting-sources with an empty value
-    expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    // A30: the operator's user setup (connectors, MCP servers), but no hooks
+    expect(args[args.indexOf("--setting-sources") + 1]).toBe("user");
+    expect(JSON.parse(args[args.indexOf("--settings") + 1] ?? "")).toEqual({
+      disableAllHooks: true,
+    });
     // built-in tools hidden via a denylist — `--tools` would also drop claude.ai connectors
     expect(args).not.toContain("--tools");
     const hidden = (args[args.indexOf("--disallowedTools") + 1] ?? "").split(",");
@@ -320,9 +329,9 @@ describe("ChatSessionService", () => {
       );
       await settled(result.turnId);
 
-      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
-      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
-      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp\?teamId=devrel$/);
+      expect(svc.lastMcpConfig?.mcpServers["zibby-kb"]?.url).toMatch(
+        /\/api\/kb\/mcp\?teamId=devrel$/,
+      );
     });
 
     it("mounts no ?teamId= at all when sendMessage's body carries none", async () => {
@@ -333,10 +342,8 @@ describe("ChatSessionService", () => {
       const result = await svc.sendMessage({ conversationId: "c-team-2", text: "ahoj" }, NOW);
       await settled(result.turnId);
 
-      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
-      const config = JSON.parse(await fs.readFile(configPath, "utf8"));
-      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp$/);
-      expect(config.mcpServers["zibby-kb"].url).not.toContain("?");
+      expect(svc.lastMcpConfig?.mcpServers["zibby-kb"]?.url).toMatch(/\/api\/kb\/mcp$/);
+      expect(svc.lastMcpConfig?.mcpServers["zibby-kb"]?.url).not.toContain("?");
     });
   });
 
@@ -835,6 +842,97 @@ describe("ChatSessionService", () => {
       const stat = await fs.stat(configPath);
       expect(stat.mode & 0o777).toBe(0o600);
     });
+
+    const turnLines = [
+      line({ type: "system", subtype: "init", session_id: "s" }),
+      line({ type: "result", is_error: false, result: "ok" }),
+    ];
+    const configOf = (svc: TestSession): string =>
+      svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
+
+    it("deletes the turn's --mcp-config file once the turn ends", async () => {
+      const svc = new TestSession(store, events, turnLines, "jarvis", undefined, undefined, dir);
+      const r = await svc.sendMessage({ conversationId: "c-rm", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      expect(svc.lastMcpConfig?.mcpServers.zibby).toBeDefined();
+      await expect(fs.access(configOf(svc))).rejects.toThrow();
+    });
+
+    it("deletes it on an errored turn and when the spawn itself throws", async () => {
+      const errored = new TestSession(
+        store,
+        events,
+        [line({ type: "result", is_error: true, result: "boom" })],
+        "jarvis",
+        undefined,
+        undefined,
+        dir,
+      );
+      const r = await errored.sendMessage({ conversationId: "c-rm2", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      await expect(fs.access(configOf(errored))).rejects.toThrow();
+
+      const failing = new TestSession(store, events, [], "jarvis", undefined, undefined, dir);
+      failing.spawnError = new Error("spawn EACCES");
+      const r2 = await failing.sendMessage({ conversationId: "c-rm3", text: "ahoj" }, NOW);
+      await settled(r2.turnId);
+      expect(failing.lastMcpConfig).toBeDefined();
+      await expect(fs.access(configOf(failing))).rejects.toThrow();
+    });
+
+    it("sweeps stale per-turn configs at start, keeping fresh ones and transcripts", async () => {
+      const old = new Date(Date.now() - 10 * 60_000);
+      const stale = ["mcp-config_1_abc123.json", "opencode-chat_1_def456.json"];
+      for (const name of [...stale, "mcp-config_2_aaa111.json", "c1.jsonl"]) {
+        await fs.writeFile(path.join(dir, name), "{}");
+      }
+      for (const name of [...stale, "c1.jsonl"]) await fs.utimes(path.join(dir, name), old, old);
+      await new TestSession(store, events, [], "jarvis", undefined, undefined, dir).onModuleInit();
+      expect((await fs.readdir(dir)).sort()).toEqual(["c1.jsonl", "mcp-config_2_aaa111.json"]);
+    });
+  });
+
+  describe("killTurnProcess", () => {
+    it("SIGTERMs, then SIGKILLs after the grace (no pid → the child itself)", () => {
+      vi.useFakeTimers();
+      try {
+        const signals: (string | undefined)[] = [];
+        killTurnProcess({
+          stdout: null,
+          on: () => undefined,
+          kill: (sig) => (signals.push(sig), true),
+        });
+        expect(signals).toEqual(["SIGTERM"]);
+        vi.advanceTimersByTime(3_000);
+        expect(signals).toEqual(["SIGTERM", "SIGKILL"]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("kills the whole detached group, even a grandchild that ignores SIGTERM", async () => {
+      // `trap "" TERM` is inherited by the backgrounded `sleep`: only SIGKILL ends it.
+      const child = spawn("sh", ["-c", 'trap "" TERM; sleep 60 & echo $!; wait'], {
+        detached: true,
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      const grandchild = Number(
+        await new Promise<string>((resolve) => child.stdout.once("data", (d) => resolve(`${d}`))),
+      );
+      const alive = (pid: number): boolean => {
+        try {
+          process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
+      killTurnProcess(child);
+      await new Promise((r) => setTimeout(r, 500));
+      expect(alive(grandchild)).toBe(true); // SIGTERM ignored
+      await new Promise((r) => setTimeout(r, 3_000));
+      expect(alive(grandchild)).toBe(false);
+    }, 10_000);
   });
   describe("TODO 13 — # and / tags", () => {
     const skills = {
@@ -871,10 +969,8 @@ describe("ChatSessionService", () => {
       );
     const promptOf = (svc: TestSession): string =>
       svc.lastArgs[svc.lastArgs.indexOf("--append-system-prompt") + 1] ?? "";
-    const kbUrlOf = async (svc: TestSession): Promise<string> => {
-      const configPath = svc.lastArgs[svc.lastArgs.indexOf("--mcp-config") + 1] ?? "";
-      return JSON.parse(await fs.readFile(configPath, "utf8")).mcpServers["zibby-kb"].url;
-    };
+    const kbUrlOf = async (svc: TestSession): Promise<string> =>
+      svc.lastMcpConfig?.mcpServers["zibby-kb"]?.url ?? "";
 
     it("runs a turn about a GitHub PR inside the project whose gitRemote is that repo", async () => {
       const cms4 = {
@@ -1046,23 +1142,39 @@ describe("ChatSessionService", () => {
       expect(msg?.model).toBe("opus");
     });
   });
-  describe("A23 — the operator's MCP servers", () => {
-    it("mounts them next to zibby / zibby-kb, which win a name clash", async () => {
+  describe("A30 — the operator's setup from user settings", () => {
+    it("the --mcp-config carries ZibbyOS's own servers only (operator servers load natively)", async () => {
       const svc = new TestSession(store, events, [], "jarvis", undefined, undefined, dir);
-      svc.operatorServers = [
-        { id: "context7", config: { type: "http", url: "https://mcp.context7.com/mcp" } },
-        { id: "zibby", config: { type: "stdio", command: "evil" } },
-        { id: "zibby-kb", config: { type: "http", url: "https://evil.example" } },
-      ];
       const args = await svc.buildArgs("ahoj", null, "c1");
       const config = JSON.parse(
         await fs.readFile(args[args.indexOf("--mcp-config") + 1] ?? "", "utf8"),
       );
-      expect(config.mcpServers.context7.url).toBe("https://mcp.context7.com/mcp");
-      expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp\?conversationId=c1$/);
-      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp$/);
-      // Isolation is unchanged: still no ambient settings.
-      expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+      expect(Object.keys(config.mcpServers).sort()).toEqual(["zibby", "zibby-kb"]);
+    });
+
+    it("the real spawn switches off CLAUDE.md files and auto-memory", async () => {
+      const bin = path.join(dir, "claude");
+      await fs.writeFile(
+        bin,
+        '#!/bin/sh\necho "$CLAUDE_CODE_DISABLE_CLAUDE_MDS $CLAUDE_CODE_DISABLE_AUTO_MEMORY"\n',
+        { mode: 0o755 },
+      );
+      const previous = process.env.CLAUDE_BIN;
+      process.env.CLAUDE_BIN = bin;
+      try {
+        const svc = new TestSession(store, events, []);
+        const realSpawn = (
+          ChatSessionService.prototype as unknown as { createProcess(a: string[]): ClaudeProcess }
+        ).createProcess;
+        const proc = realSpawn.call(svc, []);
+        let out = "";
+        proc.stdout?.on("data", (chunk: Buffer) => (out += chunk.toString()));
+        await new Promise<void>((resolve) => proc.on("close", () => resolve()));
+        expect(out.trim()).toBe("1 1");
+      } finally {
+        if (previous === undefined) delete process.env.CLAUDE_BIN;
+        else process.env.CLAUDE_BIN = previous;
+      }
     });
   });
 
@@ -1126,7 +1238,6 @@ describe("ChatSessionService", () => {
 
     it("runs the turn on opencode with the tier's model, maps events, records the engine", async () => {
       const svc = opencodeSession(ocLines("ses_1", "Ahoj z opencode."));
-      svc.operatorServers = [{ id: "playwright", config: { command: "npx" } }];
       const r = await svc.sendMessage(
         { conversationId: "c-oc", text: "ahoj", model: "sonnet" },
         NOW,
@@ -1142,6 +1253,7 @@ describe("ChatSessionService", () => {
       expect(args.at(-1)).toBe("ahoj");
       // A25: the operator's own servers stay on Claude (no classifier on opencode).
       expect(svc.lastSpawn?.env.ZIBBY_CHAT_MCP_SERVERS).toBe("zibby,zibby-kb");
+      expect(svc.lastSpawn?.env.ZIBBY_CHAT_DENY_TOOLS).toBe("");
       // The 0600 config (bearer tokens) is gone once the turn ends.
       await expect(fs.access(svc.lastSpawn?.env.OPENCODE_CONFIG ?? "")).rejects.toThrow();
 
@@ -1215,6 +1327,20 @@ describe("ChatSessionService", () => {
       );
     });
 
+    it("an opencode turn with no text, tool or error ends in an error, not an empty reply", async () => {
+      const svc = opencodeSession([
+        line({ type: "step_start", sessionID: "ses_0", part: { type: "step-start" } }),
+      ]);
+      const r = await svc.sendMessage({ conversationId: "c-empty", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      const error = seen.find((e) => e.turnId === r.turnId && e.type === "error");
+      expect(error && "message" in error ? error.message : "").toBe(
+        "opencode skončil bez odpovědi.",
+      );
+      const transcript = await store.readTranscript(r.conversationId);
+      expect(transcript.messages.some((m) => m.role === "assistant")).toBe(false);
+    });
+
     it("a mentioned agent's own engine wins over the global one", async () => {
       const agents = {
         get: async () => ({
@@ -1252,6 +1378,8 @@ describe("ChatSessionService", () => {
       await settled(r.turnId);
       expect(svc.lastSpawn?.command).toBe(bin);
       expect(svc.lastArgs[svc.lastArgs.indexOf("-m") + 1]).toBe("opencode/test-free");
+      // An `@agent` turn never spawns a task — the gate plugin denies it too.
+      expect(svc.lastSpawn?.env.ZIBBY_CHAT_DENY_TOOLS).toBe("zibby_create_task");
     });
   });
 });

@@ -33,6 +33,9 @@ describe("PolicyStorageService", () => {
     expect(decisionFor(floor, "floor-operator.question")).toBe("ask");
     expect(decisionFor(floor, "floor-agent.delegate")).toBe("notify");
     expect(decisionFor(floor, "floor-pr.open")).toBe("notify");
+    // A28 — MCP / connector calls in runs
+    expect(decisionFor(floor, "floor-mcp.read")).toBe("notify");
+    expect(decisionFor(floor, "floor-mcp.write")).toBe("ask");
     expect(floor.every((r) => r.locked && r.source === "system")).toBe(true);
   });
 
@@ -49,6 +52,14 @@ describe("PolicyStorageService", () => {
     const ids = (await new PolicyStorageService(catalog).floor()).map((r) => r.id);
     expect(ids).toContain(global.id);
     expect(ids).not.toContain(dept.id);
+  });
+
+  it("A28: puts the MCP rules back into an existing gate-rules.json", async () => {
+    const file = path.join(dir, "gate-rules.json");
+    const stored = JSON.parse(await fs.readFile(file, "utf8")) as { id: string }[];
+    await fs.writeFile(file, JSON.stringify(stored.filter((r) => !r.id.startsWith("floor-mcp."))));
+    const floor = await new PolicyStorageService(catalog).floor();
+    expect(decisionFor(floor, "floor-mcp.write")).toBe("ask");
   });
 
   it("reflects a system rule the operator moved to allow", async () => {

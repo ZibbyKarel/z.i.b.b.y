@@ -29,6 +29,54 @@ describe("GateEvaluatorService", () => {
     ...r,
   });
 
+  describe("A28 — MCP calls on the default floor", () => {
+    const mcpCall = (action: string, scope: string): IntendedAction => ({
+      action,
+      scope,
+      tool: `mcp__${scope}__x`,
+    });
+
+    it("a read notifies, a write asks a human, an unknown action asks", async () => {
+      const rules = await evaluator.rulesForAgent({});
+      expect(evaluator.evaluate(rules, mcpCall("mcp.read", "claude_ai_Slack")).decision).toBe(
+        "notify",
+      );
+      expect(evaluator.evaluate(rules, mcpCall("mcp.write", "claude_ai_Slack"))).toMatchObject({
+        decision: "ask",
+        ruleId: "floor-mcp.write",
+        resolve: { type: "human" },
+      });
+      // a Never-rule-like MCP name keeps its own floor
+      expect(evaluator.evaluate(rules, mcpCall("pr.merge", "github")).decision).toBe("deny");
+    });
+
+    it("per-server exemption: floor-mcp.write moved to allow + a scoped global ask", async () => {
+      const catalog = new GateRulesStorageService(dir);
+      const floorRule = (await catalog.list()).find((r) => r.id === "floor-mcp.write")!;
+      await catalog.update(floorRule.id, { match: floorRule.match, decision: "allow" });
+      await catalog.create({
+        match: [
+          { type: "action", action: "mcp.write" },
+          { type: "scope", scope: "claude_ai_*" },
+        ],
+        decision: "ask",
+        resolve: { type: "human" },
+      });
+      const rules = await evaluator.rulesForAgent({});
+      expect(evaluator.evaluate(rules, mcpCall("mcp.write", "playwright")).decision).toBe("allow");
+      expect(evaluator.evaluate(rules, mcpCall("mcp.write", "claude_ai_Slack")).decision).toBe(
+        "ask",
+      );
+    });
+
+    it("an agent's own allow cannot weaken the mcp.write floor", async () => {
+      const rules = await evaluator.rulesForAgent({
+        gates: [{ match: [{ type: "action", action: "mcp.write" }], decision: "allow" }],
+      });
+      expect(evaluator.evaluate(rules, mcpCall("mcp.write", "playwright")).decision).toBe("ask");
+    });
+  });
+
   describe("matching + precedence", () => {
     it("first matching rule wins", () => {
       const rules: GateRule[] = [

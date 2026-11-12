@@ -70,11 +70,13 @@ subscription). The verified recipe (spike, see spec §7):
 
 ```
 claude -p <msg> [--resume <sid>] \
-  --setting-sources "" --disallowedTools <built-ins> --append-system-prompt <persona> \
+  --setting-sources user --settings '{"disableAllHooks":true}' \
+  --disallowedTools <built-ins> --append-system-prompt <persona> \
   --output-format stream-json --include-partial-messages --verbose \
   --model sonnet --permission-mode auto \
-  --mcp-config <0600 file: zibby + zibby-kb> \
-  --allowedTools mcp__zibby__*,mcp__zibby-kb__*,<claude.ai Slack read+draft tools>
+  --mcp-config <0600 file: zibby + zibby-kb, deleted after the turn> \
+  --allowedTools Bash,mcp__zibby__*,mcp__zibby-kb__*,<claude.ai Slack read+draft tools>
+  env: CLAUDE_CODE_DISABLE_CLAUDE_MDS=1 CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 ```
 
 - **Token streaming** requires `--include-partial-messages` (otherwise whole
@@ -83,10 +85,31 @@ claude -p <msg> [--resume <sid>] \
 - **Continuity:** `--resume <sessionId>` keeps context; the session id persists
   per conversation and is passed again every turn (the server is stateless per
   turn).
-- **Isolation:** `--setting-sources ""` loads no user/project/local settings, so
-  global hooks/plugins (which could inject foreign context) never fire — but
-  auth (keychain) still works. (`CLAUDE_CONFIG_DIR` breaks auth — do not use
-  it.)
+- **The operator's setup, without its context (A30).** The chat is a superstructure
+  over the operator's terminal, so a turn loads the operator's **user** settings
+  (`--setting-sources user`): the claude.ai connectors (Slack, Atlassian, Figma,
+  Claude Data/Docs, …), the user-scope MCP servers and the MCP servers of enabled
+  plugins come up natively, exactly as in `claude`. What would inject foreign context
+  into the butler is switched off:
+  - `--settings '{"disableAllHooks":true}'` — no hook fires (SessionStart "You have
+    superpowers", the operator's tool-usage hooks). Plugins whose tools are registered
+    by a hook (`helper-desk`, `handoff`) are therefore absent.
+  - `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1` — no `~/.claude/CLAUDE.md` or project CLAUDE.md
+    (the operator's file has RTK/graphify tool rules that must not reach the butler).
+  - `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` — no auto-memory of the turn's cwd
+    (`~/.claude/projects/<cwd>/memory/MEMORY.md`); without it, the memory
+    instructions and index leaked (seen live).
+  - Plugin skills are listed in the init event but the `Skill` tool is on the denylist,
+    so no skills listing reaches the prompt (the model reported none, live).
+
+  Project and local settings are still not loaded. The rest of the user settings
+  (`env`, permission rules, language, output style) comes along too; only the effects
+  above were checked live. Auth stays the keychain login (`CLAUDE_CONFIG_DIR` breaks
+  auth — do not use it). History: the former `--setting-sources ""` isolation (A23 era)
+  stopped carrying the connectors — on CLI 2.1.322 its init event shows
+  `mcp_servers: []`, so the chat had no Slack/Jira and `CHAT_SLACK_TOOLS` pointed at
+  tools that were not there.
+
 - **`--disallowedTools <built-ins>`** (`CHAT_HIDDEN_BUILTIN_TOOLS`) hides every
   built-in tool (Read/Write/Edit/…) except **Bash**, which the operator gave the
   chat on purpose (same shell as their own `claude` session — e.g. `gh pr view`);
@@ -94,16 +117,18 @@ claude -p <msg> [--resume <sid>] \
   not a coding agent — it may only act through the `zibby` MCP tools
   (`create_task` delegates the work to a workflow). Without this, the model tries
   to build the app itself via Bash/Write instead of dispatching. (Verified with a
-  live eval.) It is a denylist rather than `--tools ""` because, together with
-  `--setting-sources ""`, any `--tools` value also drops the operator's claude.ai
-  connectors (verified 2026-10-26). Read-only built-ins (Read/Glob/Grep) run
+  live eval.) It is a denylist rather than `--tools ""` because a `--tools` value
+  also dropped the operator's claude.ai connectors (verified 2026-10-26, not re-checked
+  under A30). Read-only built-ins (Read/Glob/Grep) run
   without a permission prompt, so they must stay on the denylist.
 - **Working directory.** A turn tagged with `#project`, or opened about a GitHub
   URL whose repo matches a project's `gitRemote`, spawns with `cwd` set to that
   project's local checkout (`ProjectLocalService.resolve`: `path`, else
   `<cloneRoot>/<id>`); the scope line names the same path.
 - **claude.ai connectors (`--permission-mode auto`).** The CLI loads the
-  operator's claude.ai connectors (Jira/Confluence, Slack, …) from the login.
+  operator's claude.ai connectors (Jira/Confluence, Slack, …) from the login plus user
+  settings (A30; a read-only Slack call verified live 2026-11-12). They are deferred
+  tools, reached through `ToolSearch`.
   Since 2026-11-05 (operator's call) the chat runs `auto`, not `dontAsk`: the
   chat is a window onto the operator's terminal, so every connector is usable
   (Jira verified live). `CHAT_SLACK_TOOLS` stays as the pre-approved Slack
@@ -111,16 +136,19 @@ claude -p <msg> [--resume <sid>] \
   send or Jira create/transition** — is decided by the CLI's auto-mode
   classifier, no longer hard-denied. `--disallowedTools` is still absolute.
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
-- **Operator MCP servers (A23).** The `--mcp-config` file also carries the operator's
-  own MCP servers, read by `readOperatorMcpServers` (`inventory/operator-mcp-servers.ts`):
-  user scope (`~/.claude.json` → `mcpServers`) plus the `.mcp.json` of each plugin
-  enabled in `~/.claude/settings.json` (id `plugin_<plugin>_<server>`,
-  `${CLAUDE_PLUGIN_ROOT}` expanded). A server disabled for the turn's cwd
-  (`projects[cwd].disabledMcpServers`) is skipped; `zibby` / `zibby-kb` win a name clash.
-  Their tools are not on `--allowedTools`, so the auto-mode classifier decides each
-  call. Measured: no noticeable per-turn cost (decision A23). OAuth-backed HTTP servers
-  (e.g. claude-design, context7) come up `failed` / `needs-auth` this way; stdio servers
-  connect.
+- **Operator MCP servers (A30, replaces A23's merge).** The operator's user-scope and
+  plugin MCP servers load natively from user settings, so the `--mcp-config` file holds
+  only `zibby` / `zibby-kb` (no duplicates, and the operator servers' secrets are no
+  longer copied into a per-turn file). `readOperatorMcpServers`
+  (`inventory/operator-mcp-servers.ts`) is still used by workflow runs. Their tools are
+  not on `--allowedTools`, so the auto-mode classifier decides each call.
+- **Secret files and process lifetime.** The `--mcp-config` file (ZibbyOS's bearer
+  tokens) is deleted when the turn ends, on every path
+  (reply, error, timeout, spawn failure). At start the service sweeps any
+  `mcp-config_*.json` / `opencode-chat_*.json` older than a turn can live (crash leftovers).
+  Every turn (both engines) is spawned detached; a timed-out turn gets `SIGTERM` on its
+  whole process group, then `SIGKILL` after 3 s, and turns still running at shutdown are
+  killed the same way — no grandchild outlives the turn with a valid token.
 
 ### Chat on opencode (A24 / A25)
 
@@ -133,19 +161,24 @@ opencode model comes from `opencodeTierModels` (`resolveTierModel`, an agent's
 ```
 opencode run --standalone --format json -m <provider/model> --agent zibby [--session <id>] -- <msg>
   env: OPENCODE_CONFIG=<0600 file, deleted after the turn>, OPENCODE_DISABLE_PROJECT_CONFIG=1,
-       PWD=<turn cwd>, ZIBBY_CHAT_MCP_SERVERS=zibby,zibby-kb  (no inherited OPENCODE_*)
+       PWD=<turn cwd>, ZIBBY_CHAT_MCP_SERVERS=zibby,zibby-kb,
+       ZIBBY_CHAT_DENY_TOOLS=<zibby_create_task in an @agent turn, else empty>  (no inherited OPENCODE_*)
 ```
 
 - **Config:** the chat prompt (plus a note that shell, files and connectors need the
   Claude engine) as the `zibby` agent; MCP servers `zibby` + `zibby-kb` (remote, bearer
   header); `permissions` = deny `*`, allow `zibby_*` / `zibby-kb_*` (and deny
   `zibby_create_task` when an `@agent` is mentioned); plugin
-  `chat/opencode-chat-gate/index.mjs`. No `--auto`.
+  `chat/opencode-chat-gate/index.mjs`, which denies the `ZIBBY_CHAT_DENY_TOOLS` tools as
+  well (defence in depth). No `--auto`.
 - **Tool gating is fail-closed (A25):** only the mounted MCP tools run. Shell, edit,
   write, execute, question, skill, subagent, web and `opencode_*` tools are denied, by
   config and again by the plugin. Chat has no approval card for an `ask`, so nothing
   is routed to the gate; it is refused.
-- **Not on opencode:** the operator's own MCP servers (A23) — opencode has no auto-mode
+  On `claude-agent/*` models (Claude through opencode) Claude's own built-ins (Bash,
+  Write, …) are not exposed either: live on 2026-11-12 (`claude-agent/haiku`, opencode
+  2.2.7) the model saw only `mcp__opencode__skill`, ran nothing and created no file.
+- **Not on opencode:** the operator's own MCP servers (A30) — opencode has no auto-mode
   classifier, and Playwright alone brings `browser_run_code_unsafe`; claude.ai
   connectors (Slack, Jira, …) don't exist outside Claude.
 - **Session:** the transcript stores `sessionEngine` next to `sessionId`. A stored session
@@ -153,7 +186,8 @@ opencode run --standalone --format json -m <provider/model> --agent zibby [--ses
 - **Stream:** `text` parts → `delta` (whole parts, joined with a blank line); `tool_use`
   → `tool` (`zibby_get_status` → `mcp__zibby__get_status`; a blocked call shows as
   `status: "error"`); `error` → `error` (`opencode: <message>`); a nonzero exit with no
-  text → `error`. There is no `result` line; the turn ends when the process exits.
+  text → `error`; an exit with no text, no tool call and no error event → `error`
+  (`opencode skončil bez odpovědi.`), never an empty assistant message. There is no `result` line; the turn ends when the process exits.
 - **Unusable opencode** (no binary, no model, model not in `opencode models`) → one
   `error` event with the preflight message, no Claude fallback (A7).
 - The assistant message records `model` (the tier) plus `engine: "opencode"` and

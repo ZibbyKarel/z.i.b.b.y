@@ -3861,6 +3861,8 @@
     "subscription": "Claude subscription",
     "claudeAgentHint": "Claude can also run through opencode (claude-agent/* models) once you connect it in a terminal: opencode auth login claude-agent. Such runs still count against the Claude limits.",
     "claudeAgentConnected": "The claude-agent/* models run through your Claude subscription and count against the Claude limits.",
+    "thinkingTag": "thinking",
+    "noThinkingVariant": "This model has no “{level}” thinking variant — it will run without it.",
     "paidNotice": "This model is not confirmed free and may cost money.",
     "modelMissing": "The chosen model is no longer in the opencode list.",
     "blockedUnavailable": "the opencode binary is not installed",

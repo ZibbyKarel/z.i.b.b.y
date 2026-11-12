@@ -46,6 +46,22 @@ optional `name`/`desc`, an optional `department` and the derived `system` flag.
   inline (an `--input` body stays `gh.api_write`). Every review POST (`/pulls/<n>/reviews`)
   and every other write stays `gh.api_write`. `gh.pr_comment` is a subclass of
   `gh.api_write`: any rule matching action `gh.api_write` also matches a comment.
+- MCP / connector calls in runs (A28): `floor-mcp.read` (**notify**) covers the hook's
+  `mcp.read` (a read-only tool name) and `floor-mcp.write` (**ask**) its `mcp.write` (every
+  other MCP tool outside ZibbyOS's own servers and the run's registry servers, and any MCP
+  call the hook can't classify). Servers the operator registered and enabled in the ZibbyOS
+  MCP registry keep the pre-A28 behaviour (not classified) — the registration is the trust
+  decision (A28 amendment); the rules apply to A27 inventory servers and anything unknown.
+  A Never-rule-like MCP tool name raises that rule's action instead (`pr.merge`, `payment`,
+  `purchase`, `delete`, `deploy`, `send_email`). The intent carries `tool` and `scope` (the
+  server id). See `docs/api/approvals.md` (_MCP / connector calls_) for the per-server
+  exemption recipe.
+- Publish / destroy CLIs in Bash (A28 amendment): `npm|pnpm|yarn publish`, `cargo publish`,
+  `gem push`, `twine upload`, `docker|podman push` raise `deploy` (system rule
+  `floor-deploy`, default **ask**; autopilot never covers it, the ownership ledger never
+  lifts it); `kubectl … delete`,
+  `aws … delete-*|terminate-*|remove-*`, `aws s3 rb` raise `delete`; `jira issue create` /
+  `jira create` raise `jira.create_issue`. A raw `curl -X POST|DELETE` is not caught.
 - **Autopilot overlay** (Phase 4, `docs/api/autopilot.md`). While it is on, a matching
   `ask` from `floor-gh.pr_comment` (when its scope toggle is on), or from `floor-git.push`
   onto a `zibby/*` branch (or, approval side only, the operator's own PR head), resolves as `notify` with `via: "autopilot"`. The overlay applies only to these locked

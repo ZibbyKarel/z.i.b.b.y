@@ -11,7 +11,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
-import { type Category, MODEL_TIERS } from "@zibby/contracts";
+import { type Category, MODEL_TIERS, type ModelTier } from "@zibby/contracts";
 import {
   type Control,
   Controller,
@@ -21,7 +21,12 @@ import {
   FormTextInput,
   useWatch,
 } from "@zibby/forms";
-import { AiEngineModelPicker, useAiEnginesQuery, useTierLabel } from "../../ai-providers";
+import {
+  AiEngineModelPicker,
+  useAiEnginesQuery,
+  useThinkingHint,
+  useTierLabel,
+} from "../../ai-providers";
 import { useSystemConfigQuery } from "../../system";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { AGENT_GLYPHS, AGENT_TOOLS, THINKING_OPTIONS } from "../../../state/config";
@@ -58,6 +63,10 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
   const t = useTranslations("agents");
   const departments = useDepartmentLookup();
   const engine = useWatch({ control, name: "engine" });
+  const [tier, thinking, engineModelValue] = useWatch({
+    control,
+    name: ["model", "thinking", "engineModel"],
+  });
   const tEngine = useTranslations("aiEngine");
   const tierLabel = useTierLabel();
   const globalEngine = useSystemConfigQuery().data?.aiEngine ?? "claude";
@@ -67,6 +76,12 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
     label: tierLabel(tier, engine || globalEngine),
   }));
   const { data: engines } = useAiEnginesQuery();
+  const thinkingHint = useThinkingHint({
+    engine,
+    engineModel: engineModelValue,
+    tier: tier as ModelTier,
+    thinking,
+  });
   const opencodeModels = engines?.engines.find((e) => e.id === "opencode")?.models ?? [];
 
   return (
@@ -128,6 +143,17 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
                 />
               </Container>
             </Stack>
+            {thinkingHint && (
+              <Typography
+                data-testid="agent-thinking-hint"
+                leading="snug"
+                size="2xs"
+                type="note"
+                variant="tertiary"
+              >
+                {thinkingHint}
+              </Typography>
+            )}
 
             <Controller<AgentEditValues, "engine">
               control={control}

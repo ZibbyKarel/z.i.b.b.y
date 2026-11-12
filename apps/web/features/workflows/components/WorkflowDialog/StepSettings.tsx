@@ -1,6 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
-import { OPENAI_TEXT_MODELS, type OpenAiTextModel } from "@zibby/contracts";
+import { type ModelTier, OPENAI_TEXT_MODELS, type OpenAiTextModel } from "@zibby/contracts";
 import {
   Container,
   SelectField,
@@ -8,7 +8,9 @@ import {
   ToggleField,
   Typography,
 } from "@zibby/design-system";
-import { AiEngineModelPicker, useAiEnginesQuery } from "../../../ai-providers";
+import { AiEngineModelPicker, useAiEnginesQuery, useThinkingHint } from "../../../ai-providers";
+import { stepEngineChoice } from "../../../../utils/engine";
+import { useAgentsQuery } from "../../../agents/queries";
 import { useSkillsQuery } from "../../../skills";
 import { CommandLine } from "../../../tasks/components/CommandLine/CommandLine";
 import { useWorkflowsQuery } from "../../queries/useWorkflowsQuery";
@@ -19,6 +21,32 @@ export interface StepSettingsProps {
   setGraph: (update: (g: WorkflowGraph) => WorkflowGraph) => void;
   /** The workflow being edited — a workflow step can never run itself. */
   excludeWorkflowId?: string;
+}
+
+/** One-line "no thinking variant" hint under an agent step's engine fields. */
+function StepThinkingHint({ node }: { node: GraphNode }) {
+  const { data: agents } = useAgentsQuery();
+  const { engine, engineModel } = stepEngineChoice(
+    node,
+    agents?.find((a) => a.id === node.agent),
+  );
+  const hint = useThinkingHint({
+    engine,
+    engineModel,
+    tier: node.model as ModelTier,
+    thinking: node.thinking,
+  });
+  return hint ? (
+    <Typography
+      data-testid={`step-thinking-hint-${node.id}`}
+      leading="snug"
+      size="2xs"
+      type="note"
+      variant="tertiary"
+    >
+      {hint}
+    </Typography>
+  ) : null;
 }
 
 /**
@@ -152,6 +180,7 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
                 />
               </Container>
             )}
+            {n.type === "agent" && !n.openaiModel && <StepThinkingHint node={n} />}
             {n.type === "agent" && n.openaiModel && (
               <>
                 <Typography

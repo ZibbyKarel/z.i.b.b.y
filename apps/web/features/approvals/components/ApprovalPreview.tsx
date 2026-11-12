@@ -46,6 +46,22 @@ function PreviewShell({
   );
 }
 
+/**
+ * An MCP approval's `cmd` is `<server> · <tool> <json args>` (see `classifyMcp` in the
+ * approval hook). Split it into a header label and pretty-printed arguments; args that
+ * were truncated by the hook (not valid JSON) are shown as-is.
+ */
+export function splitMcpCmd(cmd: string): { label: string; args: string } {
+  const cut = cmd.indexOf(" {");
+  if (cut < 0) return { label: cmd, args: "{}" };
+  const raw = cmd.slice(cut + 1);
+  try {
+    return { label: cmd.slice(0, cut), args: JSON.stringify(JSON.parse(raw), null, 2) };
+  } catch {
+    return { label: cmd.slice(0, cut), args: raw };
+  }
+}
+
 const DIFF_KIND = {
   add: { tone: "ok", bg: "rgba(127,217,138,0.09)", sign: "+" },
   del: { tone: "bad", bg: "rgba(255,107,107,0.09)", sign: "−" },
@@ -157,32 +173,41 @@ export function ApprovalPreview({ preview, labels }: ApprovalPreviewProps) {
   }
 
   if (preview.kind === "command") {
+    const mcp = preview.shell === "mcp" ? splitMcpCmd(preview.cmd) : undefined;
     return (
-      <PreviewShell icon="server" label={`${preview.shell}`} meta={preview.note}>
-        <CodeBlock text={`$ ${preview.cmd}`} />
-        <Divider />
-        <Container padding={["100", "150"]}>
-          <Typography uppercase size="2xs" type="note" variant="tertiary">
-            {labels.targets}
-          </Typography>
-          <Container padding={["75", "0", "0", "0"]}>
-            <Stack direction="col" gap="50">
-              {preview.targets.map((t, i) => (
-                <Stack align="center" direction="row" gap="100" key={i}>
-                  <Icon name="trash" size="xs" tone="bad" />
-                  <Typography
-                    mono
-                    size="xs"
-                    type="note"
-                    variant={t.startsWith("…") ? "tertiary" : "secondary"}
-                  >
-                    {t}
-                  </Typography>
+      <PreviewShell
+        icon="server"
+        label={mcp ? `mcp · ${mcp.label}` : preview.shell}
+        meta={preview.note}
+      >
+        <CodeBlock text={mcp ? mcp.args : `$ ${preview.cmd}`} />
+        {preview.targets.length > 0 && (
+          <>
+            <Divider />
+            <Container padding={["100", "150"]}>
+              <Typography uppercase size="2xs" type="note" variant="tertiary">
+                {labels.targets}
+              </Typography>
+              <Container padding={["75", "0", "0", "0"]}>
+                <Stack direction="col" gap="50">
+                  {preview.targets.map((t, i) => (
+                    <Stack align="center" direction="row" gap="100" key={i}>
+                      <Icon name="trash" size="xs" tone="bad" />
+                      <Typography
+                        mono
+                        size="xs"
+                        type="note"
+                        variant={t.startsWith("…") ? "tertiary" : "secondary"}
+                      >
+                        {t}
+                      </Typography>
+                    </Stack>
+                  ))}
                 </Stack>
-              ))}
-            </Stack>
-          </Container>
-        </Container>
+              </Container>
+            </Container>
+          </>
+        )}
       </PreviewShell>
     );
   }

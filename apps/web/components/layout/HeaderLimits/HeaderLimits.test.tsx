@@ -1,10 +1,19 @@
 import { UsagePanelTestId } from "@zibby/design-system";
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders, screen } from "../../../test/render";
+import { act, fireEvent, renderWithProviders, screen } from "../../../test/render";
 import { HeaderLimits, HeaderLimitsTestId } from "./HeaderLimits";
 
 vi.mock("../../../features/bridge/widgets/BudgetsWidget", () => ({
-  BudgetsWidget: () => <div data-testid="budgets-widget-stub" />,
+  BudgetsWidget: () => (
+    <div data-testid="budgets-widget-stub">
+      <a data-testid="widget-link-1" href="#a">
+        a
+      </a>
+      <a data-testid="widget-link-2" href="#b">
+        b
+      </a>
+    </div>
+  ),
 }));
 
 const items = [
@@ -69,5 +78,28 @@ describe("HeaderLimits", () => {
     expect(popover()).toBeInTheDocument();
     fireEvent.blur(trigger, { relatedTarget: document.body });
     expect(popover()).not.toBeInTheDocument();
+  });
+
+  it("Tab from the trigger enters the portaled popover; tabbing out of its ends returns to the trigger", () => {
+    const { trigger } = setup();
+    act(() => trigger.focus());
+    fireEvent.keyDown(trigger, { key: "Tab" });
+    const first = screen.getByTestId("widget-link-1");
+    const last = screen.getByTestId("widget-link-2");
+    expect(first).toHaveFocus();
+    fireEvent.keyDown(first, { key: "Tab", shiftKey: true });
+    expect(trigger).toHaveFocus();
+    act(() => last.focus());
+    fireEvent.keyDown(last, { key: "Tab" });
+    expect(trigger).toHaveFocus();
+  });
+
+  it("Escape inside the popover closes it and returns focus to the trigger", () => {
+    const { trigger, popover } = setup();
+    act(() => trigger.focus());
+    fireEvent.keyDown(trigger, { key: "Tab" });
+    fireEvent.keyDown(screen.getByTestId("widget-link-1"), { key: "Escape" });
+    expect(popover()).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });

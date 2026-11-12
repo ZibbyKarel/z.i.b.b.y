@@ -221,6 +221,13 @@ export const SYSTEM_RULES: GlobalGateRule[] = [
   notify("channel-reply", "Odpověď do kanálu", "Odpověď do kanálu se pošle a zaloguje."),
   notify("agent.delegate", "Předání subagentovi", "Předání práce subagentovi se jen zaloguje."),
   notify("pr.open", "Otevření PR", "Otevření PR proběhne samo a objeví se v briefingu."),
+  // A28 — MCP / connector calls in runs (classified by the approval hook by tool name).
+  notify("mcp.read", "Čtení přes MCP", "Čtení přes MCP server nebo konektor se jen zaloguje."),
+  ask(
+    "mcp.write",
+    "Zápis přes MCP",
+    "Zápis, odeslání nebo jiná akce přes MCP server či konektor čeká na tvůj souhlas.",
+  ),
 ];
 
 const SYSTEM_RULE_IDS = new Set(SYSTEM_RULES.map((r) => r.id));

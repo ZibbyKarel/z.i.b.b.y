@@ -344,15 +344,17 @@ Key assembled pieces:
   ZIBBY vendors no third-party plugin tree. The args are persisted in the run
   spec, so the loaded plugins are the trace and approval-resume replays them.
 - **`--settings`** — the locked approval-hook `PreToolUse` group is always
-  **first**, `matcher: "Bash|Task|Write|Edit|mcp__zibby-run__ask_operator"`
+  **first**, `matcher: "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*"` (`APPROVAL_MATCHER`)
   (`Write`/`Edit` feed the ownership ledger above and raise an intent only when
   they land outside the free zone; `ask_operator` always raises
-  `operator.question`, see `docs/api/approvals.md`); any custom hook whose matcher could catch
-  `Bash`/`Task` (empty, `*`, or containing either token) is dropped at merge
+  `operator.question`, see `docs/api/approvals.md`; every other MCP call is classified
+  by A28, below); any custom hook whose matcher could catch
+  `Bash`/`Task`/an MCP tool (empty, `*`, or containing `Bash`, `Task` or `mcp`) is dropped at merge
   time (`collidesWithApprovalGate`) so a stored hook can never weaken the gate
   (Law 1).
 - **`--mcp-config`** — enabled MCP servers' connection config, secrets merged
-  in from the credentials store; spilled to a `0o600` sandbox file
+  in from the credentials store, plus (A27) the operator's own Claude Code servers the
+  run's `tools` / `toolGrants` name (see _Operator MCP servers in runs_ below); spilled to a `0o600` sandbox file
   (`.zibby-mcp-config.json`) rather than inline JSON when a sandbox dir is
   available, since it carries live credentials. When `runId` is set (both
   `AgentRunnerService` and `WorkflowRunnerService` thread their run's own
@@ -380,10 +382,38 @@ still-deciding hook first. 24h + 5min stays comfortably under Node's ~24.8-day
 timer cap (`2^31-1` ms), avoiding an overflow-to-immediate-kill (= instant
 auto-approve).
 
+### Operator MCP servers in runs (A27)
+
+A run can use the operator's own MCP servers — the ones Claude Code has at user scope
+(`~/.claude.json` → `mcpServers`) and in enabled plugins (`plugin_<plugin>_<server>`) —
+**only by grant**, never by default. `ClaudeRunCommandService.enabledMcpServers` reads
+them with `readOperatorMcpServers` (`docs/api/inventory.md`, cwd = the run's `contextDir`)
+only when the run has a non-empty `tools` / `toolGrants` list, and mounts an entry when
+that list names its id the same way it names a `grantOnly` registry server (`<id>`,
+`mcp__<id>`, `mcp__<id>__…`). Then it widens `--allowedTools` with `mcp__<id>__*` and
+writes the raw config (secrets included) into the 0600 `--mcp-config` file (opencode: the
+run config's `mcp.servers` and `ZIBBY_MCP_SERVERS`). A registry row with the same id wins
+(even a disabled one), the ZibbyOS ids `zibby-entities` / `zibby-kb` / `zibby-run` are
+never taken from the operator, and an id the registry would reject or a transport other
+than stdio / http / sse is skipped. No run-id header is ever added to them. OAuth-backed
+HTTP servers don't authenticate through `--mcp-config` (found in A23); stdio servers work.
+Every call to them goes through the gate (A28). An operator server whose id could produce
+a registry or ZibbyOS server's tool names — the same tool-name id (other characters become
+`_`), or one extending the other by `_…` (`playwright_x` / `playwright__x` next to registry
+`playwright`) — is not mounted (`mcpIdsCollide`), so it can't pass for a registry server in
+the hook (Claude splits `mcp__<server>__<tool>` at the first `__`, the opencode plugin
+matches `<server>_` prefixes).
+
+claude.ai connectors (Slack, Atlassian, Figma, Gmail, …) do **not** load in runs: verified
+2026-11-12 on claude 2.1.322 (A29) — with `--setting-sources ""` the init event lists no MCP
+server at all, without it the connectors load (`source: "claudeai"`). Runs keep the
+isolation; there is no connector path on opencode either (they belong to the Claude login).
+
 ## The approval hook (`claude-approval-hook.mjs`)
 
 A standalone Node script — **not run by the API process**; Claude Code itself
-spawns it as a `PreToolUse` hook before every `Bash` or `Task` tool call, JSON
+spawns it as a `PreToolUse` hook before every `Bash`, `Task` or MCP tool call (plus
+`Read`/`Grep`/`Glob`/`Write`/`Edit` for the operator-token denial and the ledger), JSON
 event on stdin. Since a hook's stdout never reaches the API's pipe, it
 coordinates through files in `ZIBBY_INTENT_DIR` (the run's sandbox, never the
 tool call's own `cwd`):
@@ -392,23 +422,77 @@ tool call's own `cwd`):
    family by token basename, `find … -delete`, `git clean`), overwrites
    (`>`/`>>` onto a real file, `tee`, `dd of=`, `truncate`, `sed -i`,
    `install`, multi-arg `cp`), moves (`mv`), git publish (`push`/force-push),
-   PR open/merge (`gh pr create`/`merge`), and mutating `gh api` calls
+   PR open/merge (`gh pr create`/`merge`), package/image publish (`npm|pnpm|yarn publish`,
+   `yarn npm publish`, `cargo publish`, `gem push`, `twine upload`, `docker|podman push`
+   → `deploy`, card „Publikovat balíček nebo image do registru“; any `--dry-run` stays
+   unclassified), remote destroy
+   (`kubectl … delete`, `aws … delete-*|terminate-*|remove-*`, `aws s3 rb` → `delete`, never
+   lifted by the ownership ledger), `jira issue create` / `jira create` →
+   `jira.create_issue`, and mutating `gh api` calls
    (`PUT`/`POST`/`PATCH`/`DELETE`, or an implicit-POST field flag) — routed to
    `pr.merge`/`pr.open` when the path matches, else `gh.api_write`. `Task` →
    **always** classifies to `agent.delegate` (every subagent handoff goes
-   through the gate, even though the default decision is `allow`).
+   through the gate, even though the default decision is `allow`). `mcp__<server>__<tool>`
+   (A28, `classifyMcp`, both engines — the opencode plugin maps its MCP calls to this
+   name) → nothing for ZibbyOS's own servers (`zibby-entities`, `zibby-kb`, `zibby-run`;
+   exact ids, not a prefix or a loopback URL) and for the run's **registry servers** (A28
+   amendment: the enabled `McpServersStorageService` rows mounted into this run, e.g.
+   `playwright` for `ui-ux-tester` — their calls keep the pre-A28 behaviour, Never-rule-like
+   names included). The registry list is the hook's argv[3], a comma list the API bakes into
+   the hook command (`--settings` on claude; on opencode the builder sets
+   `ZIBBY_MCP_REGISTRY` over the project env and the plugin passes it as argv[3]) — the hook
+   reads no env or file for it, so nothing the agent writes can widen it. Ids compare in
+   tool-name form (`my.srv` → `my_srv`), exactly. Else `mcp.read` when the tool name is
+   read-only (`get`/`list`/`search`/`read`/`fetch`/`find`/`view`/`describe`/`query`/
+   `lookup`/`show`/`count`/`retrieve` as its first or second word **and** no write word
+   such as `send`/`create`/`update`/`run`/`click`/`navigate`/`use` anywhere); a
+   Never-rule-like name keeps that rule's action (`merge` + `pull`/`pr`/`mr`/`branch` →
+   `pr.merge`, `pay`/`charge`/`refund`/`transfer`… → `payment`, `purchase`/`buy`/`checkout`
+   → `purchase`, `delete`/`remove`/`destroy`/`purge`/… → `delete`, `deploy` → `deploy`,
+   `send` + a mail word → `send_email`); everything else, and a name that doesn't parse, →
+   `mcp.write`. The request carries `tool` (full name), `scope` (server id) and a context
+   with the server, tool and the call's arguments (JSON, cut at 600 chars).
 2. Unclassified → exit 0 immediately (Claude's own permissions decide).
 3. Classified → write `intent-request.json`, then **block**, polling
    `intent-decision.json` every 200ms until it appears or the deadline elapses.
+   **Lock.** Before writing a request the hook takes `intent.lock` in the coordination dir
+   (its pid, `O_EXCL`); a second hook of the same run waits for it, a lock whose pid is dead
+   is taken over, and waiting counts against the deadline. Parallel tool calls (several MCP
+   reads, parallel `Task`s) used to overwrite each other's single request file and strand a
+   hook until its deadline.
 4. `RunnerCore.watchIntentRequest` picks up the request file and drives it
    through the same `IntentHandler` as a stdout `INTENT` line.
 5. Emit the decision as `hookSpecificOutput` (`permissionDecision: "allow" |
 "deny"`) — this overrides `--permission-mode`. Timeout → deny,
-   fail-safe.
+   fail-safe. An **allowed MCP call** exits 0 with no output instead, so Claude's own
+   permission layer (allow-list / auto mode) still applies: the gate only adds a check.
 
-Fails **open** on a classifier exception (an unclassified command falls
+Fails **open** on a classifier exception for Bash/Task (an unclassified command falls
 through to Claude's own permissions) but **closed** on a decision timeout
-(deny) — the two failure modes are asymmetric on purpose.
+(deny) — the two failure modes are asymmetric on purpose. The MCP branch fails
+**closed**: an exception while classifying an `mcp__*` call raises `mcp.write` (ask).
+
+**CLIs** (A28 check). Runs inherit the API's full env and PATH minus the operator token
+(`agentBaseEnv`), so `gh`, `jira`, `aws`, `docker`, `kubectl`, `npm` work for an agent with
+the `bash` tool exactly as in the terminal. The hook gates only the idioms it classifies:
+deletes (incl. `aws s3 rm`, `docker rm`, by the `rm` token), overwrites, moves, `git push`,
+`gh pr create|merge`, `gh api` writes, and (A28 amendment) the publish / remote-destroy /
+`jira` CLIs above:
+
+| Command                                                                                        | Action              |
+| ---------------------------------------------------------------------------------------------- | ------------------- |
+| `npm publish`, `pnpm publish`, `yarn publish`, `yarn npm publish`                              | `deploy`            |
+| `cargo publish`, `gem push`, `twine upload`, `docker push`, `podman push`, `docker image push` | `deploy`            |
+| `kubectl … delete …`                                                                           | `delete`            |
+| `aws … delete-*` / `terminate-*` / `remove-*`, `aws s3 rb`, `aws s3 rm`                        | `delete`            |
+| `jira issue create`, `jira issues create`, `jira create`                                       | `jira.create_issue` |
+
+Unclassified on purpose: `kubectl get|apply`, `aws s3 ls`, `aws … describe-*`, `docker pull`,
+`npm install`, `npm run publish`, any publish with `--dry-run`. Best-effort, not a sandbox:
+the subcommand is the first non-flag word (`pnpm --filter x publish` and `docker -H h push`
+slip), a wrapper (`sudo`, `npx`) hides the binary, and a raw `curl -X POST|DELETE` to any
+API is not parsed — those fall to Claude's auto-mode classifier (claude) or run ungated
+(opencode, where only the shell-prefix limit and the nested-agent block apply).
 
 ### Operator-token denial
 

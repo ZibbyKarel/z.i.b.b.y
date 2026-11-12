@@ -32,6 +32,8 @@ const POPOVER_WIDTH = 340;
 const POPOVER_GAP = 0; // no gap: the pointer must not leave the hover region between trigger and popover
 const VIEWPORT_MARGIN = 8;
 const noop = () => {};
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
 
 /**
  * The top bar's limits: the `UsagePanel` rings as a link to Budgets & limits, with the
@@ -83,7 +85,31 @@ export function HeaderLimits({ items }: HeaderLimitsProps) {
       }}
       onFocus={() => setOpen(true)}
       onKeyDown={(e) => {
-        if (e.key === "Escape") setOpen(false);
+        const trigger = rootRef.current?.querySelector<HTMLElement>(FOCUSABLE);
+        if (e.key === "Escape") {
+          // Focus first: the trigger's onFocus reopens, the close below must win.
+          trigger?.focus();
+          setOpen(false);
+          return;
+        }
+        // The popover is portaled to <body>, so native Tab order skips it: hand focus in from
+        // the trigger, and back to the trigger when tabbing out of either end.
+        const pop = popoverRef.current;
+        if (e.key !== "Tab" || !pop) return;
+        const items = [...pop.querySelectorAll<HTMLElement>(FOCUSABLE)];
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (!first || !last) return;
+        if (e.target === trigger && !e.shiftKey) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.target === first && e.shiftKey) {
+          e.preventDefault();
+          trigger?.focus();
+        } else if (e.target === last && !e.shiftKey) {
+          // Focus the trigger and let the browser's default Tab move on to the next header element.
+          trigger?.focus();
+        }
       }}
       onMouseEnter={() => setOpen(true)}
       onMouseLeave={() => setOpen(false)}

@@ -26,6 +26,19 @@ describe("AiEngineModelPicker", () => {
     ]);
   });
 
+  it("tags models that offer thinking variants", async () => {
+    const models = [
+      { id: "a/think", free: true, subscription: false, variants: ["high"] },
+      { id: "a/plain", free: false, subscription: false, variants: [] },
+    ];
+    render(<AiEngineModelPicker models={models} onChange={vi.fn()} value="" />);
+    await userEvent.click(screen.getByTestId(DropdownTestId.Trigger));
+    expect(screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent)).toEqual([
+      "a/think · zdarma · myšlení",
+      "a/plain",
+    ]);
+  });
+
   it("reports the picked id", async () => {
     const onChange = vi.fn();
     render(<AiEngineModelPicker models={MODELS} onChange={onChange} value="" />);

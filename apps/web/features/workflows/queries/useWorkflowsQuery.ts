@@ -9,43 +9,19 @@ export function getWorkflowsQueryKey() {
 
 /**
  * Map the contract `Workflow` onto the dashboard's domain `Workflow`: derive the
- * display-only `file` path, and drop the phase `id` the UI
- * doesn't render. `lastRun`/`lastState` are run-history fields the definition
+ * display-only `file` path. `lastRun`/`lastState` are run-history fields the definition
  * doesn't carry — defaulted here until the run list feeds them.
  */
-function selectWorkflows(response: { body: ContractWorkflow[] }): Workflow[] {
+export function selectWorkflows(response: { body: ContractWorkflow[] }): Workflow[] {
+  // Spread the whole contract workflow/phase so a new contract field can never be dropped here;
+  // only the display-only fields are added.
   return response.body.map((p) => ({
-    id: p.id,
+    ...p,
     name: p.name ?? p.id,
     lastRun: "—",
     lastState: "done",
     desc: p.desc ?? "",
     file: `~/zibby/workflows/${p.id}.workflow.md`,
-    phases: p.phases.map((ph) => ({
-      id: ph.id,
-      type: ph.type,
-      workflow: ph.workflow,
-      agent: ph.agent,
-      consumes: ph.consumes,
-      produces: ph.produces,
-      model: ph.model,
-      thinking: ph.thinking,
-      commands: ph.commands,
-      loop: ph.loop,
-      approval: ph.approval,
-      qualify: ph.qualify,
-      prompt: ph.prompt,
-      skill: ph.skill,
-      openaiModel: ph.openaiModel,
-      engine: ph.engine,
-      engineModel: ph.engineModel,
-      include: ph.include,
-    })),
-    outputs: p.outputs,
-    department: p.department,
-    complexity: p.complexity,
-    budget: p.budget,
-    project: p.project,
   }));
 }
 

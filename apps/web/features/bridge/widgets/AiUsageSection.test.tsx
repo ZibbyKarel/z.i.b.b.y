@@ -62,6 +62,27 @@ describe("AiUsageSection", () => {
     expect(screen.getByTestId(AiUsageSectionTestId.Totals)).toHaveTextContent("7 kroků");
   });
 
+  it("truncates a long model id (full id in the tooltip) and keeps the numbers visible", () => {
+    d.usage = usage({
+      models: [
+        {
+          providerId: "openrouter",
+          modelId: "very-long-vendor/model-name-with-a-long-suffix",
+          variant: "high",
+          steps: 3,
+          costUsd: 0,
+          tokens,
+        },
+      ],
+    });
+    renderWithProviders(<AiUsageSection />);
+    const row = screen.getByTestId(AiUsageSectionTestId.ModelRow);
+    const id = "openrouter/very-long-vendor/model-name-with-a-long-suffix (high)";
+    expect(row.querySelector(`[title="${id}"]`)).not.toBeNull();
+    expect(row.querySelector(".truncate")).toHaveTextContent(id);
+    expect(row).toHaveTextContent("3 kroků");
+  });
+
   it("puts the global engine's block first; opencode first adds the Claude note", () => {
     const order = () =>
       screen

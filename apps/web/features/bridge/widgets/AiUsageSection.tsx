@@ -125,6 +125,8 @@ function OpencodeBody({ available, model }: OpencodeBodyProps) {
       input: compact.format(u.tokens.input),
       output: compact.format(u.tokens.output),
     });
+  const modelName = (m: { providerId: string; modelId: string; variant?: string | undefined }) =>
+    `${m.providerId}/${m.modelId}${m.variant ? ` (${m.variant})` : ""}`;
   const models = usage?.opencode.models ?? [];
   const totals = usage?.opencode.totals;
 
@@ -148,17 +150,19 @@ function OpencodeBody({ available, model }: OpencodeBodyProps) {
               data-testid={AiUsageSectionTestId.ModelRow}
               key={`${m.providerId}/${m.modelId}/${m.variant ?? ""}`}
             >
-              <BoardLine between gap="6" indent={false}>
-                <BoardText kind="meta" tone="ink2">
-                  {`${m.providerId}/${m.modelId}${m.variant ? ` (${m.variant})` : ""}`}
-                </BoardText>
+              <Stack gap="25">
+                <span title={modelName(m)}>
+                  <BoardText truncate kind="meta" tone="ink2">
+                    {modelName(m)}
+                  </BoardText>
+                </span>
                 <BoardText kind="meta" tone="ink3">
                   {`${line(m)} · `}
                   <span data-testid={AiUsageSectionTestId.Cost}>
                     {cost(m.costUsd, m.providerId)}
                   </span>
                 </BoardText>
-              </BoardLine>
+              </Stack>
             </span>
           ))}
           {totals && (

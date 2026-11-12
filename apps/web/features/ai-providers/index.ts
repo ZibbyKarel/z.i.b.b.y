@@ -4,3 +4,4 @@ export * from "./mutations";
 export * from "./components/AiEngineModelPicker";
 export * from "./components/OperatorTokenNotice";
 export * from "./useTierLabel";
+export * from "./useThinkingHint";

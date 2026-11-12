@@ -1,14 +1,27 @@
 import { externalSkillPrompt } from "../external-skills/skill-repo";
 import { Injectable, Optional } from "@nestjs/common";
-import type { Agent, Hook, McpServer, Skill } from "@zibby/contracts";
+import {
+  type Agent,
+  type Hook,
+  type McpServer,
+  McpServerIdSchema,
+  type Skill,
+} from "@zibby/contracts";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
+import { resolveClaudeLocations } from "../inventory/claude-locations";
+import { type OperatorMcpServer, readOperatorMcpServers } from "../inventory/operator-mcp-servers";
 import { managedPluginDirs, resolveClaudePluginsDir } from "../marketplaces/marketplace-catalog";
 import { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
-import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.storage.service";
+import {
+  ENTITY_MCP_SERVER_ID,
+  KB_MCP_SERVER_ID,
+  McpServersStorageService,
+  RUN_MCP_SERVER_ID,
+} from "../mcp/mcp.storage.service";
 import { ISOLATED_SETTING_SOURCES } from "../shared/spawn-claude-cli";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { SystemConfigStore } from "../system/system-config.store";
@@ -284,17 +297,28 @@ interface HookMatcherGroup {
  * logged, not blocking), but an operator's own `ask`/`deny` gate-rules.json rule on
  * `action: agent.delegate` takes effect immediately, same as any other action.
  *
+ * `mcp__.*` (A28): every MCP call reaches the hook, which classifies it (`mcp.read` /
+ * `mcp.write` / a Never-rule action) — ZibbyOS's own servers and the run's registry
+ * servers (argv[3], see `approvalGroup`) pass unclassified, and
+ * `mcp__zibby-run__ask_operator` raises `operator.question`.
+ *
  * `Read|Grep|Glob` are matched only so the hook can deny the operator token's directory
  * (anything else exits 0 untouched). `Write|Edit` feed only the hook's ownership ledger: a `Write` that creates a new
  * file records it as the agent's own (so a later `sed -i`/`rm` on it isn't gated),
  * and either tool aimed at the gate's coordination files is denied. Neither raises
- * an intent. `mcp__zibby-run__ask_operator` always raises `operator.question` (a
- * locked ask:human floor), so the agent's question waits for the operator's answer.
+ * an intent. The agent's `ask_operator` question waits for the operator's answer (a
+ * locked ask:human floor).
  */
-function approvalGroup(): HookMatcherGroup {
-  const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
+export const APPROVAL_MATCHER = "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*";
+
+/**
+ * argv[3] = the run's registry MCP server ids (A28 amendment): their calls pass the hook
+ * unclassified. Baked into `--settings` here, so nothing the agent writes can change it.
+ */
+function approvalGroup(registryIds: readonly string[] = []): HookMatcherGroup {
+  const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S} ${JSON.stringify(registryIds.join(","))}`;
   return {
-    matcher: "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator",
+    matcher: APPROVAL_MATCHER,
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
 }
@@ -313,12 +337,12 @@ export function readGuardSettings(): string {
 
 /**
  * Would a custom hook collide with the locked approval gate's responsibility? A
- * `PreToolUse` hook whose matcher catches `Bash` or `Task` (explicitly, or by being
- * empty / `*` = "match every tool") could `allow` a destructive Bash command or an
- * agent handoff before the approval hook gates it. Such hooks are DROPPED at merge
+ * `PreToolUse` hook whose matcher catches `Bash`, `Task` or an MCP tool (explicitly, or
+ * by being empty / `*` = "match every tool") could `allow` a destructive Bash command,
+ * an agent handoff or an MCP write before the approval hook gates it. Such hooks are DROPPED at merge
  * time, so a stored hook can never weaken the gate (Law 1). The check is
  * deliberately conservative — any matcher token that is empty, `*`, or contains
- * `Bash`/`Task` counts as a collision, even at the cost of refusing an over-broad
+ * `Bash`/`Task`/`mcp` counts as a collision, even at the cost of refusing an over-broad
  * benign hook.
  */
 function collidesWithApprovalGate(hook: Hook): boolean {
@@ -329,7 +353,12 @@ function collidesWithApprovalGate(hook: Hook): boolean {
     .split("|")
     .map((token) => token.trim())
     .some(
-      (token) => token === "" || token === "*" || token.includes("Bash") || token.includes("Task"),
+      (token) =>
+        token === "" ||
+        token === "*" ||
+        token.includes("Bash") ||
+        token.includes("Task") ||
+        token.includes("mcp"),
     );
 }
 
@@ -340,8 +369,10 @@ function collidesWithApprovalGate(hook: Hook): boolean {
  * filtered out (see {@link collidesWithApprovalGate}) — these two guarantees make
  * the approval gate structural (Law 1), regardless of what is stored.
  */
-function buildSettings(customHooks: readonly Hook[]): string {
-  const byEvent: Record<string, HookMatcherGroup[]> = { PreToolUse: [approvalGroup()] };
+function buildSettings(customHooks: readonly Hook[], registryIds: readonly string[] = []): string {
+  const byEvent: Record<string, HookMatcherGroup[]> = {
+    PreToolUse: [approvalGroup(registryIds)],
+  };
   for (const hook of customHooks) {
     if (collidesWithApprovalGate(hook)) continue;
     const matcher = hook.matcher?.trim();
@@ -457,6 +488,36 @@ function resolveGrantId(grant: string, mcpServers: readonly McpServer[]): string
     return `mcp__${ENTITY_MCP_SERVER_ID}__${grant}`;
   }
   return null;
+}
+
+/** ZibbyOS's own in-process servers (the hook's `BUILTIN_MCP_SERVERS`): never an operator id. */
+const BUILTIN_MCP_IDS = [ENTITY_MCP_SERVER_ID, KB_MCP_SERVER_ID, RUN_MCP_SERVER_ID];
+
+/** Server id as it appears in tool names (the hook's `toolNameId`). */
+const toolNameId = (id: string): string => id.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+/**
+ * Could tools of `a` and `b` be told apart by name? Not when their tool-name ids are
+ * equal or one extends the other by `_…`: `mcp__<a>___x` (Claude splits at the first
+ * `__`) or `<a>_<b-rest>_x` (opencode's prefix match) could then pass as the other's.
+ */
+function mcpIdsCollide(a: string, b: string): boolean {
+  const x = toolNameId(a);
+  const y = toolNameId(b);
+  return x === y || x.startsWith(`${y}_`) || y.startsWith(`${x}_`);
+}
+
+/** The mounted servers that come from the ZibbyOS registry (not A27's operator inventory). */
+function registryIdsOf(
+  servers: readonly McpServer[],
+  operatorConfigs: ReadonlyMap<string, unknown>,
+): string[] {
+  return servers.filter((server) => !operatorConfigs.has(server.id)).map((server) => server.id);
+}
+
+/** Does a run's tools/toolGrants list name MCP server `id` (bare id, `mcp__<id>`, `mcp__<id>__…`)? */
+function grantsMcpServer(granted: readonly string[], id: string): boolean {
+  return granted.some((t) => t === id || t === `mcp__${id}` || t.startsWith(`mcp__${id}__`));
 }
 
 /**
@@ -581,10 +642,9 @@ export class ClaudeRunCommandService {
     env: Record<string, string>;
     opencodeConfig: string;
   }> {
-    const enabled = (await this.enabledMcpServers(opts)).filter(
-      (server) => !OPENCODE_RESERVED_MCP_IDS.has(server.id),
-    );
-    const mcp = await this.buildMcpConfig(enabled, opts.runId);
+    const mounted = await this.enabledMcpServers(opts);
+    const enabled = mounted.servers.filter((server) => !OPENCODE_RESERVED_MCP_IDS.has(server.id));
+    const mcp = await this.buildMcpConfig(enabled, opts.runId, mounted.operatorConfigs);
     const servers: Record<string, Record<string, unknown>> = {};
     for (const [id, s] of Object.entries(mcp?.mcpServers ?? {})) {
       servers[id] =
@@ -641,6 +701,7 @@ export class ClaudeRunCommandService {
         ZIBBY_GATE_DEADLINE_S: String(GATE_DEADLINE_S),
         [GRANT_DIRS_ENV]: grants.join(path.delimiter),
         ZIBBY_MCP_SERVERS: enabled.map((server) => server.id).join(","),
+        ZIBBY_MCP_REGISTRY: registryIdsOf(enabled, mounted.operatorConfigs).join(","),
         ZIBBY_DENY_TOOLS: rules.deny.join(","),
         ZIBBY_SHELL_PREFIXES: rules.shellPrefixes ? JSON.stringify(rules.shellPrefixes) : "",
       },
@@ -652,18 +713,48 @@ export class ClaudeRunCommandService {
    * Enabled MCP servers are injected into every run — except grantOnly ones, which
    * ride only runs whose tools/toolGrants reference them. A listing failure degrades
    * to no MCP (never blocks the run).
+   *
+   * A27: the operator's own Claude Code servers ({@link readOperatorMcpServers}: user
+   * scope + enabled plugins) are an extra, read-only source with `grantOnly` semantics —
+   * mounted only when the run's tools/toolGrants name them, never by default. A registry
+   * row with the same id wins (even a disabled one), ZibbyOS's own ids are never taken
+   * from it, an id whose tool names could pass for a registry/built-in server's
+   * (`mcpIdsCollide`) is skipped, and so is an id or transport the registry would reject. Their raw
+   * config (secrets included) rides `operatorConfigs` into the 0600 `--mcp-config`.
    */
-  private async enabledMcpServers(opts: ClaudeRunOptions): Promise<McpServer[]> {
+  private async enabledMcpServers(
+    opts: ClaudeRunOptions,
+  ): Promise<{ servers: McpServer[]; operatorConfigs: Map<string, Record<string, unknown>> }> {
     const granted = [...(opts.tools ?? []), ...(opts.toolGrants ?? [])];
-    return (await this.mcp.list().catch((): McpServer[] => [])).filter(
-      (server) =>
-        server.enabled &&
-        (!server.grantOnly ||
-          granted.some(
-            (t) =>
-              t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
-          )),
+    const registry = await this.mcp.list().catch((): McpServer[] => []);
+    const servers = registry.filter(
+      (server) => server.enabled && (!server.grantOnly || grantsMcpServer(granted, server.id)),
     );
+    const operatorConfigs = new Map<string, Record<string, unknown>>();
+    if (granted.length === 0) return { servers, operatorConfigs };
+    // Registry + built-in ids: an operator server whose tool names could pass for one of
+    // theirs is skipped (registry calls aren't classified — A28 amendment).
+    const reserved = [...registry.map((server) => server.id), ...BUILTIN_MCP_IDS];
+    const taken = new Set<string>();
+    for (const { id, config } of await this.operatorMcpServers(opts.contextDir).catch(
+      (): OperatorMcpServer[] => [],
+    )) {
+      if (taken.has(id) || !grantsMcpServer(granted, id)) continue;
+      if (reserved.some((r) => mcpIdsCollide(r, id))) continue;
+      if (!McpServerIdSchema.safeParse(id).success) continue;
+      const type = config.type ?? (typeof config.command === "string" ? "stdio" : undefined);
+      if (type !== "stdio" && type !== "http" && type !== "sse") continue;
+      taken.add(id);
+      operatorConfigs.set(id, { ...config, type });
+      servers.push({ id, name: id, type, enabled: true, grantOnly: true, hasCredentials: false });
+    }
+    return { servers, operatorConfigs };
+  }
+
+  /** A27 — the operator's own MCP servers; the test seam (tests mount none by default). */
+  protected operatorMcpServers(cwd?: string): Promise<OperatorMcpServer[]> {
+    const loc = resolveClaudeLocations();
+    return readOperatorMcpServers(loc, cwd ?? loc.repoRoot);
   }
 
   async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{
@@ -680,7 +771,7 @@ export class ClaudeRunCommandService {
   }> {
     // Their tools widen the session allow-list (see buildCatalog) and their
     // connection config rides `--mcp-config`.
-    const mcpServers = await this.enabledMcpServers(opts);
+    const { servers: mcpServers, operatorConfigs } = await this.enabledMcpServers(opts);
     const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
       opts.tools,
       mcpServers,
@@ -693,7 +784,7 @@ export class ClaudeRunCommandService {
     const customHooks = (await this.hooks.list().catch((): Hook[] => [])).filter(
       (hook) => hook.enabled,
     );
-    const mcpConfig = await this.buildMcpConfig(mcpServers, opts.runId);
+    const mcpConfig = await this.buildMcpConfig(mcpServers, opts.runId, operatorConfigs);
     // The assembled system prompt (contract + grounding + resume + body) can be large.
     // When a sandbox dir is given, spill it to a file and pass it by path — keeping it
     // off argv, where it counts toward the same OS limit `--agents` can blow (E2BIG).
@@ -720,7 +811,7 @@ export class ClaudeRunCommandService {
       // intercepts destructive Bash and blocks on a decision RunnerCore writes (see
       // claude-approval-hook.mjs). The approval hook always stays first/authoritative.
       "--settings",
-      buildSettings(customHooks),
+      buildSettings(customHooks, registryIdsOf(mcpServers, operatorConfigs)),
     ];
     // Connected MCP servers (UI-managed; the repo-root .mcp.json is NOT wired to
     // runs). The config carries real secrets (env/headers/Bearer token, see
@@ -924,10 +1015,17 @@ export class ClaudeRunCommandService {
   private async buildMcpConfig(
     servers: readonly McpServer[],
     runId?: string,
+    /** A27: raw configs of the operator's own servers, used verbatim (no run-id header). */
+    operatorConfigs?: ReadonlyMap<string, Record<string, unknown>>,
   ): Promise<{ mcpServers: Record<string, Record<string, unknown>> } | null> {
     if (servers.length === 0) return null;
     const mcpServers: Record<string, Record<string, unknown>> = {};
     for (const server of servers) {
+      const operatorConfig = operatorConfigs?.get(server.id);
+      if (operatorConfig) {
+        mcpServers[server.id] = operatorConfig;
+        continue;
+      }
       const creds = await this.mcpCredentials.read(server.id).catch(() => null);
       if (server.type === "stdio") {
         mcpServers[server.id] = {

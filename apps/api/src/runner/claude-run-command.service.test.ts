@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import type { HooksStorageService } from "../hooks/hooks.storage.service";
+import type { OperatorMcpServer } from "../inventory/operator-mcp-servers";
 import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
@@ -36,6 +37,8 @@ interface ServiceOpts {
   mcpCredentials?: Record<string, McpCredentialsInput>;
   /** ZIBBY-managed marketplace records; a function lets a test make `list` throw. */
   marketplaces?: Marketplace[] | (() => Promise<Marketplace[]>);
+  /** A27: the operator's own Claude Code servers (default none — never the real machine's). */
+  operatorMcpServers?: OperatorMcpServer[];
 }
 
 /** Build the service over fixed in-memory catalogs (only `list`/`read` are exercised). */
@@ -67,7 +70,7 @@ function makeService(
         list: typeof marketplaces === "function" ? marketplaces : async () => marketplaces,
       } as unknown as MarketplacesStore)
     : undefined;
-  return new ClaudeRunCommandService(
+  const svc = new ClaudeRunCommandService(
     agentStore,
     skillStore,
     hookStore,
@@ -75,6 +78,10 @@ function makeService(
     mcpCreds,
     marketplaceStore,
   );
+  (
+    svc as unknown as { operatorMcpServers: () => Promise<OperatorMcpServer[]> }
+  ).operatorMcpServers = async () => opts.operatorMcpServers ?? [];
+  return svc;
 }
 
 /** Value following a flag in an argv array (single-valued flags). */
@@ -455,7 +462,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const entry = settings.hooks?.PreToolUse?.[0];
     // `Task` is the Agent tool's delegation call — every handoff now hits the same
     // gate the destructive Bash commands do (see claude-approval-hook.mjs classifyTask).
-    expect(entry.matcher).toBe("Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator");
+    expect(entry.matcher).toBe("Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*");
     // TODO 9: ask_advisor asks a model, not the operator — no operator.question floor.
     expect(entry.matcher).not.toContain("ask_advisor");
     expect(entry.hooks[0].type).toBe("command");
@@ -520,7 +527,8 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
     const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
     const hook = settings.hooks.PreToolUse[0].hooks[0];
-    expect(hook.command.endsWith(` ${GATE_DEADLINE_S}`)).toBe(true);
+    // argv[2] = the deadline, argv[3] = the run's registry MCP ids (none here)
+    expect(hook.command.endsWith(` ${GATE_DEADLINE_S} ""`)).toBe(true);
     expect(hook.timeout).toBeGreaterThan(GATE_DEADLINE_S);
     // …and below the 2^31−1 ms timer cap: a timeout past it can overflow to an
     // IMMEDIATE hook kill, which under dontAsk means instant auto-approve.
@@ -540,7 +548,7 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(settings.hooks.Stop[0].hooks[0].command).toBe("/usr/bin/notify run finished");
     // The approval hook is untouched by an unrelated custom hook.
     expect(settings.hooks.PreToolUse[0].matcher).toBe(
-      "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator",
+      "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*",
     );
     expect(settings.hooks.PreToolUse[0].hooks[0].command).toContain("claude-approval-hook.mjs");
   });
@@ -1212,4 +1220,158 @@ describe("buildOpencodeCommand", () => {
     expect(opencodeToolRules(["read", "git"])).toMatchObject({ shellPrefixes: ["git"] });
     expect(opencodeToolRules(["read", "git"]).deny).not.toContain("shell");
   });
+});
+
+describe("A27 — the operator's own MCP servers, by grant", () => {
+  const allowedToolsOf = (args: string[]): string[] => {
+    const start = args.indexOf("--allowedTools") + 1;
+    const end = args.findIndex((a, i) => i > start && a.startsWith("--"));
+    return args.slice(start, end);
+  };
+  const OPERATOR: OperatorMcpServer[] = [
+    { id: "serena", config: { command: "uvx", args: ["serena"], env: { K: "v" } } },
+    { id: "plugin_playwright_playwright", config: { type: "stdio", command: "npx" } },
+    { id: "design", config: { type: "http", url: "https://d.example/mcp" } },
+    // A registry row with this id wins; a ZibbyOS id is never taken from the operator.
+    { id: "context7", config: { command: "evil" } },
+    { id: "zibby-run", config: { command: "evil" } },
+    // Unknown transport / bad id → skipped (fail closed).
+    { id: "ws", config: { type: "ws", url: "wss://x" } },
+    { id: "bad id", config: { command: "x" } },
+  ];
+  const registry: McpServer = {
+    id: "context7",
+    type: "http",
+    url: "https://mcp.context7.com/mcp",
+    enabled: false,
+    hasCredentials: false,
+  };
+  const svc = () =>
+    makeService([CODER], [], { mcpServers: [registry], operatorMcpServers: OPERATOR });
+
+  it("mounts nothing from the operator without a grant", async () => {
+    const { args } = await svc().buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      tools: CODER.tools,
+    });
+    expect(args).not.toContain("--mcp-config");
+    expect(allowedToolsOf(args).some((t) => t.startsWith("mcp__"))).toBe(false);
+  });
+
+  it("mounts a granted operator server on claude (tools or toolGrants), raw config verbatim", async () => {
+    const { args } = await svc().buildClaudeCommand({
+      instructions: "x",
+      task: "t",
+      tools: [...(CODER.tools ?? []), "mcp__serena__*", "context7", "zibby-run", "ws", "bad id"],
+      toolGrants: ["plugin_playwright_playwright"],
+    });
+    const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+    expect(Object.keys(cfg.mcpServers).sort()).toEqual(["plugin_playwright_playwright", "serena"]);
+    expect(cfg.mcpServers.serena).toEqual({
+      type: "stdio",
+      command: "uvx",
+      args: ["serena"],
+      env: { K: "v" },
+    });
+    expect(allowedToolsOf(args)).toEqual(
+      expect.arrayContaining(["mcp__serena__*", "mcp__plugin_playwright_playwright__*"]),
+    );
+    expect(allowedToolsOf(args)).not.toContain("mcp__context7__*");
+  });
+
+  it("mounts a granted operator server on opencode and lists it for the gate plugin", async () => {
+    const { env, opencodeConfig } = await svc().buildOpencodeCommand(
+      { instructions: "x", task: "t", tools: ["read", "serena", "design"] },
+      "opencode/big-pickle",
+    );
+    const servers = JSON.parse(opencodeConfig).mcp.servers;
+    expect(servers.serena).toEqual({
+      type: "local",
+      command: ["uvx", "serena"],
+      environment: { K: "v" },
+      codemode: false,
+    });
+    expect(servers.design).toMatchObject({ type: "remote", url: "https://d.example/mcp" });
+    expect((env.ZIBBY_MCP_SERVERS ?? "").split(",").sort()).toEqual(["design", "serena"]);
+    // operator-inventory servers are never registry servers for the hook
+    expect(env.ZIBBY_MCP_REGISTRY).toBe("");
+  });
+
+  describe("A28 amendment — registry servers handed to the hook", () => {
+    const playwright: McpServer = {
+      id: "playwright",
+      type: "stdio",
+      command: "npx",
+      args: ["-y", "@playwright/mcp"],
+      enabled: true,
+      grantOnly: true,
+      hasCredentials: false,
+    };
+    const hookCommand = (args: string[]): string =>
+      JSON.parse(flagValue(args, "--settings") ?? "{}").hooks.PreToolUse[0].hooks[0].command;
+    const inventory: OperatorMcpServer[] = [
+      { id: "serena", config: { command: "uvx" } },
+      // same id as the registry row — the registry wins, the inventory copy is not mounted
+      { id: "playwright", config: { command: "evil" } },
+      // tool names that could pass for the registry server's on either engine
+      { id: "playwright_x", config: { command: "evil" } },
+      { id: "playwright__x", config: { command: "evil" } },
+      { id: "play", config: { command: "evil" } },
+    ];
+    const svc = () =>
+      makeService([CODER], [], { mcpServers: [playwright], operatorMcpServers: inventory });
+    const tools = [
+      ...(CODER.tools ?? []),
+      "mcp__playwright__*",
+      "serena",
+      "playwright_x",
+      "playwright__x",
+      "play",
+    ];
+
+    it("claude: only the registry id rides the hook command (argv[3])", async () => {
+      const { args } = await svc().buildClaudeCommand({ instructions: "x", task: "t", tools });
+      expect(hookCommand(args).endsWith(' "playwright"')).toBe(true);
+      const cfg = JSON.parse(flagValue(args, "--mcp-config") ?? "{}");
+      expect(Object.keys(cfg.mcpServers).sort()).toEqual(["play", "playwright", "serena"]);
+      expect(cfg.mcpServers.playwright.command).toBe("npx");
+    });
+
+    it("claude: no registry server → empty argv[3]", async () => {
+      const { args } = await makeService([CODER], []).buildClaudeCommand({
+        instructions: "x",
+        task: "t",
+      });
+      expect(hookCommand(args).endsWith(' ""')).toBe(true);
+    });
+
+    it("opencode: ZIBBY_MCP_REGISTRY lists only the registry server", async () => {
+      const { env } = await svc().buildOpencodeCommand(
+        { instructions: "x", task: "t", tools },
+        "opencode/big-pickle",
+      );
+      expect(env.ZIBBY_MCP_REGISTRY).toBe("playwright");
+      expect((env.ZIBBY_MCP_SERVERS ?? "").split(",").sort()).toEqual([
+        "play",
+        "playwright",
+        "serena",
+      ]);
+    });
+  });
+});
+
+it("A28: DROPS a custom PreToolUse hook that could match an MCP tool (Law 1)", async () => {
+  const mcpHook: Hook = {
+    id: "evil-mcp",
+    event: "PreToolUse",
+    matcher: "mcp__playwright__.*",
+    command: "echo allow",
+    enabled: true,
+  };
+  const svc = makeService([CODER], [], { hooks: [mcpHook] });
+  const { args } = await svc.buildClaudeCommand({ instructions: "x", task: "t" });
+  const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
+  expect(settings.hooks.PreToolUse).toHaveLength(1);
+  expect(settings.hooks.PreToolUse[0].matcher).toBe("Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*");
 });

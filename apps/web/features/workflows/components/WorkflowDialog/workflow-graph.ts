@@ -17,7 +17,7 @@ import type {
   CreateWorkflowInput,
   OpenAiTextModel,
 } from "@zibby/contracts";
-import type { PhaseEscalation, PhaseLoop, Workflow } from "../../../../domain";
+import type { PhaseEscalation, PhaseLoop, Workflow, WorkflowPhase } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
 
 export type ContractPhase = CreateWorkflowInput["phases"][number];
@@ -38,6 +38,36 @@ const LAYOUT_Y0 = 200;
  * an edited workflow keeps whatever its first phase already consumed.
  */
 export const INITIAL_ASSIGNMENT = "task.md";
+
+/** Every phase key the editor owns; the rest of a phase rides along in `GraphNode.extra`. */
+const EDITED_PHASE_KEYS = [
+  "id",
+  "type",
+  "workflow",
+  "agent",
+  "consumes",
+  "produces",
+  "model",
+  "thinking",
+  "commands",
+  "loop",
+  "approval",
+  "qualify",
+  "prompt",
+  "skill",
+  "openaiModel",
+  "engine",
+  "engineModel",
+  "include",
+] as const satisfies readonly (keyof WorkflowPhase)[];
+export type PhaseExtra = Omit<WorkflowPhase, (typeof EDITED_PHASE_KEYS)[number]>;
+
+function extraOf(ph: WorkflowPhase): PhaseExtra | undefined {
+  const rest = Object.entries(ph).filter(
+    ([k]) => !(EDITED_PHASE_KEYS as readonly string[]).includes(k),
+  );
+  return rest.length ? (Object.fromEntries(rest) as PhaseExtra) : undefined;
+}
 
 export interface GraphNode {
   /** Durable phase id — loop targets reference it; an edited workflow keeps it. */
@@ -75,6 +105,11 @@ export interface GraphNode {
    * workflow never silently drops it; the canvas just can't show it.
    */
   looseLoop?: PhaseLoop;
+  /**
+   * Phase fields the editor never touches (e.g. `advisor`), kept verbatim and spread back by
+   * `graphToPhases` so a new contract field is carried through an edit instead of dropped.
+   */
+  extra?: PhaseExtra;
   x: number;
   y: number;
 }
@@ -185,6 +220,7 @@ export function phasesToGraph(initial: Workflow | undefined, agents: Agent[]): W
       ? { engineModel: ph.engineModel }
       : {}),
     ...(ph.type === "agent" && ph.openaiModel && ph.include?.length ? { include: ph.include } : {}),
+    ...(extraOf(ph) ? { extra: extraOf(ph) } : {}),
     model: ph.model ?? "sonnet",
     thinking: ph.thinking ?? "medium",
     x: LAYOUT_X0 + i * (NODE_W + GAP_X),
@@ -289,11 +325,13 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
     const loop = loopOf(node);
 
     const approval = node.approval ? { approval: node.approval } : {};
+    const extra = node.extra ?? {};
     const consumes = handoff;
     const produces = node.produces.trim();
     handoff = produces || handoff;
     if (node.type === "workflow") {
       return {
+        ...extra,
         id: node.id,
         type: "workflow" as const,
         workflow: node.workflow ?? "",
@@ -305,6 +343,7 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
     }
     if (node.type === "tool") {
       return {
+        ...extra,
         id: node.id,
         type: "tool" as const,
         consumes,
@@ -315,6 +354,7 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
       };
     }
     return {
+      ...extra,
       id: node.id,
       type: "agent" as const,
       agent: node.agent,

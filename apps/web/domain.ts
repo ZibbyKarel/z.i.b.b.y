@@ -5,6 +5,7 @@ import type {
   AiEngine,
   DepartmentId,
   OpenAiTextModel,
+  PhaseAdvisor,
   SkillSource,
   WorkflowComplexity,
 } from "@zibby/contracts";
@@ -103,6 +104,8 @@ export interface WorkflowPhase {
   engineModel?: string;
   /** `openaiModel` phase only: extra run-relative files fed to the model. */
   include?: string[];
+  /** Agent phase: advisor override of the workflow's, or `false` to turn it off. */
+  advisor?: false | PhaseAdvisor;
 }
 
 export type WorkflowState = "done" | "parked" | "failed" | "running";
@@ -150,6 +153,10 @@ export interface Workflow {
   budget?: { maxCostUsd: number; warnAtPct: number };
   /** Default project a run binds to (supplies env/secrets). */
   project?: string;
+  /** Preconditions on the run's project (`"web"` = it must carry `web.url`). */
+  requires?: "web"[];
+  /** Default phase advisor for every agent phase. */
+  advisor?: PhaseAdvisor;
 }
 
 export type IntegrationStatus = "connected" | "disconnected" | "error";

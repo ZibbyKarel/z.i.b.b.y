@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { Agent, UpdateWorkflowInput } from "@zibby/contracts";
 import { DialogTestId } from "@zibby/design-system";
 import type { Workflow } from "../../domain";
+import { OperatorTokenNoticeTestId } from "../ai-providers/components/OperatorTokenNotice";
 import { WorkflowCardTestId } from "./components/WorkflowCard/WorkflowCard";
 import { Screen, ScreenTestId } from "./Screen";
 
@@ -69,6 +70,7 @@ const { hooks } = vi.hoisted(() => ({
       refetch: vi.fn(),
     },
     update: vi.fn(),
+    duplicate: { mutate: vi.fn(), isPending: false, error: undefined as unknown },
   },
 }));
 
@@ -80,7 +82,7 @@ vi.mock("./queries", () => ({
 vi.mock("./mutations", () => ({
   useCreateWorkflowMutation: () => ({ mutate: vi.fn(), isPending: false }),
   useUpdateWorkflowMutation: () => ({ mutate: hooks.update, isPending: false }),
-  useDuplicateWorkflowMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDuplicateWorkflowMutation: () => hooks.duplicate,
   duplicateWorkflowBody: vi.fn(),
 }));
 vi.mock("../agents", () => ({ useAgentsQuery: () => ({ data: AGENTS }) }));
@@ -257,5 +259,28 @@ describe("workflows Screen — inline edit", () => {
     // Re-entering edit re-seeds from the (unchanged) workflow, not the discarded draft.
     await userEvent.click(screen.getByRole("button", { name: "Editovat" }));
     expect(screen.getAllByTestId("workflow-node")).toHaveLength(2);
+  });
+});
+
+describe("workflows Screen — duplicate", () => {
+  const open = (error: unknown) => {
+    hooks.workflows = { data: [EXISTING], isPending: false, isError: false, refetch: vi.fn() };
+    hooks.duplicate = { mutate: vi.fn(), isPending: false, error };
+    render(<Screen selectedId="delivery" />);
+  };
+
+  it("shows the operator-token notice on a 401", () => {
+    open({ status: 401, body: {} });
+    expect(screen.getByTestId(OperatorTokenNoticeTestId.Root)).toBeInTheDocument();
+  });
+
+  it("shows no notice without an error or on another status", () => {
+    open(undefined);
+    expect(screen.queryByTestId(OperatorTokenNoticeTestId.Root)).toBeNull();
+  });
+
+  it("shows no notice on a non-401 error", () => {
+    open({ status: 500, body: {} });
+    expect(screen.queryByTestId(OperatorTokenNoticeTestId.Root)).toBeNull();
   });
 });

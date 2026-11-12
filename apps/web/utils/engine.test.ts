@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatEngine, tierConcreteModel, tierLevel } from "./engine";
+import {
+  formatEngine,
+  lacksThinkingVariant,
+  stepEngineChoice,
+  tierConcreteModel,
+  tierLevel,
+} from "./engine";
 
 describe("tier helpers", () => {
   it("numbers tiers weakest to strongest", () => {
@@ -23,5 +29,40 @@ describe("tier helpers", () => {
 
   it("formatEngine is untouched", () => {
     expect(formatEngine("opencode", "p/m")).toBe("opencode · p/m");
+  });
+});
+
+describe("lacksThinkingVariant", () => {
+  const models = [
+    { id: "a/think", variants: ["low", "high"] },
+    { id: "a/plain", variants: [] },
+  ];
+  it("flags a known model without the level", () => {
+    expect(lacksThinkingVariant(models, "a/plain", "high")).toBe(true);
+    expect(lacksThinkingVariant(models, "a/think", "medium")).toBe(true);
+  });
+  it("does not flag a supported level, an explicit #variant, or an unknown/empty model", () => {
+    expect(lacksThinkingVariant(models, "a/think", "high")).toBe(false);
+    expect(lacksThinkingVariant(models, "a/plain#max", "high")).toBe(false);
+    expect(lacksThinkingVariant(models, "x/gone", "high")).toBe(false);
+    expect(lacksThinkingVariant(models, "", "high")).toBe(false);
+  });
+});
+
+describe("stepEngineChoice", () => {
+  const agent = { engine: "opencode", engineModel: "a/agent" } as const;
+  it("step model beats the agent's, which beats nothing", () => {
+    expect(stepEngineChoice({ engine: "opencode", engineModel: "a/step" }, agent).engineModel).toBe(
+      "a/step",
+    );
+    expect(stepEngineChoice({}, agent)).toEqual({ engine: "opencode", engineModel: "a/agent" });
+    expect(stepEngineChoice({}, { engine: "opencode" }).engineModel).toBeUndefined();
+  });
+  it("drops the exact model off opencode", () => {
+    expect(stepEngineChoice({ engine: "claude" }, agent)).toEqual({
+      engine: "claude",
+      engineModel: undefined,
+    });
+    expect(stepEngineChoice({}, undefined).engine).toBeUndefined();
   });
 });

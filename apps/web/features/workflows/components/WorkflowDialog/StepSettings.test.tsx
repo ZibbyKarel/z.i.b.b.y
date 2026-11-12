@@ -16,6 +16,20 @@ vi.mock("../../../skills", () => ({
     ],
   }),
 }));
+const mocks = vi.hoisted(() => ({
+  engines: undefined as unknown,
+  config: { aiEngine: "claude" } as Record<string, unknown>,
+  agents: [] as unknown[],
+}));
+vi.mock("../../../ai-providers/queries", async (orig) => ({
+  ...(await orig<object>()),
+  useAiEnginesQuery: () => ({ data: mocks.engines }),
+}));
+vi.mock("../../../system", async (orig) => ({
+  ...(await orig<object>()),
+  useSystemConfigQuery: () => ({ data: mocks.config }),
+}));
+vi.mock("../../../agents/queries", () => ({ useAgentsQuery: () => ({ data: mocks.agents }) }));
 vi.mock("../../../marketplaces", () => ({ useMarketplaceSkillsQuery: () => ({ data: [] }) }));
 
 const base = { produces: "out.md", commands: "", model: "sonnet", thinking: "medium", x: 0, y: 0 };
@@ -155,5 +169,44 @@ describe("StepSettings — runs on", () => {
     await pick("OpenAI · gpt-6-luna");
     expect(node()?.engine).toBeUndefined();
     expect(node()?.openaiModel).toBe("gpt-6-luna");
+  });
+});
+
+describe("StepSettings — thinking hint", () => {
+  const withOpencode = (variants: string[]) => {
+    mocks.engines = { engines: [{ id: "opencode", models: [{ id: "a/m", variants }] }] };
+  };
+  const hint = () => screen.queryByTestId("step-thinking-hint-a1");
+
+  it("shows when the step's opencode model lacks the thinking level", () => {
+    withOpencode(["low"]);
+    renderSteps([agentNode({ engine: "opencode", engineModel: "a/m", thinking: "high" })]);
+    expect(hint()).toHaveTextContent("high");
+  });
+
+  it("is hidden when the model offers the level, on claude, or for an unknown model", () => {
+    withOpencode(["high"]);
+    renderSteps([agentNode({ engine: "opencode", engineModel: "a/m", thinking: "high" })]);
+    expect(hint()).toBeNull();
+  });
+
+  it("is hidden on the claude engine", () => {
+    withOpencode([]);
+    renderSteps([agentNode({ engine: "claude", thinking: "high" })]);
+    expect(hint()).toBeNull();
+  });
+
+  it("is hidden for a model missing from the list", () => {
+    withOpencode([]);
+    renderSteps([agentNode({ engine: "opencode", engineModel: "x/unknown", thinking: "high" })]);
+    expect(hint()).toBeNull();
+  });
+
+  it("uses the agent's exact model when the step has none", () => {
+    withOpencode(["low"]);
+    mocks.agents = [{ id: "writer", engine: "opencode", engineModel: "a/m" }];
+    renderSteps([agentNode({ engine: undefined, thinking: "high" })]);
+    expect(hint()).toHaveTextContent("high");
+    mocks.agents = [];
   });
 });

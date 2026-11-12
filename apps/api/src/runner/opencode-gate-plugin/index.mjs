@@ -21,8 +21,9 @@
 // Env (set by the command builder / RunnerCore): ZIBBY_GATE_NODE (node binary),
 // ZIBBY_GATE_HOOK (absolute hook path), ZIBBY_GATE_DEADLINE_S, ZIBBY_GATE_CWD (the
 // run's spawn dir — paths are judged against it, never against opencode's own cwd),
-// ZIBBY_GATE_LOG (decision log RunnerCore copies into the run log), ZIBBY_MCP_SERVERS
-// and ZIBBY_DENY_TOOLS (comma lists), ZIBBY_SHELL_PREFIXES (JSON array; set when the
+// ZIBBY_GATE_LOG (decision log RunnerCore copies into the run log), ZIBBY_MCP_SERVERS,
+// ZIBBY_MCP_REGISTRY (the registry subset, handed to the hook as argv[3]) and
+// ZIBBY_DENY_TOOLS (comma lists), ZIBBY_SHELL_PREFIXES (JSON array; set when the
 // agent only has `Bash(<prefix>:*)`), plus the hook's own ZIBBY_INTENT_DIR /
 // ZIBBY_FREE_DIRS.
 
@@ -182,7 +183,9 @@ export function runHook(event, env = process.env) {
   if (!node || !hook) return Promise.resolve("ZibbyOS gate is not configured for this run.");
   return new Promise((resolve) => {
     let out = "";
-    const child = spawn(node, [hook, env.ZIBBY_GATE_DEADLINE_S ?? ""], {
+    // argv[3]: the run's registry MCP servers (A28 amendment) — set by the command
+    // builder over the project env, so the agent can't widen it.
+    const child = spawn(node, [hook, env.ZIBBY_GATE_DEADLINE_S ?? "", env.ZIBBY_MCP_REGISTRY ?? ""], {
       stdio: ["pipe", "pipe", "ignore"],
       env,
     });

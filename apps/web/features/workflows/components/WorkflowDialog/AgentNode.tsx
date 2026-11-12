@@ -15,6 +15,7 @@ import {
 } from "@zibby/design-system";
 import { useTierLabel } from "../../../ai-providers";
 import { agentSymbol } from "../../../agents/agentSymbol";
+import { stepEngineChoice } from "../../../../utils/engine";
 import { toolOpenAiImageModel } from "../../openaiImageModel";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
 import { ACCENT, BAD, SURFACE, SURFACE_HI, mix } from "./canvas-tokens";
@@ -115,10 +116,13 @@ export function AgentNode({
 }: AgentNodeProps) {
   const t = useTranslations("forms.workflow");
   const tierLabel = useTierLabel();
-  // The step's exact opencode model when it has one; otherwise the level on its effective engine.
+  // The step's (else its agent's) exact opencode model; otherwise the level on its effective engine.
+  const choice = stepEngineChoice(
+    node,
+    agents.find((a) => a.id === node.agent),
+  );
   const modelLabel =
-    node.engineModel?.split("/").pop() ??
-    tierLabel(node.model, node.engine ?? agents.find((a) => a.id === node.agent)?.engine, true);
+    choice.engineModel?.split("/").pop() ?? tierLabel(node.model, choice.engine, true);
   const imageModel =
     node.type === "tool" ? toolOpenAiImageModel(node.commands.split("\n")) : undefined;
   const label =

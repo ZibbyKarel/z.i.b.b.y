@@ -94,6 +94,7 @@ describe("opencodeChatArgs / opencodeChatEnv", () => {
         OPENCODE_DISABLE_PROJECT_CONFIG: "1",
         PWD: "/repo",
         ZIBBY_CHAT_MCP_SERVERS: "zibby,zibby-kb",
+        ZIBBY_CHAT_DENY_TOOLS: "",
       });
     } finally {
       delete process.env.OPENCODE_PERMISSION;
@@ -178,6 +179,29 @@ describe("opencode chat gate plugin", () => {
       expect(denied.effect).toBe("deny");
     } finally {
       delete process.env.ZIBBY_CHAT_MCP_SERVERS;
+    }
+  });
+
+  it("denies a mounted tool named in ZIBBY_CHAT_DENY_TOOLS (an @agent turn's create_task)", async () => {
+    const hooks: Record<string, (e: Record<string, unknown>) => unknown> = {};
+    const reg =
+      (name: string) => async (_: string, fn: (e: Record<string, unknown>) => unknown) => {
+        hooks[name] = fn;
+      };
+    process.env.ZIBBY_CHAT_MCP_SERVERS = "zibby";
+    process.env.ZIBBY_CHAT_DENY_TOOLS = "zibby_create_task";
+    try {
+      await plugin.setup({ permission: { hook: reg("evaluate") }, tool: { hook: reg("before") } });
+      expect(() => hooks.before?.({ tool: "zibby_create_task", input: {} })).toThrow(
+        /Blocked by the ZibbyOS gate/,
+      );
+      expect(hooks.before?.({ tool: "zibby_recall_memory", input: {} })).toBeUndefined();
+      const ask = { action: "zibby_create_task", effect: "ask" };
+      hooks.evaluate?.(ask);
+      expect(ask.effect).toBe("deny");
+    } finally {
+      delete process.env.ZIBBY_CHAT_MCP_SERVERS;
+      delete process.env.ZIBBY_CHAT_DENY_TOOLS;
     }
   });
 });

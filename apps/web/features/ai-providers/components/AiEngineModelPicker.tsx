@@ -53,11 +53,13 @@ export function AiEngineModelPicker({
   const sorted = [...models].sort((a, b) => rank(a) - rank(b));
   const options = sorted.map((m) => ({
     value: m.id,
-    label: m.free
-      ? `${m.id} · ${t("free")}`
-      : m.subscription
-        ? `${m.id} · ${t("subscription")}`
-        : m.id,
+    label: [
+      m.id,
+      m.free ? t("free") : m.subscription ? t("subscription") : "",
+      m.variants.length > 0 ? t("thinkingTag") : "",
+    ]
+      .filter(Boolean)
+      .join(" · "),
   }));
   const missing = loaded && isModelMissing(models, value);
   // Keep a no-longer-listed choice visible so the control does not look empty.

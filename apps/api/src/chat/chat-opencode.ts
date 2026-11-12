@@ -99,12 +99,14 @@ export function opencodeChatArgs(model: string, sessionId: string | null, text: 
 /**
  * The env of an opencode chat turn: no inherited `OPENCODE_*` (only ours), project config
  * off, `PWD` pinned to the spawn dir (opencode takes its project dir from `$PWD`), and the
- * mounted server ids for the gate plugin.
+ * mounted server ids + the per-turn denied tools for the gate plugin (which denies them
+ * again on top of the config's rules).
  */
 export function opencodeChatEnv(
   configFile: string,
   cwd: string,
   serverIds: readonly string[],
+  denyTools: readonly string[] = [],
 ): NodeJS.ProcessEnv {
   const env = agentBaseEnv();
   for (const key of Object.keys(env)) if (key.startsWith("OPENCODE_")) delete env[key];
@@ -115,6 +117,7 @@ export function opencodeChatEnv(
     OPENCODE_DISABLE_PROJECT_CONFIG: "1",
     PWD: cwd,
     ZIBBY_CHAT_MCP_SERVERS: serverIds.join(","),
+    ZIBBY_CHAT_DENY_TOOLS: denyTools.join(","),
     ...(claudePath ? { OPENCODE_CLAUDE_PATH: claudePath } : {}),
   };
 }

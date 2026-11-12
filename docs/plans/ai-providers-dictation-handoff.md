@@ -27,6 +27,7 @@ AI. Second: Czech dictation inside ZibbyOS (earlier attempts failed; colleague s
 | T1  | Engine-independent model tiers + per-step engine/model (A19–A22) + budget % gate off Claude | opus | implemented, uncommitted (backend + contracts + docs; UI by another agent). See "Next" for what is not verified |
 | C1  | opencode 2.2.7 `claude-agent` provider: gate proof, Claude limits for `claude-agent/*`, `OPENCODE_CLAUDE_PATH`, `subscription` flag, PWD fix (A18) | opus | implemented, uncommitted (backend + docs; UI in parallel). See "opencode 2.2.7 + Claude Agent" |
 | C2  | Chat: operator MCP servers on claude (A23), chat on opencode (A24), fail-closed tool gating (A25) | opus | implemented, uncommitted (backend + contracts + docs; chat UI not touched). See "Chat on opencode (C2)" |
+| C3  | Claude chat loads the operator's user setup (connectors, MCP servers, plugins) with hooks, CLAUDE.md and auto-memory off; A23 merge removed (A30) | opus | implemented, uncommitted (chat service + tests + docs). See "Chat loads the operator's setup (A30)" |
 
 Installed on the machine (2026-11-12): `brew install whisper.cpp ffmpeg`; model
 `~/Library/Application Support/ZibbyOS/models/ggml-large-v3-turbo.bin` (1.5 GB).
@@ -173,11 +174,60 @@ its bearer token):
 
 Not done / limits: operator servers on opencode (needs a per-tool allowlist or a gate path);
 `skill` is still listed in the toolset (the plugin blocks it); an engine switch starts a fresh
-session with no context carry-over; an `@agent`'s read-only tools are not allowed on opencode;
-Claude chat's `mcp-config-*.json` files still stay in the chat dir (unchanged behaviour);
-`disabledMcpServers` is judged for the turn's cwd (the project path, else the API's cwd); only
-`${CLAUDE_PLUGIN_ROOT}` is expanded in plugin configs; OAuth HTTP servers don't authenticate
-through `--mcp-config` (A23). The chat UI does not show `engine` / `engineModel` yet.
+session with no context carry-over; an `@agent`'s read-only tools are not allowed on opencode.
+Claude chat's `mcp-config_*.json` files are deleted when the turn ends (every exit path) and
+crash leftovers are swept at start. Since A30 the Claude chat no longer merges the operator's
+servers into `--mcp-config`; they load from user settings (see "Chat loads the operator's
+setup (A30)" below). The chat UI does not show `engine` / `engineModel` yet.
+
+### Chat loads the operator's setup (A30, 2026-11-12, claude 2.1.322)
+
+Run live through the worktree chat service (port 3391, isolated `ZIBBY_DATA_DIR`,
+`ZIBBY_CHAT_MODEL=haiku`, `CLAUDE_BIN` = a logging wrapper that refused every non-chat spawn so
+no run could start). Numbers and connected servers are in decision A30.
+
+- Leak check: no `hook_*` events in any turn; asked directly, the model saw none of
+  superpowers / graphify / RTK / ponytail / CLAUDE.md / MEMORY.md. With only
+  `CLAUDE_CODE_DISABLE_CLAUDE_MDS=1` (direct CLI probe in the repo) the auto-memory
+  instructions and `MEMORY.md` mention leaked; `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1` stops it.
+- Connector read: `ToolSearch` → `mcp__claude_ai_Slack__slack_list_user_channels` returned
+  channel names. Nothing was sent or written.
+- Dispatch: both "postav mi malou todo aplikaci v Reactu" turns called `create_task`; the
+  isolated data dir had no workflows, so routing failed and nothing ran. The model then
+  offered to build the app itself with Bash and asked first — that comes from Bash being
+  allowed (operator's call), not from A30.
+
+Not verified: an Atlassian call; a turn with a `#project` cwd; a resumed session from before
+A30; whether `--tools` still drops connectors under user settings.
+
+### Runs as a superstructure over the terminal (A27–A29, 2026-11-12)
+
+- **A29 live probe** (claude 2.1.322, `claude -p "Reply with the single word OK." --permission-mode auto
+  --output-format stream-json --verbose --model haiku`, n=1 each, ~1 s / ~2.5 s `duration_ms`):
+  with `--setting-sources ""` → `mcp_servers: []`, no `mcp__*` tool; without it → plugin
+  context7 (needs-auth), plugin playwright (connected, 25 tools), serena + claude-design (failed),
+  claude.ai Claude Data / Docs (connected), Atlassian (32 + 20 tools), Figma (44), Slack (27) and
+  ~15 more claude.ai connectors in `needs-auth`. So connectors do not load in runs; the mechanism
+  that drops them under `--setting-sources ""` was not found in the binary (the connector fetch
+  is gated only on strict MCP config / managed policy / `--bare`).
+- **A27** has no live proof: unit tests mount operator servers on both engines
+  (`claude-run-command.service.test.ts`, "A27"). Not run: a real agent run with a granted
+  operator server.
+- **A28** opencode proof is unit-level with the real hook (`opencode-gate-plugin/index.test.ts`,
+  "A28"); no live opencode run (free tier rate-limited, and the fake-provider route was not set
+  up for runs). Claude side: hook process tests incl. the per-run lock with two concurrent hooks.
+- **Existing recipes affected** (`~/Documents/AI/ZibbyOS/recipes`): only registry `playwright`
+  (grantOnly) is a non-ZibbyOS MCP server, granted by `ui-ux-tester` (`mcp__playwright__*`),
+  used by workflows `web-qa` (phase `explore`) and `pr-review-browser` (phase `browser`). Almost
+  every Playwright tool (`browser_navigate`, `browser_click`, `browser_type`, `browser_snapshot`,
+  `browser_take_screenshot`, `browser_evaluate`, `browser_run_code_unsafe`, …) was `mcp.write` →
+  an approval per call. **Fixed by A28a:** `playwright` is a registry row
+  (`recipes/mcp-servers/playwright.json`, enabled, grantOnly), so it rides the hook's
+  registry list and its calls pass unclassified again. Verified by unit tests only (no live
+  `web-qa` run). The operator also has a `playwright@claude-plugins-official` plugin; its
+  inventory id (`plugin_playwright_playwright`) is not granted by `ui-ux-tester` and doesn't
+  collide with `playwright`. Test fixtures under `apps/api/test` don't use a third-party MCP
+  server.
 
 ## opencode research (R1, web — unverified items marked)
 
@@ -232,6 +282,12 @@ toggle --print`, `hex model list`) and a local HTTP API (port + token in
 - Known baseline failure: 3 tests in `autopilot pr-review gate` fail on clean `main` too.
 
 ## Next (not done in this run)
+
+- A28 follow-ups: registry servers are exempt (A28a); a per-server switch for inventory servers
+  would be friendlier than the floor-move recipe. The publish (→ `deploy`, operator decision) / remote-destroy / `jira` CLIs are
+  classified now (A28a); still not caught: `curl -X POST|DELETE`, wrappers (`sudo`, `npx`),
+  `pnpm --filter x publish`, `docker buildx build --push`, `helm uninstall`, `gh issue create`.
+  A29: find what drops claude.ai connectors under `--setting-sources ""`.
 
 - C1 not verified: the exact text of a Claude limit error inside opencode's JSONL on
   `claude-agent/*` (the runner's limit-line scan relies on `detectLimit` matching it;

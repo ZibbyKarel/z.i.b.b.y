@@ -10,6 +10,16 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { analyzeOwnership, classify, classifyTask } from "./claude-approval-hook.mjs";
 // @ts-expect-error — same untyped seam; a separate line keeps the directive on the import.
 import { classifyEvent } from "./claude-approval-hook.mjs";
+// @ts-expect-error — same untyped seam (A28 MCP classification).
+import { BUILTIN_MCP_SERVERS, isReadOnlyMcpTool } from "./claude-approval-hook.mjs";
+// @ts-expect-error — same untyped seam (A28 amendment: registry servers).
+import { registryServers } from "./claude-approval-hook.mjs";
+import { AUTOPILOT_COVERED_RULES, autopilotCoversApproval } from "../autopilot/autopilot.service";
+import {
+  ENTITY_MCP_SERVER_ID,
+  KB_MCP_SERVER_ID,
+  RUN_MCP_SERVER_ID,
+} from "../mcp/mcp.storage.service";
 
 /**
  * Direct coverage for the PreToolUse approval hook's destructive-command detector.
@@ -1201,5 +1211,343 @@ describe("classifyEvent — ask_operator (D-ASK)", () => {
     expect(
       classifyEvent({ tool_name: "mcp__zibby-run__ask_advisor", tool_input: { question: "q" } }),
     ).toBeNull();
+  });
+});
+
+describe("A28 — MCP / connector calls", () => {
+  type Req = { action: string; tool?: string; scope?: string; context?: string } | null;
+  const mcp = (tool_name: string, tool_input: unknown = {}) =>
+    classifyEvent({ tool_name, tool_input }) as Req;
+
+  it.each([
+    // read-only by name → mcp.read
+    ["mcp__claude_ai_Slack__slack_read_channel", "mcp.read"],
+    ["mcp__claude_ai_Slack__slack_search_public", "mcp.read"],
+    ["mcp__claude_ai_Atlassian__getJiraIssue", "mcp.read"],
+    ["mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql", "mcp.read"],
+    ["mcp__claude_ai_Google_Calendar__list_events", "mcp.read"],
+    ["mcp__claude_ai_Figma__get_screenshot", "mcp.read"],
+    ["mcp__context7__query-docs", "mcp.read"],
+    // write / unknown → mcp.write
+    ["mcp__claude_ai_Slack__slack_send_message", "mcp.write"],
+    ["mcp__claude_ai_Atlassian__createJiraIssue", "mcp.write"],
+    ["mcp__claude_ai_Atlassian__executeRead", "mcp.write"],
+    ["mcp__claude_ai_Atlassian__atlassianUserInfo", "mcp.write"],
+    ["mcp__claude_ai_Figma__use_figma", "mcp.write"],
+    ["mcp__playwright__browser_navigate", "mcp.write"],
+    ["mcp__playwright__browser_snapshot", "mcp.write"],
+    ["mcp__playwright__browser_run_code_unsafe", "mcp.write"],
+    ["mcp__x__mark_as_read", "mcp.write"],
+    ["mcp__x__get_and_send", "mcp.write"],
+    // Never-rule-like names keep their existing action (and its floor rule)
+    ["mcp__github__merge_pull_request", "pr.merge"],
+    ["mcp__stripe__create_payment", "payment"],
+    ["mcp__shop__buy_item", "purchase"],
+    ["mcp__x__delete_file", "delete"],
+    ["mcp__claude_ai_Atlassian__executeDestructive", "delete"],
+    ["mcp__vercel__deploy_project", "deploy"],
+    ["mcp__claude_ai_Gmail__send_message", "send_email"],
+    // unparsable → fail closed
+    ["mcp__noseparator", "mcp.write"],
+  ])("%s → %s", (name, action) => {
+    expect(mcp(name)?.action).toBe(action);
+  });
+
+  it("carries server, tool and a bounded argument summary for the approval card", () => {
+    const r = mcp("mcp__claude_ai_Slack__slack_send_message", {
+      channel: "C1",
+      text: "x".repeat(2000),
+    });
+    expect(r).toMatchObject({
+      action: "mcp.write",
+      tool: "mcp__claude_ai_Slack__slack_send_message",
+      scope: "claude_ai_Slack",
+    });
+    const ctx = JSON.parse(r?.context ?? "{}");
+    expect(ctx.riskType).toBe("odeslani");
+    expect(ctx.summary).toContain("claude_ai_Slack · slack_send_message");
+    expect(ctx.preview.cmd).toContain('"channel":"C1"');
+    expect(ctx.preview.cmd.length).toBeLessThan(700);
+  });
+
+  it("leaves ZibbyOS's own servers unclassified (they gate themselves)", () => {
+    expect(mcp("mcp__zibby-entities__list_entities")).toBeNull();
+    expect(mcp("mcp__zibby-kb__search_team_kb")).toBeNull();
+    expect(mcp("mcp__zibby-run__ask_advisor")).toBeNull();
+    // ...but not a look-alike id
+    expect(mcp("mcp__zibby-foo__do_thing")?.action).toBe("mcp.write");
+  });
+
+  it("the built-in id list matches the seeded registry ids", () => {
+    expect([...BUILTIN_MCP_SERVERS].sort()).toEqual(
+      [ENTITY_MCP_SERVER_ID, KB_MCP_SERVER_ID, RUN_MCP_SERVER_ID].sort(),
+    );
+  });
+
+  describe("registry servers (A28 amendment)", () => {
+    const reg = (name: string, ids: string, input: unknown = {}) =>
+      classifyEvent({ tool_name: name, tool_input: input }, registryServers(ids)) as Req;
+
+    it("a registry server's write passes unclassified (pre-A28 behaviour)", () => {
+      expect(reg("mcp__playwright__browser_click", "playwright")).toBeNull();
+      expect(reg("mcp__playwright__browser_navigate", "playwright")).toBeNull();
+      expect(reg("mcp__playwright__browser_run_code_unsafe", "playwright")).toBeNull();
+      // Never-rule-like names too: the hook never saw registry calls before A28.
+      expect(reg("mcp__github__merge_pull_request", "github")).toBeNull();
+    });
+
+    it("a server not in the run's registry list is still classified", () => {
+      expect(reg("mcp__serena__replace_symbol_body", "playwright")?.action).toBe("mcp.write");
+      expect(reg("mcp__unknown__do_it", "")?.action).toBe("mcp.write");
+      expect(reg("mcp__claude_ai_Slack__slack_send_message", "playwright")?.action).toBe(
+        "mcp.write",
+      );
+    });
+
+    it("matches the tool-name form of an id and never a prefix of it", () => {
+      expect(reg("mcp__my_srv__send", "my.srv")).toBeNull();
+      expect(reg("mcp__playwright_x__click", "playwright")?.action).toBe("mcp.write");
+      expect(reg("mcp__play__click", "playwright")?.action).toBe("mcp.write");
+    });
+
+    it("the list comes from argv[3] only — env does not count", () => {
+      process.env.ZIBBY_MCP_REGISTRY = "serena";
+      try {
+        expect(registryServers(undefined).size).toBe(0);
+        expect([...registryServers(" a , b.c ,")]).toEqual(["a", "b_c"]);
+      } finally {
+        delete process.env.ZIBBY_MCP_REGISTRY;
+      }
+    });
+  });
+
+  it("read needs the verb in the first two words and no write word", () => {
+    expect(isReadOnlyMcpTool("slack_read_channel")).toBe(true);
+    expect(isReadOnlyMcpTool("channel_topic_read")).toBe(false);
+    expect(isReadOnlyMcpTool("list_and_delete")).toBe(false);
+  });
+
+  describe("hook process", () => {
+    let cwd: string;
+    beforeEach(async () => {
+      cwd = await fs.mkdtemp(path.join(os.tmpdir(), "hook-mcp-"));
+    });
+    afterEach(async () => {
+      await fs.rm(cwd, { recursive: true, force: true });
+    });
+    const env = () => ({ ZIBBY_INTENT_DIR: cwd });
+    const decide = (decision: string) =>
+      fs.writeFile(path.join(cwd, "intent-decision.json"), JSON.stringify({ decision }));
+    const waitFor = async (file: string) => {
+      for (let i = 0; i < 100; i++) {
+        const raw = await fs.readFile(file, "utf8").catch(() => null);
+        if (raw) return raw;
+        await new Promise((r) => setTimeout(r, 50));
+      }
+      throw new Error(`no ${file}`);
+    };
+
+    it("an allowed MCP call exits without a decision (Claude's own layer still applies)", async () => {
+      await decide("allow");
+      const res = await runHook(
+        cwd,
+        { tool_name: "mcp__x__get_thing", tool_input: {}, cwd },
+        env(),
+      );
+      expect(res).toEqual({ stdout: "", code: 0 });
+    });
+
+    it("a registry server's write raises no request (argv[3]); another server's does", async () => {
+      const res = await runHook(
+        cwd,
+        { tool_name: "mcp__playwright__browser_click", tool_input: {}, cwd },
+        env(),
+        ["5", "playwright,context7"],
+      );
+      expect(res).toEqual({ stdout: "", code: 0 });
+      await expect(fs.access(path.join(cwd, "intent-request.json"))).rejects.toThrow();
+
+      const pending = runHook(
+        cwd,
+        { tool_name: "mcp__serena__replace_symbol_body", tool_input: {}, cwd },
+        { ...env(), ZIBBY_MCP_REGISTRY: "serena" },
+        ["5", "playwright"],
+      );
+      const req = JSON.parse(await waitFor(path.join(cwd, "intent-request.json")));
+      expect(req).toMatchObject({ action: "mcp.write", scope: "serena" });
+      await fs.rm(path.join(cwd, "intent-request.json"));
+      await decide("deny");
+      await pending;
+    });
+
+    it("a denied MCP write is blocked", async () => {
+      await decide("deny");
+      const res = await runHook(cwd, { tool_name: "mcp__x__send_it", tool_input: {}, cwd }, env());
+      expect(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision).toBe("deny");
+    });
+
+    it("an MCP name that doesn't parse asks (fail closed), unlike an unknown Bash command", async () => {
+      const pending = runHook(cwd, { tool_name: "mcp__", tool_input: {}, cwd }, env());
+      const req = JSON.parse(await waitFor(path.join(cwd, "intent-request.json")));
+      expect(req.action).toBe("mcp.write");
+      await fs.rm(path.join(cwd, "intent-request.json"));
+      await decide("deny");
+      await pending;
+    });
+
+    it("parallel calls queue on the run's gate lock instead of racing one request file", async () => {
+      const a = runHook(cwd, { tool_name: "mcp__x__send_a", tool_input: {}, cwd }, env());
+      const b = runHook(cwd, { tool_name: "mcp__x__send_b", tool_input: {}, cwd }, env());
+      const seen: string[] = [];
+      for (let i = 0; i < 2; i++) {
+        const file = path.join(cwd, "intent-request.json");
+        seen.push(JSON.parse(await waitFor(file)).tool);
+        await fs.rm(file);
+        await decide("allow");
+        // the next request only appears once this hook has consumed its decision
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      const results = await Promise.all([a, b]);
+      expect(seen.sort()).toEqual(["mcp__x__send_a", "mcp__x__send_b"]);
+      expect(results.every((r) => r.code === 0 && r.stdout === "")).toBe(true);
+      expect(
+        await fs
+          .access(path.join(cwd, "intent.lock"))
+          .then(() => true)
+          .catch(() => false),
+      ).toBe(false);
+    });
+
+    it("takes over a lock whose holder is dead", async () => {
+      await fs.writeFile(path.join(cwd, "intent.lock"), "999999");
+      await decide("allow");
+      const res = await runHook(
+        cwd,
+        { tool_name: "mcp__x__get_thing", tool_input: {}, cwd },
+        env(),
+      );
+      expect(res.code).toBe(0);
+    });
+  });
+});
+
+describe("classify — publish / remote-destroy / jira CLIs", () => {
+  it.each([
+    ["jira issue create -s 'Bug' -t Bug", "jira.create_issue"],
+    ["jira issues create", "jira.create_issue"],
+    ["jira create -p ZIB", "jira.create_issue"],
+    ["kubectl delete pod web-1", "delete"],
+    ["kubectl -n prod delete deployment api", "delete"],
+    ["aws ec2 terminate-instances --instance-ids i-1", "delete"],
+    ["aws --region eu-west-1 rds delete-db-instance --db-instance-identifier x", "delete"],
+    ["aws iam remove-user-from-group --user-name a --group-name b", "delete"],
+    ["aws s3 rb s3://bucket --force", "delete"],
+    ["aws s3 rm s3://bucket/key", "delete"],
+    ["docker push ghcr.io/me/app:1", "deploy"],
+    ["docker image push app", "deploy"],
+    ["podman push app", "deploy"],
+    ["npm publish", "deploy"],
+    ["pnpm -r publish --access public", "deploy"],
+    ["yarn publish", "deploy"],
+    ["yarn npm publish", "deploy"],
+    ["cargo publish", "deploy"],
+    ["gem push app-1.0.gem", "deploy"],
+    ["twine upload dist/*", "deploy"],
+    ["npm run build && npm publish", "deploy"],
+  ])("%s → %s", (command, action) => {
+    expect(classify(command)?.action).toBe(action);
+  });
+
+  it.each([
+    "kubectl get pods",
+    "kubectl apply -f x.yaml",
+    "aws s3 ls",
+    "aws ec2 describe-instances",
+    "docker pull node:22",
+    "docker build -t app .",
+    "npm install",
+    "npm run publish",
+    "npm publish --dry-run",
+    "pnpm publish --dry-run",
+    "cargo publish --dry-run",
+    "cargo build",
+    "jira issue list",
+    "jira issue view ZIB-1",
+    "curl -X POST https://api.example.com/things",
+  ])("%s stays unclassified", (command) => {
+    expect(classify(command)).toBeNull();
+  });
+
+  it("a publish is `deploy` with the registry card text and no branch", () => {
+    const c = classify("npm publish");
+    expect(c?.action).toBe("deploy");
+    expect(c?.branch).toBeUndefined();
+    expect(c?.summary).toBe("Publikovat balíček nebo image do registru");
+    // outranks a push in a chain
+    expect(classify("git push origin main && npm publish")?.action).toBe("deploy");
+  });
+
+  it("autopilot cannot waive a publish (`deploy`), whatever branch it owns", () => {
+    const intent = { action: "deploy", branch: "zibby/x" };
+    for (const covers of Object.values(AUTOPILOT_COVERED_RULES)) {
+      expect(covers(intent, { ownedBranch: "zibby/x" })).toBe(false);
+    }
+    for (const kind of [
+      "agent",
+      "workflow-stage",
+      "pr-fix-ci",
+      "pr-address-comments",
+      "channel",
+    ] as const) {
+      expect(autopilotCoversApproval({ kind, action: "deploy" }, "zibby/x", true)).toBe(false);
+    }
+  });
+
+  it("the ownership ledger / free zone never lifts a publish (hook process)", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "own-publish-"));
+    try {
+      // the agent "owns" the whole dir and it is the free zone — still asks
+      await fs.writeFile(path.join(dir, "created-files.json"), JSON.stringify([dir]));
+      const pending = runHook(
+        dir,
+        bashEvent("npm publish", dir),
+        {
+          ZIBBY_INTENT_DIR: dir,
+          ZIBBY_FREE_DIRS: dir,
+        },
+        ["5"],
+      );
+      let raw: string | null = null;
+      for (let i = 0; i < 100 && !raw; i++) {
+        raw = await fs.readFile(path.join(dir, "intent-request.json"), "utf8").catch(() => null);
+        if (!raw) await new Promise((r) => setTimeout(r, 50));
+      }
+      expect(JSON.parse(raw ?? "{}").action).toBe("deploy");
+      await fs.writeFile(
+        path.join(dir, "intent-decision.json"),
+        JSON.stringify({ decision: "deny" }),
+      );
+      const res = await pending;
+      expect(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision).toBe("deny");
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("a remote delete is never lifted by the ownership ledger", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "own-remote-"));
+    try {
+      const intentDir = path.join(dir, "sandbox");
+      await fs.mkdir(intentDir);
+      const opts = { cwd: dir, ledger: [], intentDir, free: [dir] };
+      // control: a command with no file effect stays exempt in the same setup
+      expect(analyzeOwnership("kubectl get pods", opts).exempt).toBe(true);
+      expect(analyzeOwnership("kubectl delete pod x", opts).exempt).toBe(false);
+      expect(analyzeOwnership("aws ec2 terminate-instances --instance-ids i-1", opts).exempt).toBe(
+        false,
+      );
+    } finally {
+      await fs.rm(dir, { recursive: true, force: true });
+    }
   });
 });

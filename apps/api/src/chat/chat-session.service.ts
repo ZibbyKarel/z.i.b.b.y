@@ -3,7 +3,13 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { agentBaseEnv } from "../shared/agent-env";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  type OnModuleDestroy,
+  type OnModuleInit,
+} from "@nestjs/common";
 import {
   type Agent,
   type AiEngine,
@@ -22,8 +28,6 @@ import {
   repoFromGitRemote,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { readOperatorMcpServers } from "../inventory/operator-mcp-servers";
-import { resolveClaudeLocations } from "../inventory/claude-locations";
 import { assertOpencodeReady, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
@@ -60,6 +64,8 @@ export interface ChatSpawnOptions {
 
 /** Minimal shape of the spawned `claude` process — the test seam overrides this. */
 export interface ClaudeProcess {
+  /** Set for a real (detached) child — its pid is also its process group id. */
+  pid?: number;
   stdout: NodeJS.ReadableStream | null;
   on(event: "close", cb: (code: number | null) => void): void;
   on(event: "error", cb: (err: Error) => void): void;
@@ -79,6 +85,35 @@ export interface ChatTurnTags {
 
 /** Hard ceiling on one turn; a stuck `claude` is killed and the turn ends in error. */
 const TURN_TIMEOUT_MS = 120_000;
+
+/** Grace after SIGTERM before a killed turn's process group gets SIGKILL. */
+const KILL_GRACE_MS = 3_000;
+
+/** The per-turn secret configs `writeSecretFile` spills (`<prefix>_<ms>_<hex>.json`). */
+const TURN_SECRET_FILE = /^(mcp-config|opencode-chat)_\d+_[0-9a-f]+\.json$/;
+
+/**
+ * Kill a turn's process: SIGTERM to its whole process group (a real child is spawned
+ * detached, so grandchildren — opencode's `claude`, Claude's MCP stdio servers, a Bash
+ * command — go too), SIGKILL after {@link KILL_GRACE_MS}. Nothing may outlive a turn
+ * holding its bearer tokens. Mirrors `RunnerCore`'s group kill + shutdown escalation.
+ */
+export function killTurnProcess(proc: ClaudeProcess): void {
+  const signal = (sig: NodeJS.Signals): void => {
+    try {
+      if (!proc.pid) throw new Error("no pid");
+      process.kill(-proc.pid, sig);
+    } catch {
+      try {
+        proc.kill(sig);
+      } catch {
+        // already gone
+      }
+    }
+  };
+  signal("SIGTERM");
+  setTimeout(() => signal("SIGKILL"), KILL_GRACE_MS).unref?.();
+}
 
 /** Built-in CLI tools a chat turn must never see (see `--disallowedTools` in buildArgs). */
 export const CHAT_HIDDEN_BUILTIN_TOOLS = [
@@ -127,9 +162,24 @@ function hiddenBuiltinTools(keep: readonly string[]): string {
 }
 
 /**
- * The operator's claude.ai Slack connector, read + draft only — pre-approved. Under
- * `--permission-mode auto` the tools off this list (send, schedule, canvas/list edits)
- * are no longer hard-denied: the CLI's classifier decides them.
+ * A30 — the Claude chat turn loads the operator's user-level setup (`--setting-sources
+ * user`: claude.ai connectors, user MCP servers, enabled plugins' MCP servers) but none
+ * of the context it would inject into the butler: `disableAllHooks` stops every hook
+ * (SessionStart "You have superpowers", tool-usage hooks, hook-registered tools), and
+ * these env flags stop `~/.claude/CLAUDE.md` / project CLAUDE.md files and the per-cwd
+ * auto-memory (`~/.claude/projects/<cwd>/memory/MEMORY.md`). Verified on claude 2.1.322.
+ */
+export const CHAT_CLAUDE_SETTINGS = JSON.stringify({ disableAllHooks: true });
+export const CHAT_CLAUDE_ENV = {
+  CLAUDE_CODE_DISABLE_CLAUDE_MDS: "1",
+  CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+} as const;
+
+/**
+ * The operator's claude.ai Slack connector (loaded from the login via user settings,
+ * A30), read + draft only — pre-approved. Under `--permission-mode auto` the tools off
+ * this list (send, schedule, canvas/list edits) are no longer hard-denied: the CLI's
+ * classifier decides them.
  */
 export const CHAT_SLACK_TOOLS = [
   "slack_read_channel",
@@ -178,24 +228,29 @@ export function mergeToolEvent(events: ChatToolEvent[], event: ChatToolEvent): C
 
 /**
  * The conversational engine. One operator message = one streaming `claude` CLI
- * turn (spec §4.1): `claude -p <msg> --resume <sid> --setting-sources ""
- * --append-system-prompt <persona> --output-format stream-json
- * --include-partial-messages --model sonnet`. Token deltas are forwarded live over
- * {@link ChatEventsService}; the finished turn is appended to the JSONL transcript;
- * the threaded session id is persisted for `--resume` on the next turn.
+ * turn (spec §4.1): `claude -p <msg> --resume <sid> --setting-sources user
+ * --settings {"disableAllHooks":true} --append-system-prompt <persona>
+ * --output-format stream-json --include-partial-messages --model sonnet`. Token deltas
+ * are forwarded live over {@link ChatEventsService}; the finished turn is appended to
+ * the JSONL transcript; the threaded session id is persisted for `--resume` on the next
+ * turn.
  *
- * `--setting-sources ""` is the isolation mechanism (verified): it loads none of the
- * operator's user/project/local settings — so the global hooks/plugins that would
- * inject foreign context ("You have superpowers") never fire — while keeping auth
- * (the Max subscription, creds in the keychain) and honoring explicit
- * `--append-system-prompt` / `--mcp-config`.
+ * A30 (supersedes the old `--setting-sources ""` isolation, which on CLI 2.1.322 also
+ * drops every claude.ai connector): the turn loads the operator's USER settings — so
+ * connectors, user MCP servers and plugins' MCP servers are there, exactly as in the
+ * terminal — with hooks, CLAUDE.md files and auto-memory switched off (see
+ * {@link CHAT_CLAUDE_SETTINGS} / {@link CHAT_CLAUDE_ENV}), so nothing foreign ("You have
+ * superpowers", the operator's tool-usage rules) reaches the butler. Project/local
+ * settings are still not loaded.
  *
  * Spawning is isolated behind {@link createProcess} so unit tests drive the full
  * turn (parse → emit → persist) with canned CLI lines and never touch a process.
  */
 @Injectable()
-export class ChatSessionService {
+export class ChatSessionService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(ChatSessionService.name);
+  /** Turn processes still running — reaped on shutdown (they are detached). */
+  private readonly live = new Set<ClaudeProcess>();
   protected readonly model = process.env.ZIBBY_CHAT_MODEL ?? "sonnet";
 
   constructor(
@@ -225,6 +280,22 @@ export class ChatSessionService {
     // The turn runs inside the project's local checkout (path or `<cloneRoot>/<id>`).
     private readonly projectLocal?: ProjectLocalService,
   ) {}
+
+  /** Remove per-turn secret configs a crash left behind. Only files older than any live
+   *  turn could be, so a second API on the same chat dir keeps its in-flight configs. */
+  async onModuleInit(): Promise<void> {
+    const cutoff = Date.now() - TURN_TIMEOUT_MS - KILL_GRACE_MS;
+    const names = await fs.readdir(this.chatDir).catch(() => [] as string[]);
+    for (const name of names.filter((n) => TURN_SECRET_FILE.test(n))) {
+      const file = path.join(this.chatDir, name);
+      const stat = await fs.stat(file).catch(() => undefined);
+      if (stat && stat.mtimeMs < cutoff) await fs.rm(file, { force: true }).catch(() => undefined);
+    }
+  }
+
+  onModuleDestroy(): void {
+    for (const proc of this.live) killTurnProcess(proc);
+  }
 
   /** The turn's project: the `#project` tag, else the project whose `gitRemote` is the
    *  repo of the GitHub URL the chat is about. Its path is THIS machine's checkout. */
@@ -345,15 +416,19 @@ export class ChatSessionService {
     const args = [
       "-p",
       text,
+      // A30: the operator's user setup (connectors, MCP servers, plugins) minus hooks;
+      // CLAUDE.md + auto-memory are off via CHAT_CLAUDE_ENV (see createProcess).
       "--setting-sources",
-      "",
+      "user",
+      "--settings",
+      CHAT_CLAUDE_SETTINGS,
       // Hide the built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
       // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
       // (create_task delegates real work to the workflow). Without this the model
       // tries to build things itself with Bash/Write instead of dispatching a task.
-      // A denylist, not `--tools ""`: with `--setting-sources ""`, ANY `--tools` value
-      // also drops the operator's claude.ai connectors (verified CLI behaviour), which
-      // the Slack allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
+      // A denylist, not `--tools ""`: a `--tools` value also dropped the claude.ai
+      // connectors (verified 2026-10-26, not re-checked under A30), which the Slack
+      // allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
       // without a permission prompt, so they MUST stay on this list; everything else
       // is left to the `auto` permission classifier.
       "--disallowedTools",
@@ -379,7 +454,7 @@ export class ChatSessionService {
       "auto",
     ];
     if (sessionId) args.push("--resume", sessionId);
-    args.push(...(await this.toolArgs(conversationId, teamId, tags?.project?.path)));
+    args.push(...(await this.toolArgs(conversationId, teamId)));
     return args;
   }
 
@@ -508,9 +583,10 @@ export class ChatSessionService {
    * `0600` file under the chat dir (`resolveChatDir()`, gitignored) and passed as
    * `--mcp-config <path>`; only the file PATH goes on argv. A fresh, collision-safe
    * filename per call (mirrors the runner's `buildMcpConfigArgs`, minus a shared
-   * per-run sandbox dir chat doesn't have) — left on disk after the turn (chat has
-   * no per-run cleanup sweep; the file carries no secret usable outside this boot
-   * and sits mode-0600 in a gitignored dir).
+   * per-run sandbox dir chat doesn't have). {@link runTurn} deletes it on every exit
+   * path of the turn, and {@link onModuleInit} sweeps any a crash left. Since A30 it
+   * holds ZibbyOS's own servers only: the operator's servers load natively from user
+   * settings, so their secrets are never copied into this file.
    *
    * `--allowedTools` widens to cover both servers (`mcp__zibby__*,mcp__zibby-kb__*`).
    * Per commit `eb525567`, this list is a PROMPTING hint, not a toolset filter — a
@@ -521,14 +597,11 @@ export class ChatSessionService {
    * classifier instead — that is how the chat gets Jira & co.)
    *
    * {@link CHAT_SLACK_TOOLS} adds the operator's claude.ai Slack connector, which the
-   * CLI loads from the operator's login (not from `mcpServers`), read + draft only.
+   * CLI loads from the operator's login + user settings (not from `mcpServers`), read +
+   * draft only.
    */
-  protected async toolArgs(
-    conversationId: string,
-    teamId?: string,
-    cwd?: string,
-  ): Promise<string[]> {
-    const config = { mcpServers: await this.mcpServers(conversationId, teamId, cwd) };
+  protected async toolArgs(conversationId: string, teamId?: string): Promise<string[]> {
+    const config = { mcpServers: this.mcpServers(conversationId, teamId) };
     const file = await this.writeSecretFile("mcp-config", config);
     return [
       "--mcp-config",
@@ -540,21 +613,14 @@ export class ChatSessionService {
   }
 
   /**
-   * The turn's MCP servers: A23's operator servers (user scope + enabled plugins, read
-   * from Claude Code's config) under ZibbyOS's own `zibby` / `zibby-kb`, which always win
-   * a name clash. Both bearer tokens ride in here, so it only ever goes to a 0600 file.
+   * ZibbyOS's own `zibby` / `zibby-kb` servers (both engines). Both bearer tokens ride in
+   * here, so it only ever goes to a 0600 file.
    */
-  private async mcpServers(
+  private mcpServers(
     conversationId: string,
     teamId?: string,
-    /** Where the turn runs (decides the operator's per-project disabled servers); `null`
-     *  = mount ZibbyOS's own servers only. */
-    cwd?: string | null,
-  ): Promise<Record<string, Record<string, unknown>>> {
-    const operator =
-      cwd === null ? [] : await this.operatorMcpServers(cwd ?? process.cwd()).catch(() => []);
+  ): Record<string, Record<string, unknown>> {
     return {
-      ...Object.fromEntries(operator.map((s) => [s.id, s.config])),
       zibby: {
         type: "http",
         url: this.mcpBaseUrl(conversationId),
@@ -566,13 +632,6 @@ export class ChatSessionService {
         headers: { Authorization: `Bearer ${this.kbMcpAuth.chatBearerToken}` },
       },
     };
-  }
-
-  /** A23 — the operator's own MCP servers; the test seam (tests mount none). */
-  protected operatorMcpServers(
-    cwd: string,
-  ): Promise<{ id: string; config: Record<string, unknown> }[]> {
-    return readOperatorMcpServers(resolveClaudeLocations(), cwd);
   }
 
   /** Spill a secret-bearing JSON config to a fresh 0600 file under the chat dir. */
@@ -599,32 +658,37 @@ export class ChatSessionService {
   ): Promise<{ args: string[]; env: NodeJS.ProcessEnv; configFile: string; serverIds: string[] }> {
     const agent = await this.turnAgent(conversationId);
     const prompt = await this.buildPrompt(conversationId, agent, tags);
-    // A25: only ZibbyOS's own servers. The operator's servers stay on the Claude engine,
-    // where the CLI's auto classifier judges their calls; opencode has no classifier and
-    // would run e.g. Playwright's `browser_run_code_unsafe` unasked (seen live).
-    const servers = await this.mcpServers(conversationId, teamId, null);
+    // A25: only ZibbyOS's own servers. The operator's servers stay on the Claude engine
+    // (loaded there from user settings, A30), where the CLI's auto classifier judges their
+    // calls; opencode has no classifier and would run e.g. Playwright's
+    // `browser_run_code_unsafe` unasked (seen live).
+    const servers = this.mcpServers(conversationId, teamId);
+    // Inline delegation, not a run: an `@agent` turn never spawns a task (as on Claude).
+    // Denied by the config AND by the chat gate plugin (defence in depth).
+    const denyTools = agent ? ["zibby_create_task"] : [];
     const { config, serverIds } = buildOpencodeChatConfig(
       `${prompt}\n\n${OPENCODE_CHAT_NOTE}`,
       servers,
-      // Inline delegation, not a run: an `@agent` turn never spawns a task (as on Claude).
-      agent ? ["zibby_create_task"] : [],
+      denyTools,
     );
     const configFile = await this.writeSecretFile("opencode-chat", config);
     return {
       args: opencodeChatArgs(model, sessionId, text),
-      env: opencodeChatEnv(configFile, tags?.project?.path ?? process.cwd(), serverIds),
+      env: opencodeChatEnv(configFile, tags?.project?.path ?? process.cwd(), serverIds, denyTools),
       configFile,
       serverIds,
     };
   }
 
-  /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */
+  /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. Detached
+   *  (own process group) so {@link killTurnProcess} takes the grandchildren down too. */
   protected createProcess(args: string[], cwd?: string, opts?: ChatSpawnOptions): ClaudeProcess {
     return spawn(opts?.command ?? process.env.CLAUDE_BIN ?? "claude", args, {
       ...(cwd ? { cwd } : {}),
+      detached: true,
       // opencode's stderr is never read; an unread pipe could stall it.
       stdio: ["ignore", "pipe", opts ? "ignore" : "pipe"],
-      env: opts?.env ?? agentBaseEnv(),
+      env: opts?.env ?? agentBaseEnv(CHAT_CLAUDE_ENV),
     }) as ChildProcess;
   }
 
@@ -702,15 +766,27 @@ export class ChatSessionService {
         tags,
       );
     }
-    const proc = opencodeTurn
-      ? this.createProcess(opencodeTurn.args, tags?.project?.path, {
-          command: opencodeBin(),
-          env: opencodeTurn.env,
-        })
-      : this.createProcess(
-          await this.buildArgs(text, sessionId, conversationId, teamId, tags),
-          tags?.project?.path,
-        );
+    const claudeArgs = opencodeTurn
+      ? undefined
+      : await this.buildArgs(text, sessionId, conversationId, teamId, tags);
+    // The turn's secret-bearing config (ZibbyOS's bearer tokens): deleted
+    // once the turn ends, whatever way it ends.
+    const secretFile =
+      opencodeTurn?.configFile ?? claudeArgs?.[claudeArgs.indexOf("--mcp-config") + 1];
+    const removeSecretFile = (): Promise<void> =>
+      secretFile ? fs.rm(secretFile, { force: true }).catch(() => undefined) : Promise.resolve();
+    let proc: ClaudeProcess;
+    try {
+      proc = opencodeTurn
+        ? this.createProcess(opencodeTurn.args, tags?.project?.path, {
+            command: opencodeBin(),
+            env: opencodeTurn.env,
+          })
+        : this.createProcess(claudeArgs ?? [], tags?.project?.path);
+    } catch (error) {
+      await removeSecretFile();
+      throw error;
+    }
     const parseLine = opencodeTurn
       ? (line: string) => parseOpencodeChatLine(line, opencodeTurn.serverIds)
       : parseChatStreamLine;
@@ -789,6 +865,7 @@ export class ChatSessionService {
       }
     };
 
+    this.live.add(proc);
     await new Promise<void>((resolve) => {
       let buffer = "";
       let settled = false;
@@ -800,7 +877,7 @@ export class ChatSessionService {
       };
       const timer = setTimeout(() => {
         errored = errored ?? "Odpověď trvala příliš dlouho.";
-        proc.kill("SIGTERM");
+        killTurnProcess(proc);
         finish();
       }, TURN_TIMEOUT_MS);
       timer.unref?.();
@@ -819,10 +896,12 @@ export class ChatSessionService {
         }
       });
       proc.on("error", (err) => {
+        this.live.delete(proc);
         errored = errored ?? String(err);
         finish();
       });
       proc.on("close", (code) => {
+        this.live.delete(proc);
         if (buffer.trim()) consumeLine(buffer);
         if (code && !errored && !accumulated) {
           errored = `${opencodeTurn ? "opencode" : "claude"} skončil s kódem ${code}.`;
@@ -830,7 +909,7 @@ export class ChatSessionService {
         finish();
       });
     });
-    if (opencodeTurn) await fs.rm(opencodeTurn.configFile, { force: true }).catch(() => undefined);
+    await removeSecretFile();
 
     // The turn is over: stop reacting to live pushes, then sweep anything that was
     // queued because it arrived with no subscriber listening (e.g. it landed in the
@@ -849,6 +928,10 @@ export class ChatSessionService {
 
     clearTurnState();
 
+    // opencode can exit 0 with neither text nor an error event — never store an empty reply.
+    if (opencodeTurn && !errored && !accumulated.trim() && toolEvents.length === 0) {
+      errored = "opencode skončil bez odpovědi.";
+    }
     if (errored && !accumulated) {
       this.events.emit({ conversationId, turnId, type: "error", message: errored });
       return;
