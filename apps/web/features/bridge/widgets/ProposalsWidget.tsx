@@ -49,7 +49,6 @@ export enum ProposalsWidgetTestId {
 
 const DAY_MS = 86_400_000;
 
-/** Whole days until `expiresAt` (rounded up, never negative). */
 /**
  * What the approve dialog prefills when no sample task is available: the stored sample, else the
  * first `("…")` quoted group of the proposal text (older proposals), `task created:` stripped.
@@ -59,6 +58,7 @@ export const proposalPrompt = (p: Pick<Proposal, "text" | "provenance">): string
   /\("([^"]+)"\)/.exec(p.text)?.[1]?.replace(/^task created:\s*/i, "") ||
   undefined;
 
+/** Whole days until `expiresAt` (rounded up, never negative). */
 export const proposalExpiryDays = (expiresAt: string, now: number): number =>
   Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / DAY_MS));
 

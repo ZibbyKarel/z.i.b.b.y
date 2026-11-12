@@ -25,13 +25,15 @@ and drafts "I noticed X — automate it?" suggestions for the morning briefing.
 **Proposes ≠ acts.** The GapDetector only writes a vault note; it never creates an
 automation or dispatches anything. Approving a suggestion is an operator action: the
 Bridge Proposals widget's **Approve** opens the create-automation dialog prefilled
-from the gap's most recent task (`provenance.taskId`); once the automation is created
+from the gap's most recent task (`provenance.taskId`). The prompt prefills in this order:
+the sample task's text, else `provenance.sample` (the recurring task's title), else the
+quoted part of a legacy suggestion's text; once the automation is created
 the proposal is decided `approve`.
 
 ## Structured proposals (TODO 14)
 
 Each gap is also upserted as a `gap-detect` proposal (dedupe key = the normalised
-pattern, provenance `{ automationId, noteId: "automation-gaps", taskId }`).
+pattern, provenance `{ automationId, noteId: "automation-gaps", taskId, sample }`).
 An open gap proposal the run no longer reports is expired on the spot
 (`ProposalsService.expireUnseen`) instead of lingering for 30 days.
 Dismissed and approved proposals are left out of the note; edited ones are written with their

@@ -97,7 +97,10 @@ export class GapDetectorService {
     };
     const suggestions: string[] = [];
     for (const g of gaps) {
-      const sample = g.sample.replace(/^task created:\s*/i, "").slice(0, PROPOSAL_TEXT_MAX);
+      const sample = g.sample
+        .replace(/^task created:\s*/i, "")
+        .trim()
+        .slice(0, PROPOSAL_TEXT_MAX);
       const [line] = await this.proposals.syncNoteLines(
         "gap-detect",
         [{ key: g.pattern, text: toSuggestion(g), occurrences: g.count }],
