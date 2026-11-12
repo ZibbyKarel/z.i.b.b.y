@@ -8,6 +8,8 @@ import {
   SheetSection,
   SheetText,
 } from "@zibby/design-system";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useTriggerAutomationMutation } from "../../../automations/mutations";
 import { useAutomationsQuery } from "../../../automations/queries";
@@ -35,6 +37,7 @@ function targetLabel(target: Automation["target"]): string {
 export function AutomationSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
   const a = useTranslations("bridge.widgets.automationRuns");
+  const router = useRouter();
   const format = useFormatter();
   const cronLabel = useCronLabel();
   const { data: automations } = useAutomationsQuery();
@@ -61,6 +64,7 @@ export function AutomationSheet({ id, anchor, onClose }: SheetProps) {
       closeLabel={t("bridge.sheet.close")}
       kind={t("bridge.sheet.kind.automation")}
       onClose={onClose}
+      onTitleClick={() => router.push(`/work/automations/${encodeURIComponent(id)}` as Route)}
       title={automation.name ?? automation.id}
     >
       <SheetSection>

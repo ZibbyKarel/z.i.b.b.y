@@ -2,10 +2,15 @@ import type { Automation } from "@zibby/contracts";
 import { AnchoredSheetTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { renderWithProviders, screen } from "../../../../test/render";
+import { renderWithProviders, screen, within } from "../../../../test/render";
 import { AutomationSheet, AutomationSheetTestId } from "./AutomationSheet";
 
-const d = vi.hoisted(() => ({ trigger: vi.fn() }));
+const d = vi.hoisted(() => ({ trigger: vi.fn(), push: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: d.push }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 const automation: Automation = {
   id: "nightly",
   name: "Nightly review",
@@ -44,6 +49,14 @@ describe("AutomationSheet", () => {
     );
     await userEvent.click(screen.getByTestId(AutomationSheetTestId.RunNow));
     expect(d.trigger).toHaveBeenCalledWith({ params: { id: "nightly" }, body: {} });
+  });
+
+  it("the title opens the automation detail page", async () => {
+    renderWithProviders(<AutomationSheet anchor={anchor} id="nightly" onClose={vi.fn()} />);
+    await userEvent.click(
+      within(screen.getByTestId(AnchoredSheetTestId.Title)).getByRole("button"),
+    );
+    expect(d.push).toHaveBeenCalledWith("/work/automations/nightly");
   });
 
   it("renders nothing for an unknown id", () => {
