@@ -20,6 +20,8 @@ export * from "./projects/resolved-project-context.schema";
 export * from "./projects/projects.contract";
 export * from "./project-health/project-health.schema";
 export * from "./project-health/project-health.contract";
+export * from "./project-ci/project-ci.schema";
+export * from "./project-ci/project-ci.contract";
 export * from "./inventory/inventory.schema";
 export * from "./inventory/inventory.contract";
 export * from "./proposals/proposal.schema";
