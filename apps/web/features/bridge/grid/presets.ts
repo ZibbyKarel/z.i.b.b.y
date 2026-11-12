@@ -7,15 +7,13 @@ const DEFAULT_TUPLES: readonly WidgetTuple[] = [
   ["briefing", 0, 0, 12, 3],
   ["issues", 0, 3, 4, 18],
   ["prs", 4, 3, 4, 18],
-  ["tasks", 8, 3, 4, 10],
-  ["runs", 8, 13, 4, 8],
+  ["runs", 8, 3, 4, 18],
 ];
 
 const REVIEW_TUPLES: readonly WidgetTuple[] = [
   ["prs", 0, 0, 6, 21],
   ["issues", 6, 0, 3, 21],
-  ["tasks", 9, 0, 3, 11],
-  ["runs", 9, 11, 3, 10],
+  ["runs", 9, 0, 3, 21],
 ];
 
 export const DEFAULT_LAYOUT: BridgeWidget[] = fromArr(DEFAULT_TUPLES);

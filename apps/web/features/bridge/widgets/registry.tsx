@@ -13,7 +13,6 @@ import { PrsWidget } from "./PrsWidget";
 import { ProposalsWidget } from "./ProposalsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
-import { TasksWidget } from "./TasksWidget";
 import { TeamKbWidget, TeamKbWidgetSettings } from "./TeamKbWidget";
 import { TodoWidget } from "./TodoWidget";
 import { WidgetSortSettings } from "./widgetFilters";
@@ -123,12 +122,6 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     Component: IssuesWidget,
     Filters: IssuesFilterControls,
     Settings: WidgetSortSettings,
-  },
-  tasks: {
-    labelKey: "bridge.widget.tasks.label",
-    descKey: "bridge.widget.tasks.desc",
-    icon: "check",
-    Component: TasksWidget,
   },
   prs: {
     labelKey: "bridge.widget.prs.label",

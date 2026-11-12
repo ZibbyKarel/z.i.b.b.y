@@ -19,7 +19,6 @@ import { IssuesWidget, IssuesWidgetTestId } from "./IssuesWidget";
 import { PrsWidget, PrsWidgetTestId } from "./PrsWidget";
 import type { BridgeWidgetProps } from "./registry";
 import { RunsWidget, RunsWidgetTestId } from "./RunsWidget";
-import { TasksWidget } from "./TasksWidget";
 import { WidgetSortControlTestId } from "./widgetFilters";
 
 const refreshMutate = vi.hoisted(() => vi.fn());
@@ -535,47 +534,6 @@ const run = (runId: string, status: string, over: Record<string, unknown> = {}) 
   ...over,
 });
 
-describe("TasksWidget (task queue)", () => {
-  it("shows only waiting runs; opens the task (scheduled: its own id); static without one", async () => {
-    d.runs = [
-      run("a", "running"),
-      run("q", "queued"),
-      run("s", "scheduled", { kind: "scheduled", taskId: undefined }),
-      run("h", "held", { taskId: undefined }),
-      run("w", "awaiting-approval"),
-    ];
-    const props = setup({ widget: widget("w-tasks", "tasks") });
-    renderWithProviders(<TasksWidget {...props} />);
-    const rows = screen.getAllByTestId(BoardRowTestId.Root);
-    expect(rows).toHaveLength(3);
-    expect(rows[0]).toHaveTextContent("Run q");
-    expect(rows[0]).toHaveTextContent("ve frontě");
-    expect(rows[1]).toHaveTextContent("naplánováno");
-    expect(rows[2]?.tagName).toBe("DIV");
-    await userEvent.click(rows[1] as HTMLElement);
-    expect(props.onOpen).toHaveBeenCalledWith({
-      kind: "task",
-      id: "s",
-      widgetId: "w-tasks",
-      key: "w-tasks:s",
-      href: "/work/tasks/s",
-    });
-    expect(props.onCountChange).toHaveBeenLastCalledWith({
-      count: 3,
-      you: 0,
-      aside: undefined,
-      loading: false,
-    });
-  });
-
-  it("is empty when nothing waits", () => {
-    d.runs = [run("a", "running")];
-    const props = setup({ widget: widget("w", "tasks") });
-    renderWithProviders(<TasksWidget {...props} />);
-    expect(props.onEmptyChange).toHaveBeenLastCalledWith(true);
-  });
-});
-
 describe("RunsWidget", () => {
   it("renders live runs with progress, state and issue; opens the run", async () => {
     d.runs = [
@@ -706,16 +664,17 @@ describe("RunsWidget", () => {
     });
   });
 
-  it("splits active (no waiting) from the last finished, with state-coloured bars and headers", () => {
+  it("splits active (started, then waiting) from the last finished, with state-coloured bars and headers", () => {
     d.runs = [run("a", "running", { pct: 10 }), run("q", "queued")];
     d.archived = [run("d", "done"), run("e", "error")];
     const props = setup({ widget: widget("w-runs", "runs") });
     renderWithProviders(<RunsWidget {...props} />);
     const headers = screen.getAllByTestId(RowGroupHeaderTestId.Title);
-    expect(headers.map((h) => h.textContent)).toEqual(["Běží", "Ukončené"]);
+    expect(headers.map((h) => h.textContent)).toEqual(["Aktivní", "Ukončené"]);
     const rows = screen.getAllByTestId(BoardRowTestId.Root);
     expect(rows.map((r) => r.getAttribute("data-rk"))).toEqual([
       "w-runs:a",
+      "w-runs:q",
       "w-runs:d",
       "w-runs:e",
     ]);
@@ -726,7 +685,7 @@ describe("RunsWidget", () => {
     expect(icon("d")).toHaveClass("text-ok");
     expect(icon("e")).toHaveClass("text-bad");
     expect(props.onCountChange).toHaveBeenLastCalledWith({
-      count: 3,
+      count: 4,
       you: 0,
       aside: undefined,
       loading: false,
@@ -738,7 +697,7 @@ describe("RunsWidget", () => {
     const props = setup({ widget: widget("w-runs", "runs") });
     const { unmount } = renderWithProviders(<RunsWidget {...props} />);
     expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
-      "Běží",
+      "Aktivní",
     ]);
     unmount();
     d.runs = [];
@@ -749,18 +708,13 @@ describe("RunsWidget", () => {
     ]);
   });
 
-  it("the queue and the running widget never show the same run", () => {
+  it("shows every live run exactly once, waiting ones included", () => {
     d.runs = [run("a", "running"), run("p", "pending"), run("q", "queued"), run("s", "scheduled")];
-    const keys = (ui: React.ReactElement) => {
-      const view = renderWithProviders(ui);
-      const k = screen.getAllByTestId(BoardRowTestId.Root).map((r) => r.getAttribute("data-rk"));
-      view.unmount();
-      return k.map((x) => x?.split(":")[1]);
-    };
-    const queue = keys(<TasksWidget {...setup({ widget: widget("w", "tasks") })} />);
-    const active = keys(<RunsWidget {...setup({ widget: widget("w", "runs") })} />);
-    expect(queue.filter((k) => active.includes(k))).toEqual([]);
-    expect([...queue, ...active].sort()).toEqual(["a", "p", "q", "s"]);
+    renderWithProviders(<RunsWidget {...setup({ widget: widget("w", "runs") })} />);
+    const keys = screen
+      .getAllByTestId(BoardRowTestId.Root)
+      .map((r) => r.getAttribute("data-rk")?.split(":")[1]);
+    expect(keys).toEqual(["a", "p", "q", "s"]);
   });
 
   it("is empty with no live runs", () => {

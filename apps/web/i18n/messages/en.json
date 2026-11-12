@@ -3338,7 +3338,7 @@
         "colProgress": "Progress",
         "colIssue": "Issue",
         "group": {
-          "active": "Running",
+          "active": "Active",
           "finished": "Finished"
         },
         "state": {
@@ -3487,17 +3487,13 @@
         "label": "Issues",
         "desc": "Jira and GitHub items, grouped under their epic"
       },
-      "tasks": {
-        "label": "Task queue",
-        "desc": "Runs waiting to start: queued, scheduled, held"
-      },
       "prs": {
         "label": "Pull requests",
         "desc": "Agent PRs and your own, with stacks"
       },
       "runs": {
         "label": "Runs",
-        "desc": "Active runs and the last 10 finished ones"
+        "desc": "Active and waiting runs and the last 10 finished ones"
       },
       "pins": {
         "label": "Pinned",

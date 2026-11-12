@@ -45,7 +45,7 @@ export function findSelectedRun(list: readonly RunView[], selId: string | null):
  */
 const STOPPABLE_KINDS = new Set<RunKind>(["agent", "workflow", "goal"]);
 
-/** Not yet started: the Bridge queue widget shows these, the running widget the rest. */
+/** Not yet started: the Bridge Runs widget lists these below the started runs in its Active group. */
 export const WAITING_STATES = new Set(["scheduled", "queued", "held"]);
 
 /** A still-waiting task (never dispatched) — "stop" cancels it out of the queue. */
