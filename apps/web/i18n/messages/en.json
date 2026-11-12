@@ -195,7 +195,9 @@
     "retry": "Try again",
     "mutationError": "That didn't go through — your change wasn't saved. Please try again.",
     "back": "Back",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "copied": "Copied",
+    "copyFailed": "Copy failed"
   },
   "tasks": {
     "dialogTitle": "New task",
@@ -3624,7 +3626,10 @@
         "copyBranch": "Copy branch",
         "copyNumber": "Copy PR number",
         "tabOverview": "Overview",
-        "noDescription": "No description provided."
+        "noDescription": "No description provided.",
+        "draftFailedNoReason": "Changing the draft state failed.",
+        "closeFailedNoReason": "Closing the PR failed.",
+        "descriptionTruncated": "Description truncated, view on GitHub ↗"
       },
       "run": {
         "open": "Open run ↗",

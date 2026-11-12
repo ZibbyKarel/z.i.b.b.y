@@ -25,6 +25,7 @@ import {
   Tab,
   TabList,
   Tabs,
+  TextLink,
   Typography,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
@@ -85,6 +86,20 @@ export enum PrSheetTestId {
   Overview = "pr-sheet-overview",
   Changes = "pr-sheet-changes",
   IssueLink = "pr-sheet-issue-link",
+  DescriptionTruncated = "pr-sheet-description-truncated",
+}
+
+/** PR bodies are untrusted: only images GitHub hosts are loaded; others render as links. */
+export function isGithubImage(src: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(src);
+    return (
+      protocol === "https:" &&
+      (hostname === "github.com" || hostname.endsWith(".githubusercontent.com"))
+    );
+  } catch {
+    return false;
+  }
 }
 
 /** `prStatus` tone vocabulary → DS sheet tones. */
@@ -161,9 +176,15 @@ function IconValue({ icon, text }: { icon: StatIcon; text: string }) {
 
 /** A branch name in the code voice with a copy button; a fork head has none (dash, no copy). */
 function Branch({ name, copyLabel, testId }: { name?: string; copyLabel: string; testId: string }) {
+  const t = useTranslations();
   if (!name) return <Typography type="code">—</Typography>;
   return (
-    <Copyable copyLabel={copyLabel} text={name}>
+    <Copyable
+      copiedLabel={t("common.copied")}
+      copyFailedLabel={t("common.copyFailed")}
+      copyLabel={copyLabel}
+      text={name}
+    >
       <Typography as="span" data-testid={testId} type="code">
         {name}
       </Typography>
@@ -238,7 +259,14 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       { ...target, body: { draft: !pr.draft } },
       {
         onSuccess: () => setError(null),
-        onError: (err) => setError(t("bridge.sheet.pr.draftFailed", { reason: errorReason(err) })),
+        onError: (err) => {
+          const reason = errorReason(err);
+          setError(
+            reason
+              ? t("bridge.sheet.pr.draftFailed", { reason })
+              : t("bridge.sheet.pr.draftFailedNoReason"),
+          );
+        },
       },
     );
 
@@ -340,7 +368,12 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       kind={
         <>
           {`${t("bridge.sheet.kind.pr")} · `}
-          <CopyableText copyLabel={t("bridge.sheet.pr.copyNumber")} text={`#${pr.number}`} />
+          <CopyableText
+            copiedLabel={t("common.copied")}
+            copyFailedLabel={t("common.copyFailed")}
+            copyLabel={t("bridge.sheet.pr.copyNumber")}
+            text={`#${pr.number}`}
+          />
         </>
       }
       meta={
@@ -436,7 +469,21 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
           {tab === "overview" ? (
             <Container data-testid={PrSheetTestId.Overview}>
               {pr.body ? (
-                <Markdown escapeHtml source={pr.body} />
+                <Stack gap="100">
+                  <Markdown escapeHtml allowImage={isGithubImage} source={pr.body} />
+                  {pr.descriptionTruncated ? (
+                    <Typography type="note" variant="secondary">
+                      <TextLink
+                        data-testid={PrSheetTestId.DescriptionTruncated}
+                        href={pr.url}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        {t("bridge.sheet.pr.descriptionTruncated")}
+                      </TextLink>
+                    </Typography>
+                  ) : null}
+                </Stack>
               ) : (
                 <SheetText lines={[t("bridge.sheet.pr.noDescription")]} />
               )}
@@ -473,10 +520,16 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
                 onSuccess: () => {
                   setConfirmClose(false);
                   setError(null);
+                  onClose();
                 },
                 onError: (err) => {
                   setConfirmClose(false);
-                  setError(t("bridge.sheet.pr.closeFailed", { reason: errorReason(err) }));
+                  const reason = errorReason(err);
+                  setError(
+                    reason
+                      ? t("bridge.sheet.pr.closeFailed", { reason })
+                      : t("bridge.sheet.pr.closeFailedNoReason"),
+                  );
                 },
               },
             )

@@ -26,6 +26,8 @@ export enum MarkdownTestId {
   CodeBlock = "markdown-code-block",
   /** A span marked by the `highlight` prop. */
   Mark = "markdown-mark",
+  /** An image `allowImage` rejected, rendered as a link instead. */
+  BlockedImage = "markdown-blocked-image",
 }
 
 /** Minimal shape of the mdast nodes the escape plugin walks (no external dep). */
@@ -179,6 +181,32 @@ export interface MarkdownProps {
    * (memoised) — it is part of the plugin list.
    */
   highlight?: (text: string) => HighlightRange[];
+  /**
+   * Image source allowlist. When set, an image whose `src` fails it is not loaded (no tracking
+   * pixels from untrusted bodies) and renders as a plain link to the source instead.
+   */
+  allowImage?: (src: string) => boolean;
+}
+
+function withImageGuard(
+  components: MarkdownRendererComponents,
+  allowImage: ((src: string) => boolean) | undefined,
+): MarkdownRendererComponents {
+  if (!allowImage) return components;
+  return {
+    ...components,
+    img: ({ src, alt, title }) => {
+      const url = typeof src === "string" ? src : "";
+      // a plain <img>: the DS is framework-agnostic (no next/image)
+      // eslint-disable-next-line @next/next/no-img-element
+      if (url && allowImage(url)) return <img alt={alt} src={url} title={title} />;
+      return (
+        <a data-testid={MarkdownTestId.BlockedImage} href={url} rel="noreferrer" target="_blank">
+          {alt || url}
+        </a>
+      );
+    },
+  };
 }
 
 /**
@@ -193,13 +221,14 @@ export function Markdown({
   escapeHtml = false,
   variant = "default",
   highlight,
+  allowImage,
 }: MarkdownProps) {
   const rehypePlugins = highlight ? [rehypeHighlight(highlight)] : undefined;
   if (variant === "prose") {
     return (
       <div className="md-prose" data-testid={MarkdownTestId.Root}>
         <MDEditor.Markdown
-          components={proseComponents}
+          components={withImageGuard(proseComponents, allowImage)}
           rehypePlugins={rehypePlugins}
           remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
           source={source}
@@ -215,7 +244,7 @@ export function Markdown({
           palette there, so vars set on the wrapper are shadowed (light-grey
           text on the light theme). */}
       <MDEditor.Markdown
-        components={testIdComponents}
+        components={withImageGuard(testIdComponents, allowImage)}
         rehypePlugins={rehypePlugins}
         remarkPlugins={escapeHtml ? ESCAPE_HTML_PLUGINS : undefined}
         source={source}

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Copyable, CopyableTestId } from "./Copyable";
@@ -31,5 +31,40 @@ describe("Copyable", () => {
     );
     await userEvent.click(screen.getByTestId(CopyableTestId.Copy));
     expect(writeText).toHaveBeenCalledWith("#42");
+  });
+
+  it("shows and announces the copied state, then resets after ~1.5 s", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+    render(<Copyable copiedLabel="Zkopírováno" text="x" />);
+    const status = screen.getByTestId(CopyableTestId.Status);
+    expect(status).toHaveAttribute("aria-live", "polite");
+    expect(status).toBeEmptyDOMElement();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await userEvent.click(screen.getByTestId(CopyableTestId.Copy));
+      expect(status).toHaveTextContent("Zkopírováno");
+      act(() => vi.advanceTimersByTime(1600));
+      expect(status).toBeEmptyDOMElement();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a failure state when the clipboard rejects or is missing", async () => {
+    vi.stubGlobal("navigator", {
+      ...navigator,
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    const { unmount } = render(<Copyable copyFailedLabel="Nelze zkopírovat" text="x" />);
+    await userEvent.click(screen.getByTestId(CopyableTestId.Copy));
+    expect(screen.getByTestId(CopyableTestId.Status)).toHaveTextContent("Nelze zkopírovat");
+    unmount();
+    vi.stubGlobal("navigator", { ...navigator, clipboard: undefined });
+    render(<Copyable text="x" />);
+    await userEvent.click(screen.getByTestId(CopyableTestId.Copy));
+    expect(screen.getByTestId(CopyableTestId.Status)).toHaveTextContent("Copy failed");
   });
 });

@@ -249,7 +249,12 @@ function InboxItemView({ item: it }: { item: InboxRoadmapItem }) {
               <Typography type="label">{t("detail.back")}</Typography>
             </TextLink>
             <Typography type="label">
-              <CopyableText copyLabel={tCommon("copyId")} text={key} />
+              <CopyableText
+                copiedLabel={tCommon("copied")}
+                copyFailedLabel={tCommon("copyFailed")}
+                copyLabel={tCommon("copyId")}
+                text={key}
+              />
               {` · ${[sourceName, it.project.name].join(" · ")}`}
             </Typography>
             {it.source.url ? (

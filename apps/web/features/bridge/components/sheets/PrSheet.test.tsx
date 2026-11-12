@@ -4,6 +4,7 @@ import {
   CopyableTestId,
   DialogTestId,
   IconTestId,
+  MarkdownTestId,
   MenuButtonTestId,
   MetricStripTestId,
   StackCrumbsTestId,
@@ -115,9 +116,23 @@ const linkedIssue = (p: InboxPr) => ({
   updatedAt: "2026-01-01T00:00:00.000Z",
 });
 
-const show = (p: InboxPr, all: InboxPr[] = [p]) => {
+const show = (p: InboxPr, all: InboxPr[] = [p], onClose: () => void = () => {}) => {
   hooks.prs = all;
-  return renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={() => {}} />);
+  return renderWithProviders(<PrSheet anchor={anchor} id={p.url} onClose={onClose} />);
+};
+
+type MutateOpts = { onSuccess?: () => void; onError?: (err: unknown) => void };
+
+const confirmClose = () => {
+  fireEvent.click(
+    within(screen.getByTestId(AnchoredSheetTestId.Actions)).getByTestId(MenuButtonTestId.Trigger),
+  );
+  fireEvent.click(screen.getByTestId(`${MenuButtonTestId.Item}-close`));
+  fireEvent.click(
+    within(screen.getByTestId(DialogTestId.Footer)).getByRole("button", {
+      name: "Zavřít pull request",
+    }),
+  );
 };
 
 afterEach(() => {
@@ -339,6 +354,36 @@ describe("PrSheet content", () => {
     );
   });
 
+  it("closes the sheet after a successful close", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) => opts.onSuccess?.());
+    const onClose = vi.fn();
+    show(pr(52, {}), undefined, onClose);
+    confirmClose();
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("a failed close without a message has no dangling colon", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) =>
+      opts.onError?.({ status: 500, body: {} }),
+    );
+    show(pr(53, {}));
+    confirmClose();
+    expect(screen.getByTestId(AnchoredSheetTestId.FooterNote)).toHaveTextContent(
+      /^Zavření PR selhalo\.$/,
+    );
+  });
+
+  it("a failed close with a message shows it", () => {
+    closePr.mockImplementation((_vars: unknown, opts: MutateOpts) =>
+      opts.onError?.({ status: 409, body: { message: "nope" } }),
+    );
+    show(pr(54, {}));
+    confirmClose();
+    expect(screen.getByTestId(AnchoredSheetTestId.FooterNote)).toHaveTextContent(
+      "Zavření PR selhalo: nope",
+    );
+  });
+
   it("has no ⋯ menu on someone else's PR", () => {
     show(pr(51, { bucket: "to-review", section: "needs-your-review" }));
     expect(screen.queryByTestId(MenuButtonTestId.Trigger)).toBeNull();
@@ -356,6 +401,33 @@ describe("PrSheet content", () => {
       screen.getByTestId("pr-diff"),
     );
     expect(screen.queryByTestId(PrSheetTestId.Overview)).toBeNull();
+  });
+
+  it("a truncated description links to GitHub", () => {
+    const p = pr(62, { body: "Long text", descriptionTruncated: true });
+    show(p);
+    const link = screen.getByTestId(PrSheetTestId.DescriptionTruncated);
+    expect(link).toHaveAttribute("href", p.url);
+    expect(link).toHaveTextContent("zobrazit na GitHubu");
+  });
+
+  it("Overview shows GitHub-hosted images only; others become links", () => {
+    show(
+      pr(63, {
+        body: "![a](https://user-images.githubusercontent.com/1.png) ![b](https://github.com/x.png) ![c](https://evil.example/p.png)",
+      }),
+    );
+    const imgs = Array.from(
+      screen.getByTestId(PrSheetTestId.Overview).getElementsByTagName("img"),
+    ).map((i) => i.getAttribute("src"));
+    expect(imgs).toEqual([
+      "https://user-images.githubusercontent.com/1.png",
+      "https://github.com/x.png",
+    ]);
+    expect(screen.getByTestId(MarkdownTestId.BlockedImage)).toHaveAttribute(
+      "href",
+      "https://evil.example/p.png",
+    );
   });
 
   it("Overview says so when the PR has no description", () => {

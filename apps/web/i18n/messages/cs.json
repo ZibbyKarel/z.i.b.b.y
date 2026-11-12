@@ -195,7 +195,9 @@
     "retry": "Zkusit znovu",
     "mutationError": "Akce se nepovedla — změna se neuložila. Zkus to prosím znovu.",
     "back": "Zpět",
-    "skipToContent": "Přeskočit na obsah"
+    "skipToContent": "Přeskočit na obsah",
+    "copied": "Zkopírováno",
+    "copyFailed": "Kopírování selhalo"
   },
   "tasks": {
     "dialogTitle": "Nový task",
@@ -3624,7 +3626,10 @@
         "copyBranch": "Kopírovat větev",
         "copyNumber": "Kopírovat číslo PR",
         "tabOverview": "Přehled",
-        "noDescription": "PR nemá žádný popis."
+        "noDescription": "PR nemá žádný popis.",
+        "draftFailedNoReason": "Změna stavu draftu selhala.",
+        "closeFailedNoReason": "Zavření PR selhalo.",
+        "descriptionTruncated": "Popis je zkrácený, zobrazit na GitHubu ↗"
       },
       "run": {
         "open": "Otevřít běh ↗",

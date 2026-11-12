@@ -169,7 +169,12 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       kind={
         <>
           {`${t("bridge.sheet.kind.issue")} · ${source} · `}
-          <CopyableText copyLabel={t("common.copyId")} text={itemKey(item)} />
+          <CopyableText
+            copiedLabel={t("common.copied")}
+            copyFailedLabel={t("common.copyFailed")}
+            copyLabel={t("common.copyId")}
+            text={itemKey(item)}
+          />
         </>
       }
       onClose={onClose}

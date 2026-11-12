@@ -60,7 +60,12 @@ export function RunSheet({ id, anchor, onClose, onOpen }: SheetProps) {
             ? t("runs.detail.workflow", { name: run.owner })
             : `${t("bridge.sheet.kind.run")} · ${run.kind}`}
           {" · "}
-          <CopyableText copyLabel={t("common.copyId")} text={run.runId} />
+          <CopyableText
+            copiedLabel={t("common.copied")}
+            copyFailedLabel={t("common.copyFailed")}
+            copyLabel={t("common.copyId")}
+            text={run.runId}
+          />
         </>
       }
       onClose={onClose}
