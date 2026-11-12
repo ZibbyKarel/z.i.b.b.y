@@ -49,6 +49,22 @@ describe("createSwipeDetector (todo-6)", () => {
     ]);
   });
 
+  it("drops accrued drift when a vertical scroll interleaves horizontal-dominant events", () => {
+    const d = createSwipeDetector();
+    const out: SwipeDirection[] = [];
+    for (let i = 0; i < 40; i++) {
+      const horizontal = i % 2 === 0;
+      const r = d({
+        deltaX: horizontal ? -30 : -5,
+        deltaY: horizontal ? 5 : 40,
+        ctrlKey: false,
+        timeStamp: i * 16,
+      });
+      if (r) out.push(r);
+    }
+    expect(out).toEqual([]);
+  });
+
   it("does not fire below the threshold", () => {
     expect(feed(createSwipeDetector(), 10, { deltaX: -10 })).toEqual([]);
   });

@@ -25,7 +25,12 @@ export function createSwipeDetector(): (e: WheelSample) => SwipeDirection | null
       fired = false;
     }
     last = e.timeStamp;
-    if (e.ctrlKey || Math.abs(e.deltaY) >= Math.abs(e.deltaX) || fired) return null;
+    if (fired || e.ctrlKey) return null;
+    // A vertical-dominant event means the user is scrolling, not swiping: drop what accrued.
+    if (Math.abs(e.deltaY) >= Math.abs(e.deltaX)) {
+      acc = 0;
+      return null;
+    }
     acc += e.deltaX;
     if (Math.abs(acc) < SWIPE_THRESHOLD_PX) return null;
     fired = true;
