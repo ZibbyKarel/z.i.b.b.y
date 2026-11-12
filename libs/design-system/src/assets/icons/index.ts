@@ -25,6 +25,7 @@ import { dots } from "./dots";
 import { dotsVertical } from "./dotsVertical";
 import { file } from "./file";
 import { shield } from "./shield";
+import { user } from "./user";
 import { search } from "./search";
 import { gear } from "./gear";
 import { bot } from "./bot";
@@ -96,6 +97,7 @@ export const iconNames = [
   "dotsVertical",
   "file",
   "shield",
+  "user",
   "search",
   "gear",
   "bot",
@@ -170,6 +172,7 @@ export const paths: Record<IconName, ReactNode> = {
   dotsVertical,
   file,
   shield,
+  user,
   search,
   gear,
   bot,

@@ -1,7 +1,7 @@
 "use client";
 
 import type { AutomationView } from "@zibby/contracts";
-import { BoardLine, BoardRow, BoardText, RowGroupHeader } from "@zibby/design-system";
+import { BoardLine, BoardRow, BoardText, Icon, RowGroupHeader } from "@zibby/design-system";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
@@ -21,6 +21,40 @@ export enum AutomationRunsWidgetTestId {
   Time = "automation-runs-widget-time",
   /** The failed marker on an upcoming or failed row (todo-5) — suffixed `-<row key>`. */
   Failed = "automation-runs-widget-failed",
+  /** The system (shield) / user icon left of the title (todo-7) — suffixed `-<row key>`. */
+  Kind = "automation-runs-widget-kind",
+}
+
+/** todo-7: shield (warn) for a system automation, user (accent) for a user one. */
+function AutomationTitle({
+  rowKey,
+  automation,
+  step,
+}: {
+  rowKey: string;
+  automation: AutomationView;
+  step: string;
+}) {
+  const t = useTranslations("bridge.widgets.automationRuns.kind");
+  const label = t(automation.system ? "system" : "user");
+  return (
+    <BoardLine gap="6">
+      <span
+        aria-label={label}
+        data-kind={automation.system ? "system" : "user"}
+        data-testid={`${AutomationRunsWidgetTestId.Kind}-${rowKey}`}
+        role="img"
+        title={label}
+      >
+        <Icon
+          name={automation.system ? "shield" : "user"}
+          size="sm"
+          tone={automation.system ? "warn" : "accent"}
+        />
+      </span>
+      <RunTitle step={step} title={automation.name ?? automation.id} />
+    </BoardLine>
+  );
 }
 
 /** How far ahead "upcoming" looks — also bounds the minute-by-minute cron scan. */
@@ -96,10 +130,7 @@ export function AutomationRunsWidget({
       }),
     [locale],
   );
-  const nameOf = useMemo(
-    () => new Map((automations ?? []).map((a) => [a.id, a.name ?? a.id])),
-    [automations],
-  );
+  const byId = useMemo(() => new Map((automations ?? []).map((a) => [a.id, a])), [automations]);
 
   const running = useMemo(() => {
     const runs = live.filter((r) => r.automationId);
@@ -210,7 +241,14 @@ export function AutomationRunsWidget({
             sheetSide={sheetSide}
             tone={r.tone}
           >
-            <RunTitle step={r.step} title={nameOf.get(r.automationId) ?? r.title} />
+            {(() => {
+              const a = byId.get(r.automationId);
+              return a ? (
+                <AutomationTitle automation={a} rowKey={r.key} step={r.step} />
+              ) : (
+                <RunTitle step={r.step} title={r.title} />
+              );
+            })()}
             <BoardLine gap="5">
               <BoardText tabular kind="meta">
                 <RunElapsed startedAt={r.startedAt} />
@@ -230,9 +268,10 @@ export function AutomationRunsWidget({
             sheetSide={sheetSide}
             tone="working"
           >
-            <RunTitle
+            <AutomationTitle
+              automation={f.automation}
+              rowKey={f.key}
               step={f.automation.target.type}
-              title={f.automation.name ?? f.automation.id}
             />
             <BoardLine gap="5">
               <BoardText tabular kind="meta">
@@ -253,9 +292,10 @@ export function AutomationRunsWidget({
             sheetSide={sheetSide}
             tone="error"
           >
-            <RunTitle
+            <AutomationTitle
+              automation={f.automation}
+              rowKey={f.key}
               step={f.automation.target.type}
-              title={f.automation.name ?? f.automation.id}
             />
             <BoardLine gap="5">
               <span data-testid={`${AutomationRunsWidgetTestId.Failed}-${f.key}`}>
@@ -279,7 +319,7 @@ export function AutomationRunsWidget({
             sheetSide={sheetSide}
             tone={u.failedAt === undefined ? "idle" : "error"}
           >
-            <RunTitle step={cronLabel(u.expr)} title={u.automation.name ?? u.automation.id} />
+            <AutomationTitle automation={u.automation} rowKey={u.key} step={cronLabel(u.expr)} />
             <BoardLine gap="5">
               {u.failedAt === undefined ? (
                 <BoardText tabular kind="meta">
