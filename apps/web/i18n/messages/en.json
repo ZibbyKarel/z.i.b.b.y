@@ -668,7 +668,10 @@
     "autonomyDispatch": "Dispatch (act)",
     "autonomyReply": "Reply (Comms)",
     "deleteTitle": "Delete integration?",
-    "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone."
+    "deleteBody": "Really delete integration {name}? Stored credentials are deleted too. This cannot be undone.",
+    "tokenNoExpiry": "NO EXPIRATION DATE",
+    "tokenExpiresIn": "expires in {days, plural, one {# day} other {# days}}",
+    "tokenExpired": "token expired"
   },
   "release": {
     "title": "Merge queue",

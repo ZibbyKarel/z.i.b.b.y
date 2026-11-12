@@ -5,6 +5,7 @@ import type { Integration } from "@zibby/contracts";
 import { BreadcrumbTestId } from "@zibby/design-system";
 import { DetailScreen, IntegrationDetailScreenTestId } from "./DetailScreen";
 import { IntegrationFormTestId } from "./components/IntegrationFormFields";
+import { TokenExpiryLabelTestId } from "./components/TokenExpiryLabel";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -53,6 +54,22 @@ describe("integrations DetailScreen (N4h grammar — closes the series)", () => 
     hooks.setCredentials.mockClear();
     hooks.test.mockClear();
     hooks.integration = { data: INTEGRATION, isPending: false, isError: false, refetch: vi.fn() };
+  });
+
+  it("shows the GitHub token expiry under the title", () => {
+    vi.useFakeTimers({ now: Date.parse("2026-11-12T10:00:00Z"), toFake: ["Date"] });
+    hooks.integration = {
+      ...hooks.integration,
+      data: {
+        ...INTEGRATION,
+        kind: "github",
+        config: { kind: "github", repo: "acme/repo", streams: ["issues"], username: "octocat" },
+        tokenExpiresAt: "2026-11-15T10:00:00.000Z",
+      },
+    };
+    render(<DetailScreen integrationId="team-slack" projectId="acme" />);
+    expect(screen.getByTestId(TokenExpiryLabelTestId.Root)).toHaveTextContent("vyprší za 3 dny");
+    vi.useRealTimers();
   });
 
   it("locks the kind and shows top-right actions by accessible name", () => {
