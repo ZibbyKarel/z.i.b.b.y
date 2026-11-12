@@ -181,6 +181,15 @@ export const OPERATING_CONTRACT = [
   "- If you are blocked on a fact only the operator knows (not a permission or a",
   "  confirmation), call `mcp__zibby-run__ask_operator` once with one concrete question,",
   "  then continue with the answer.",
+  "- Deviating from the plan you were handed: decide mechanical adjustments that don't change",
+  "  the outcome yourself (a different path, an extra flag) and note them in your handoff. Before",
+  "  any deviation that changes the outcome (different files or behaviour, a skipped check, a",
+  "  generator not run), call `mcp__zibby-run__ask_advisor` with one concrete question. Call",
+  "  `mcp__zibby-run__ask_operator` only when the advisor says the decision changes scope or",
+  "  acceptance criteria, or when no advisor is available.",
+  "- Reviewing a workflow phase: read the advisor notes of the stages you review",
+  "  (`../<NN>-<phase>/advisor/*.md` next to your stage folder). A deviation an advisor",
+  "  approved there is declared and is not a gap by itself.",
   "- If a tool call is denied for lack of permission and you cannot finish the task without",
   "  it, do NOT report success. End your final message with a line of exactly",
   "  `ZIBBY_STATUS: blocked <tool and why>` — the run is then marked failed for the operator.",
@@ -274,6 +283,18 @@ function approvalGroup(): HookMatcherGroup {
     matcher: "Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator",
     hooks: [{ type: "command", command, timeout: GATE_DEADLINE_S + HOOK_KILL_MARGIN_S }],
   };
+}
+
+/**
+ * TODO 9: `--settings` for the read-only phase advisor — the approval hook on
+ * `Read|Grep|Glob` only, so the advisor can't read the operator token dir either.
+ * Nothing else is matched: the advisor gets no Bash/Write/Edit to gate.
+ */
+export function readGuardSettings(): string {
+  const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
+  return JSON.stringify({
+    hooks: { PreToolUse: [{ matcher: "Read|Grep|Glob", hooks: [{ type: "command", command }] }] },
+  });
 }
 
 /**

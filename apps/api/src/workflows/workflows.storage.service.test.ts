@@ -167,6 +167,22 @@ describe("WorkflowsStorageService", () => {
     expect((await service.get("web-qa")).requires).toEqual(["web"]);
   });
 
+  it("TODO 9: round-trips the workflow and phase advisor, and an update never strips it", async () => {
+    const advisor = { model: "opus" as const, thinking: "high" as const, maxCalls: 3 };
+    await service.create({
+      ...sample,
+      id: "adv",
+      advisor,
+      phases: [phase("a"), { ...phase("b"), advisor: { from: "a" } }],
+    });
+    const parsed = matter(await fs.readFile(fileFor(dir, "adv"), "utf8"));
+    expect(parsed.data.advisor).toEqual(advisor);
+    await service.update("adv", { desc: "edited" });
+    const read = await service.get("adv");
+    expect(read.advisor).toEqual(advisor);
+    expect(read.phases[1]?.advisor).toEqual({ from: "a" });
+  });
+
   it("TODO 13: a workflow without requires writes no requires key", async () => {
     await service.create(sample);
     const parsed = matter(await fs.readFile(fileFor(dir, "release"), "utf8"));

@@ -262,6 +262,12 @@ to, once, with one concrete question — never for a permission or a confirmatio
    "No answer was recorded. Decide yourself or stop." It never waits and never
    answers on its own.
 
+`mcp__zibby-run__ask_advisor` (TODO 9, see `docs/api/workflows.md` — Phase advisor)
+is the rung before this: it asks a model, not the operator, so the hook does not gate
+it. It cannot settle scope or acceptance-criteria questions: those, a missing advisor,
+the call cap and any failure all send the agent on to `ask_operator`, whose floor is
+unchanged.
+
 A client can never create an Approval directly — only the server (a runner or
 triage flow) generates them. This prevents forging a decision (Law 4).
 

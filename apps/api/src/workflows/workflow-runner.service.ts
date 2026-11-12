@@ -86,6 +86,12 @@ const OPENAI_STAGE_SCRIPT = path.resolve(__dirname, "openai-stage.mjs");
 /** Per-file cap for `consumes`/`include` text inlined into an OpenAI request. */
 const OPENAI_FILE_CAP = 200 * 1024;
 /**
+ * TODO 9: `MCP_TOOL_TIMEOUT` for every stage. Measured on claude 2.1.322: the default
+ * already held a 150 s tool call, but an Opus advisor on high thinking can take longer,
+ * so it is pinned explicitly; the advisor's own spawn timeout sits below it.
+ */
+export const STAGE_MCP_TOOL_TIMEOUT_MS = 30 * 60 * 1000;
+/**
  * Repo-root `node_modules/.bin`, on every stage's PATH. The packaged app's code
  * lives inside the .app bundle, so it points at the source checkout it was built
  * from (`ZIBBY_SOURCE_ROOT`); a plain run anchors on this file like `data-dir.ts`.
@@ -1032,6 +1038,19 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     const run = this.runs.get(workflowRunId);
     if (!run) throw new WorkflowRunNotFoundError(workflowRunId);
     return run;
+  }
+
+  /**
+   * TODO 9 seam for the phase advisor: a stage run's sandbox cwd and captured claude
+   * session id. Null for an unknown stage run.
+   */
+  stageInfo(stageRunId: string): { cwd: string; sessionId?: string } | null {
+    try {
+      const rec = this.core.get(stageRunId);
+      return { cwd: rec.cwd, ...(rec.sessionId ? { sessionId: rec.sessionId } : {}) };
+    } catch {
+      return null;
+    }
   }
 
   /**
@@ -2688,6 +2707,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       )),
       ZIBBY_RUN_DIR: run.cwd,
       ZIBBY_STAGE_DIR: stageCwd,
+      // TODO 9: `ask_advisor` holds its MCP call while a strong model thinks — keep the
+      // CLI's tool-call timeout above the advisor's own spawn timeout.
+      MCP_TOOL_TIMEOUT: String(STAGE_MCP_TOOL_TIMEOUT_MS),
       // Repo bins (e.g. `product-factory`): first for a tool phase; LAST for an agent
       // stage, so a project checkout's own toolchain is never shadowed.
       PATH: (phase.type === "tool"

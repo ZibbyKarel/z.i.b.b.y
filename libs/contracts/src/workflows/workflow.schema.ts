@@ -46,6 +46,36 @@ export const PhaseLoopSchema = z.object({
 export type PhaseLoop = z.infer<typeof PhaseLoopSchema>;
 
 /**
+ * TODO 9 — the phase advisor behind `ask_advisor`: a stronger model, forked from the
+ * session of the phase that planned the work, that an agent asks before it deviates
+ * from the plan. Set on the workflow (default) and/or a phase (field-by-field
+ * override; `false` turns it off). `from` names the phase whose claude session the
+ * advisor resumes — default: the phase that produced the handoff this phase consumes.
+ * `maxCalls` caps the calls per phase run. Scope / acceptance-criteria questions are
+ * never the advisor's to settle: it replies `ESCALATE:` and the agent asks the operator.
+ */
+export const PhaseAdvisorSchema = z
+  .object({
+    model: AgentModelSchema.optional(),
+    thinking: AgentThinkingSchema.optional(),
+    maxCalls: z.number().int().min(1).max(20).optional(),
+    from: z.string().min(1).optional(),
+  })
+  .strict();
+export type PhaseAdvisor = z.infer<typeof PhaseAdvisorSchema>;
+
+/** Values a configured advisor falls back to for the fields neither level sets. */
+export const ADVISOR_DEFAULTS = { model: "opus", thinking: "high", maxCalls: 3 } as const;
+
+export interface ResolvedPhaseAdvisor {
+  model: z.infer<typeof AgentModelSchema>;
+  thinking: z.infer<typeof AgentThinkingSchema>;
+  maxCalls: number;
+  /** Explicit source phase; absent = derive it from the consumed handoff. */
+  from?: string;
+}
+
+/**
  * What a phase executes. `agent` (the default, so every committed `.workflow.md`
  * parses unchanged) spawns the phase agent; `tool` runs deterministic shell `commands` IN THE STAGE
  * SANDBOX (consumes → commands → produces) — a transform step between agents;
@@ -117,6 +147,8 @@ export const WorkflowPhaseSchema = z.object({
    * reject fails the run. Absent (the default) = fully autonomous.
    */
   approval: z.enum(["ask"]).optional(),
+  /** Agent phase only: override the workflow's `advisor` field by field, or `false` to turn it off. */
+  advisor: z.union([z.literal(false), PhaseAdvisorSchema]).optional(),
 });
 export type WorkflowPhase = z.infer<typeof WorkflowPhaseSchema>;
 
@@ -276,6 +308,8 @@ const WorkflowObject = z.object({
    * run ends `failed` with `failedReason`, no agent started. Absent = no check.
    */
   requires: z.array(z.enum(["web"])).optional(),
+  /** TODO 9 — default phase advisor for every agent phase (absent = no advisor). */
+  advisor: PhaseAdvisorSchema.optional(),
 });
 
 /** Shared phase/loop validation (used by the full schema; storage re-validates updates). */
@@ -382,6 +416,18 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
         message: `loop.driftTo "${ph.loop.driftTo}" is not an existing phase id`,
         path: ["phases", i, "loop", "driftTo"],
       });
+    if (ph.advisor !== undefined && ph.type !== "agent")
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "advisor is for agent phases only",
+        path: ["phases", i, "advisor"],
+      });
+    if (ph.advisor && ph.advisor.from !== undefined && !idSet.has(ph.advisor.from))
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `advisor.from "${ph.advisor.from}" is not an existing phase id`,
+        path: ["phases", i, "advisor", "from"],
+      });
     if (!ph.loop) return;
     for (const [key, target] of [
       ["to", ph.loop.to],
@@ -397,6 +443,12 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
       }
     }
   });
+  if (p.advisor?.from !== undefined && !idSet.has(p.advisor.from))
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `advisor.from "${p.advisor.from}" is not an existing phase id`,
+      path: ["advisor", "from"],
+    });
   // An output sink draws from a phase artifact — its `from` must be something a
   // phase actually `produces`, or it would read an empty handoff at delivery time.
   // A `folder` sink reads a run-wide folder (e.g. `book/`), not a handoff file.
@@ -421,6 +473,21 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
  */
 export const WorkflowSchema = WorkflowObject.superRefine(refineWorkflow);
 export type Workflow = z.infer<typeof WorkflowSchema>;
+
+/**
+ * The effective advisor of `phaseId`: the workflow default merged with the phase's
+ * own `advisor` field by field, filled with {@link ADVISOR_DEFAULTS}. `null` when the
+ * phase sets `advisor: false`, the phase is unknown, or neither level configures one.
+ */
+export function resolvePhaseAdvisor(
+  workflow: Pick<Workflow, "advisor" | "phases">,
+  phaseId: string,
+): ResolvedPhaseAdvisor | null {
+  const phase = workflow.phases.find((p) => p.id === phaseId);
+  if (!phase || phase.advisor === false) return null;
+  if (!workflow.advisor && !phase.advisor) return null;
+  return { ...ADVISOR_DEFAULTS, ...workflow.advisor, ...phase.advisor };
+}
 
 /** Body accepted by `createWorkflow` — full entity, with loop targets validated. */
 export const CreateWorkflowSchema = WorkflowSchema;

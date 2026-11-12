@@ -9,6 +9,7 @@ import {
   WorkflowComplexitySchema,
   WorkflowRunSchema,
   WorkflowSchema,
+  resolvePhaseAdvisor,
   workflowRunsContract,
   workflowsContract,
 } from "../index";
@@ -514,5 +515,83 @@ describe("WorkflowRun.failedReason (TODO 13)", () => {
       failedReason: "requires a web project, but the run has no project",
     });
     expect(parsed.failedReason).toContain("web project");
+  });
+});
+
+describe("phase advisor (todo-9)", () => {
+  const delivery = (extra: Record<string, unknown> = {}, koder: Record<string, unknown> = {}) => ({
+    id: "delivery",
+    phases: [phase("architekt"), phase("koder", koder), phase("review")],
+    instructions: "x",
+    ...extra,
+  });
+
+  it("parses a workflow default and a phase override", () => {
+    const parsed = WorkflowSchema.parse(
+      delivery(
+        { advisor: { model: "opus", thinking: "high", maxCalls: 3 } },
+        { advisor: { model: "sonnet", from: "architekt" } },
+      ),
+    );
+    expect(parsed.advisor).toEqual({ model: "opus", thinking: "high", maxCalls: 3 });
+    expect(parsed.phases[1]?.advisor).toEqual({ model: "sonnet", from: "architekt" });
+  });
+
+  it("accepts advisor: false on a phase", () => {
+    expect(WorkflowSchema.safeParse(delivery({}, { advisor: false })).success).toBe(true);
+  });
+
+  it("rejects a from that is not a phase id", () => {
+    expect(WorkflowSchema.safeParse(delivery({}, { advisor: { from: "nope" } })).success).toBe(
+      false,
+    );
+    expect(WorkflowSchema.safeParse(delivery({ advisor: { from: "nope" } })).success).toBe(false);
+  });
+
+  it("rejects an advisor on a tool phase and unknown keys", () => {
+    const tool = { id: "t", type: "tool", commands: ["true"], produces: "o.md" };
+    expect(
+      WorkflowSchema.safeParse({
+        id: "w",
+        phases: [{ ...tool, advisor: { model: "opus" } }],
+        instructions: "x",
+      }).success,
+    ).toBe(false);
+    expect(WorkflowSchema.safeParse(delivery({ advisor: { modle: "opus" } })).success).toBe(false);
+  });
+
+  it("resolves to null when neither level configures it", () => {
+    expect(resolvePhaseAdvisor(WorkflowSchema.parse(delivery()), "koder")).toBeNull();
+  });
+
+  it("uses the workflow default, filled with defaults", () => {
+    const wf = WorkflowSchema.parse(delivery({ advisor: { maxCalls: 5 } }));
+    expect(resolvePhaseAdvisor(wf, "koder")).toEqual({
+      model: "opus",
+      thinking: "high",
+      maxCalls: 5,
+    });
+  });
+
+  it("lets the phase override field by field", () => {
+    const wf = WorkflowSchema.parse(
+      delivery(
+        { advisor: { model: "opus", thinking: "high", maxCalls: 2 } },
+        { advisor: { thinking: "medium", from: "architekt" } },
+      ),
+    );
+    expect(resolvePhaseAdvisor(wf, "koder")).toEqual({
+      model: "opus",
+      thinking: "medium",
+      maxCalls: 2,
+      from: "architekt",
+    });
+  });
+
+  it("turns off with advisor: false and for an unknown phase", () => {
+    const wf = WorkflowSchema.parse(delivery({ advisor: { model: "opus" } }, { advisor: false }));
+    expect(resolvePhaseAdvisor(wf, "koder")).toBeNull();
+    expect(resolvePhaseAdvisor(wf, "ghost")).toBeNull();
+    expect(resolvePhaseAdvisor(wf, "review")).not.toBeNull();
   });
 });

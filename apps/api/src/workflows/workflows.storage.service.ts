@@ -161,6 +161,8 @@ export class WorkflowsStorageService extends MarkdownEntityStore<Workflow> {
     // TODO 13 precondition — MUST be copied: a dropped `requires` would let a
     // web-only workflow run against any project, silently.
     if (Array.isArray(data.requires)) candidate.requires = data.requires;
+    // TODO 9 phase advisor default — absent stays absent (no advisor).
+    if (typeof data.advisor === "object" && data.advisor !== null) candidate.advisor = data.advisor;
 
     const result = WorkflowSchema.safeParse(candidate);
     return result.success ? result.data : null;
@@ -182,6 +184,7 @@ export class WorkflowsStorageService extends MarkdownEntityStore<Workflow> {
     if (workflow.budget !== undefined) data.budget = workflow.budget;
     if (workflow.project !== undefined) data.project = workflow.project;
     if (workflow.requires !== undefined) data.requires = workflow.requires;
+    if (workflow.advisor !== undefined) data.advisor = workflow.advisor;
     return data;
   }
 

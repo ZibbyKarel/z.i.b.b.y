@@ -1174,4 +1174,10 @@ describe("classifyEvent — ask_operator (D-ASK)", () => {
   it("caps the question at 2000 chars", () => {
     expect(JSON.parse(ask("x".repeat(3000)).context).summary).toHaveLength(2000);
   });
+
+  it("does not gate ask_advisor (TODO 9 — it asks a model, not the operator)", () => {
+    expect(
+      classifyEvent({ tool_name: "mcp__zibby-run__ask_advisor", tool_input: { question: "q" } }),
+    ).toBeNull();
+  });
 });
