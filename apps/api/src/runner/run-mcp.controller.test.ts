@@ -9,7 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { ApprovalsService } from "../approvals/approvals.service";
 import { KbMcpAuthGuard } from "../kb/kb-mcp-auth.guard";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
-import { RunMcpController } from "./run-mcp.controller";
+import { PHASE_ADVISOR, RunMcpController } from "./run-mcp.controller";
 
 const approval = (over: Partial<Approval>): Approval => ({
   id: "ap",
@@ -25,6 +25,7 @@ const approval = (over: Partial<Approval>): Approval => ({
 });
 
 const list = vi.fn<(status?: Approval["status"]) => Promise<Approval[]>>();
+const advise = vi.fn<(runId: string, question: string) => Promise<string>>();
 
 describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
   let app: INestApplication;
@@ -37,6 +38,7 @@ describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
       controllers: [RunMcpController],
       providers: [
         { provide: ApprovalsService, useValue: { list } },
+        { provide: PHASE_ADVISOR, useValue: { ask: advise } },
         KbMcpAuthService,
         KbMcpAuthGuard,
       ],
@@ -57,9 +59,15 @@ describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
 
   beforeEach(() => {
     list.mockReset();
+    advise.mockReset();
   });
 
-  async function ask(token: string, runId: string | undefined, question: string) {
+  async function ask(
+    token: string,
+    runId: string | undefined,
+    question: string,
+    tool = "ask_operator",
+  ) {
     const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
     if (runId) headers["X-Zibby-Run-Id"] = runId;
     const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/api/runs/mcp`), {
@@ -67,7 +75,7 @@ describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
     });
     const client = new Client({ name: "run-mcp-test", version: "1.0.0" });
     await client.connect(transport);
-    const result = (await client.callTool({ name: "ask_operator", arguments: { question } })) as {
+    const result = (await client.callTool({ name: tool, arguments: { question } })) as {
       isError?: boolean;
       content: Array<{ type: "text"; text: string }>;
     };
@@ -150,5 +158,60 @@ describe("POST /api/runs/mcp — RunMcpController (ask_operator)", () => {
     const r = await ask(runToken, "wf_1", "Which env?");
     expect(r.isError).toBeFalsy();
     expect(r.text).toBe("No answer was recorded. Decide yourself or stop.");
+  });
+
+  it("ask_advisor passes the run's question to the phase advisor and returns its text", async () => {
+    advise.mockResolvedValue("The advisor answered: run the generator.");
+    const r = await ask(runToken, "wf_1", "Skip the generator?", "ask_advisor");
+    expect(advise).toHaveBeenCalledWith("wf_1", "Skip the generator?");
+    expect(r.isError).toBeFalsy();
+    expect(r.text).toContain("run the generator");
+    // Never touches the operator's approvals.
+    expect(list).not.toHaveBeenCalled();
+  });
+
+  it("ask_advisor is an error without a run id (and for the chat token)", async () => {
+    expect((await ask(runToken, undefined, "q", "ask_advisor")).isError).toBe(true);
+    expect((await ask(chatToken, "wf_1", "q", "ask_advisor")).isError).toBe(true);
+    expect(advise).not.toHaveBeenCalled();
+  });
+});
+
+describe("RunMcpController without a phase advisor", () => {
+  it("ask_advisor tells the agent to use ask_operator", async () => {
+    const moduleRef = await Test.createTestingModule({
+      controllers: [RunMcpController],
+      providers: [
+        { provide: ApprovalsService, useValue: { list } },
+        KbMcpAuthService,
+        KbMcpAuthGuard,
+      ],
+    }).compile();
+    const app = moduleRef.createNestApplication();
+    await app.init();
+    await app.listen(0);
+    const { port } = app.getHttpServer().address() as AddressInfo;
+    const transport = new StreamableHTTPClientTransport(
+      new URL(`http://127.0.0.1:${port}/api/runs/mcp`),
+      {
+        requestInit: {
+          headers: {
+            Authorization: `Bearer ${moduleRef.get(KbMcpAuthService).runBearerToken}`,
+            "X-Zibby-Run-Id": "wf_1",
+          },
+        },
+      },
+    );
+    const client = new Client({ name: "run-mcp-test", version: "1.0.0" });
+    await client.connect(transport);
+    const result = (await client.callTool({
+      name: "ask_advisor",
+      arguments: { question: "q" },
+    })) as {
+      content: Array<{ text: string }>;
+    };
+    await client.close();
+    await app.close();
+    expect(result.content[0]?.text).toContain("ask_operator");
   });
 });

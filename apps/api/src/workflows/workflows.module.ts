@@ -8,11 +8,13 @@ import { LimitsModule } from "../limits/limits.module";
 import { MemoryModule } from "../memory/memory.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { ClaudeRunModule } from "../runner/claude-run.module";
+import { PHASE_ADVISOR } from "../runner/run-mcp.controller";
 import { SkillsModule } from "../skills/skills.module";
 import { SignalBusModule } from "../automations/signal-bus.module";
 import { ScheduledTasksStorageModule } from "../tasks/scheduled-tasks-storage.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { dataDir, recipesDir } from "../shared/data-dir";
+import { PhaseAdvisorService } from "./phase-advisor.service";
 import { WORKFLOW_RUNS_DIR, WorkflowRunnerService } from "./workflow-runner.service";
 import { WorkflowRunsController } from "./workflow-runs.controller";
 import { WorkflowsController } from "./workflows.controller";
@@ -62,6 +64,9 @@ export function resolveWorkflowRunsDir(): string {
     { provide: WORKFLOW_RUNS_DIR, useFactory: resolveWorkflowRunsDir },
     WorkflowsStorageService,
     WorkflowRunnerService,
+    // TODO 9 — `ask_advisor` (RunMcpController) resolves it by token through ModuleRef.
+    PhaseAdvisorService,
+    { provide: PHASE_ADVISOR, useExisting: PhaseAdvisorService },
   ],
   exports: [WorkflowsStorageService, WorkflowRunnerService],
 })

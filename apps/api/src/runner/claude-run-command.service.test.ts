@@ -144,6 +144,9 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     expect(prompt.endsWith("Jsi Kodér.")).toBe(true);
     expect(prompt).toMatch(/NEVER ask for confirmation/);
     expect(prompt).toContain("mcp__zibby-run__ask_operator");
+    // TODO 9: the escalation ladder — advisor first, operator for scope/AC.
+    expect(prompt).toContain("mcp__zibby-run__ask_advisor");
+    expect(prompt).toMatch(/changes scope or\s+acceptance criteria/);
   });
 
   it("omits the grounding block when none is supplied (contract directly precedes the body)", async () => {
@@ -452,6 +455,8 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
     // `Task` is the Agent tool's delegation call — every handoff now hits the same
     // gate the destructive Bash commands do (see claude-approval-hook.mjs classifyTask).
     expect(entry.matcher).toBe("Bash|Task|Read|Grep|Glob|Write|Edit|mcp__zibby-run__ask_operator");
+    // TODO 9: ask_advisor asks a model, not the operator — no operator.question floor.
+    expect(entry.matcher).not.toContain("ask_advisor");
     expect(entry.hooks[0].type).toBe("command");
     expect(entry.hooks[0].command).toContain("claude-approval-hook.mjs");
   });
