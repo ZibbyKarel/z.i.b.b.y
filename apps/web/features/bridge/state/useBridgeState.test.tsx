@@ -195,7 +195,7 @@ describe("useBridgeState", () => {
 
   it("Esc is ignored while typing in an input, textarea or contenteditable", () => {
     const { result } = renderHook(() => useBridgeState());
-    act(() => result.current.toggleCatalog());
+    act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
     const ta = document.createElement("textarea");
     const ce = document.createElement("div");
     // jsdom has no isContentEditable; emulate it
@@ -205,7 +205,7 @@ describe("useBridgeState", () => {
       act(
         () => void el.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })),
       );
-    expect(result.current.catalogOpen).toBe(true);
+    expect(result.current.selection).not.toBeNull();
     ta.remove();
     ce.remove();
   });
@@ -260,17 +260,11 @@ describe("useBridgeState", () => {
     expect(setBridge).not.toHaveBeenCalled();
   });
 
-  it("Esc closes the selection, then the catalog", () => {
+  it("Esc closes the selection", () => {
     const { result } = renderHook(() => useBridgeState());
-    const esc = () =>
-      act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
-    act(() => result.current.toggleCatalog());
     act(() => result.current.setSelection({ kind: "pr", id: "1", widgetId: "prs", key: "pr:1" }));
-    esc();
+    act(() => void window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" })));
     expect(result.current.selection).toBeNull();
-    expect(result.current.catalogOpen).toBe(true);
-    esc();
-    expect(result.current.catalogOpen).toBe(false);
   });
 
   it("mirrors the open sheet into the URL and restores it, keeping other params", () => {

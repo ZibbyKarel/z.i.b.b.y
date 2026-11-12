@@ -3273,12 +3273,6 @@
       "deselectAll": "Clear all"
     },
     "editLayout": "Edit layout",
-    "catalog": {
-      "title": "Widget catalog",
-      "add": "Add",
-      "close": "Close",
-      "empty": "Every widget is already on the board."
-    },
     "collapse": "Collapse",
     "resize": "Resize",
     "resizeNw": "top left",

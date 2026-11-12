@@ -86,4 +86,30 @@ export const Overview: Story = {
   ),
 };
 
+// Bridge "add widget" dropdown: a + trigger and icon / name / description options.
+export const WithDescriptions: Story = {
+  args: {
+    ariaLabel: "Add widget",
+    icon: "plus",
+    intent: "secondary",
+    size: "md",
+    items: [
+      {
+        id: "briefing",
+        label: "Briefing",
+        description: "Morning summary",
+        icon: "coffee",
+        onSelect: () => {},
+      },
+      {
+        id: "issues",
+        label: "Issues",
+        description: "Bugs assigned to you",
+        icon: "bug",
+        onSelect: () => {},
+      },
+    ],
+  },
+};
+
 export const Playground: Story = {};
