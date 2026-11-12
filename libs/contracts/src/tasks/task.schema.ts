@@ -944,6 +944,11 @@ export const ScheduledTaskSchema = z.object({
     })
     .optional(),
   /**
+   * todo-10 — set on a base-branch "Fix CI" task (`POST /api/project-ci/:projectId/fix`): the
+   * project and the red commit it fixes. Server-written; an open one blocks a second click.
+   */
+  baseFixCi: z.object({ projectId: z.string().min(1), headSha: z.string().min(1) }).optional(),
+  /**
    * Set on a `pr-ci-triage` task (the cheap read-only first step of the CI auto-fix). Server-written.
    * - `running` — the triage agent is working;
    * - `triaged` — the verdict was parsed, the heartbeat decides what follows;

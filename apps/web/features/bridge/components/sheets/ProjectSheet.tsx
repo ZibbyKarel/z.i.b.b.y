@@ -33,8 +33,10 @@ const TONE: Record<ProjectCi["state"], SheetTone> = {
   failing: "error",
   running: "working",
   pending: "thinking",
+  cancelled: "idle",
   skipped: "idle",
   none: "idle",
+  error: "blocked",
 };
 
 /** The chat context: the branch state plus every failing job / step (data, not instructions). */
@@ -120,6 +122,8 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
   if (!project) return null;
 
   const state = ci?.state ?? "none";
+  // An open fix task for this red commit (server-side `baseFixCi`) — no second click.
+  const fixRunning = Boolean(ci?.fixTaskId);
   const stateLabel = (s: ProjectCi["state"]) => tw(`state.${s}`);
   const onFix = () =>
     fix.mutate(
@@ -145,20 +149,26 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
           {state === "failing" ? (
             <Button
               data-testid={ProjectSheetTestId.FixCi}
-              disabled={fix.isPending}
+              disabled={fix.isPending || fixRunning}
               icon="bolt"
               intent="primary"
               onClick={onFix}
               size="sm"
             >
-              {ts("fixCi")}
+              {fixRunning ? ts("fixRunning") : ts("fixCi")}
             </Button>
           ) : null}
         </>
       }
       chips={[...(ci?.branch ? [ci.branch] : []), ...(ci?.headSha ? [ci.headSha.slice(0, 7)] : [])]}
       closeLabel={t("bridge.sheet.close")}
-      footerNote={ci?.provider === "gitlab" ? ts("gitlabDeferred") : undefined}
+      footerNote={
+        ci?.state === "error"
+          ? ts("unavailable", { reason: ci.error ?? "" })
+          : ci?.provider === "gitlab"
+            ? ts("gitlabDeferred")
+            : undefined
+      }
       kind={t("bridge.sheet.kind.project")}
       onClose={onClose}
       stateLabel={stateLabel(state)}

@@ -4,15 +4,18 @@ import { ProjectIdSchema } from "../projects/project.schema";
 
 /**
  * todo-10 — CI state of one unit (step, job, workflow run, or the whole base branch). `skipped`
- * covers GitHub's skipped / neutral / cancelled; `none` = nothing ran (or no CI link).
+ * covers GitHub's skipped / neutral; `none` = nothing ran (or no CI link); `error` = the repo
+ * could not be read (rate limit, no access) — only ever the whole branch's state.
  */
 export const CiStateSchema = z.enum([
   "passing",
   "failing",
   "running",
   "pending",
+  "cancelled",
   "skipped",
   "none",
+  "error",
 ]);
 export type CiState = z.infer<typeof CiStateSchema>;
 
@@ -56,7 +59,11 @@ export const ProjectCiSchema = z.object({
   branch: z.string().optional(),
   headSha: z.string().optional(),
   state: CiStateSchema,
+  /** Why the repo could not be read (`state: "error"`). */
+  error: z.string().optional(),
   workflows: z.array(CiWorkflowRunSchema),
+  /** An open "Fix CI" task for `headSha` (`ScheduledTask.baseFixCi`) — the button shows it running. */
+  fixTaskId: z.string().optional(),
   checkedAt: IsoDateTimeSchema,
 });
 export type ProjectCi = z.infer<typeof ProjectCiSchema>;

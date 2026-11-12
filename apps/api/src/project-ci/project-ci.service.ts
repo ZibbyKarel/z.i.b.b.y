@@ -12,7 +12,6 @@ import { TaskSchedulerService } from "../tasks/task-scheduler.service";
 const GITHUB_API = "https://api.github.com";
 /** Base-branch CI is polled state; one GitHub read per project per minute at most. */
 export const PROJECT_CI_CACHE_MS = 60_000;
-/** Title prefix of the fix task — also how an in-flight fix is recognised. */
 const FIX_TITLE = "Fix base-branch CI";
 
 /** Base-branch CI is not red, or a fix is already running → 409. */
@@ -54,12 +53,13 @@ export function ciStateOf(status?: string, conclusion?: string | null): CiState 
   if (conclusion === "success") return "passing";
   if (conclusion === "failure" || conclusion === "timed_out" || conclusion === "startup_failure")
     return "failing";
-  return "skipped"; // skipped / neutral / cancelled / action_required / stale
+  if (conclusion === "cancelled") return "cancelled";
+  return "skipped"; // skipped / neutral / action_required / stale
 }
 
-/** Worst-first rollup: any failing → failing, then running, pending, passing, skipped. */
+/** Worst-first rollup: failing, running, pending, passing, cancelled, skipped; nothing → none. */
 export function rollup(states: readonly CiState[]): CiState {
-  for (const s of ["failing", "running", "pending", "passing", "skipped"] as const) {
+  for (const s of ["failing", "running", "pending", "passing", "cancelled", "skipped"] as const) {
     if (states.includes(s)) return s;
   }
   return "none";
@@ -75,8 +75,8 @@ const gitlabUrl = (remote?: string): string | undefined => {
 /**
  * todo-10 — base-branch CI of a project for the Bridge "Project status" widget. GitHub Actions:
  * repo `default_branch` → runs on that branch → the newest commit that has runs, one run per
- * workflow → its jobs incl. steps. Cached per project ({@link PROJECT_CI_CACHE_MS}); rate limits
- * throw like the CI monitor. GitLab is recognised from `gitRemote` but deferred (no adapter).
+ * workflow → its jobs incl. steps. Cached per project ({@link PROJECT_CI_CACHE_MS}), an unreachable
+ * repo as `state: "error"` too; a completed run's jobs are fetched once. GitLab is recognised from `gitRemote` but deferred (no adapter).
  * `fix` creates an ordinary task with a PR output: ZIBBY opens the PR itself on terminal (Tier-2),
  * the operator merges.
  */
@@ -84,6 +84,10 @@ const gitlabUrl = (remote?: string): string | undefined => {
 export class ProjectCiService {
   private readonly fetchImpl: typeof fetch;
   private readonly cache = new Map<string, { at: number; ci: ProjectCi }>();
+  /** Jobs of COMPLETED runs per project (immutable once done), keyed by run id. */
+  private readonly jobsCache = new Map<string, Map<number, GhJob[]>>();
+  /** Per-project chain: concurrent fix clicks run one after another. */
+  private readonly locks = new Map<string, Promise<unknown>>();
 
   constructor(
     private readonly projects: ProjectsStorageService,
@@ -100,24 +104,54 @@ export class ProjectCiService {
   async get(projectId: string, fresh = false, now = Date.now()): Promise<ProjectCi> {
     const project = await this.projects.get(projectId); // ProjectNotFoundError → 404
     const hit = this.cache.get(projectId);
-    if (!fresh && hit && now - hit.at < PROJECT_CI_CACHE_MS) return hit.ci;
-    const ci = await this.read(project, now);
-    this.cache.set(projectId, { at: now, ci });
-    return ci;
+    let ci = hit?.ci;
+    if (fresh || !hit || now - hit.at >= PROJECT_CI_CACHE_MS) {
+      // An unreachable repo is cached as `error` too — a 403 loop must not burn the quota.
+      ci = await this.read(project, now).catch(
+        (err: unknown): ProjectCi => ({
+          projectId,
+          provider: "github",
+          state: "error",
+          error: err instanceof Error ? err.message : String(err),
+          workflows: [],
+          checkedAt: new Date(now).toISOString(),
+        }),
+      );
+      this.cache.set(projectId, { at: now, ci });
+    }
+    // Not cached: a fix started a second ago must show at once.
+    const open = ci?.headSha ? await this.openFix(projectId, ci.headSha) : undefined;
+    return { ...ci!, ...(open ? { fixTaskId: open.id } : {}) };
   }
 
-  async fix(projectId: string): Promise<{ taskId: string }> {
+  /** The open (no outcome, not dead) base-branch fix task for this commit, if any. */
+  private async openFix(projectId: string, headSha: string) {
+    return (await this.tasks.list()).find(
+      (t) =>
+        t.baseFixCi?.projectId === projectId &&
+        t.baseFixCi.headSha === headSha &&
+        !t.outcome &&
+        !isDeadTask(t),
+    );
+  }
+
+  fix(projectId: string): Promise<{ taskId: string }> {
+    const run = (this.locks.get(projectId) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(() => this.fixLocked(projectId));
+    this.locks.set(projectId, run);
+    return run;
+  }
+
+  private async fixLocked(projectId: string): Promise<{ taskId: string }> {
     const ci = await this.get(projectId, true);
     if (ci.provider !== "github") throw new NoGithubLinkError(projectId);
-    if (ci.state !== "failing") {
+    if (ci.state !== "failing" || !ci.headSha) {
       throw new ProjectCiConflictError(`CI of ${ci.branch ?? "the base branch"} is ${ci.state}`);
     }
-    const running = (await this.tasks.list()).find(
-      (t) =>
-        t.projectId === projectId && t.title?.startsWith(FIX_TITLE) && !t.outcome && !isDeadTask(t),
-    );
-    if (running)
-      throw new ProjectCiConflictError(`a CI fix is already running (task ${running.id})`);
+    if (ci.fixTaskId) {
+      throw new ProjectCiConflictError(`a CI fix is already running (task ${ci.fixTaskId})`);
+    }
     const repo = ci.repoUrl?.replace("https://github.com/", "") ?? "";
     const result = await this.scheduler.createTask(
       {
@@ -128,6 +162,7 @@ export class ProjectCiService {
       Date.now(),
       projectId,
     );
+    await this.tasks.setBaseFixCi(result.task.id, { projectId, headSha: ci.headSha });
     return { taskId: result.task.id };
   }
 
@@ -144,9 +179,13 @@ export class ProjectCiService {
       const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}${path}`, {
         headers: { authorization: `Bearer ${link.token}`, accept: "application/vnd.github+json" },
       });
-      if (res.status === 429 || res.status === 403) {
+      if (
+        res.status === 429 ||
+        (res.status === 403 && res.headers.get("x-ratelimit-remaining") === "0")
+      ) {
         throw new Error(`github rate limited (HTTP ${res.status})`);
       }
+      if (res.status === 403) throw new Error("github: no access to the repo (HTTP 403)");
       if (!res.ok) throw new Error(`github ${path}: HTTP ${res.status}`);
       return (await res.json()) as T;
     };
@@ -163,11 +202,16 @@ export class ProjectCiService {
       seen.add(r.workflow_id);
       return true;
     });
+    const known = this.jobsCache.get(project.id) ?? new Map<number, GhJob[]>();
+    const nextJobs = new Map<number, GhJob[]>(); // only the current runs stay cached
     const workflows: CiWorkflowRun[] = await Promise.all(
       latest.map(async (r) => {
-        const { jobs = [] } = await gh<{ jobs?: GhJob[] }>(
-          `/actions/runs/${r.id}/jobs?per_page=100`,
-        );
+        const id = r.id ?? 0;
+        const jobs =
+          known.get(id) ??
+          (await gh<{ jobs?: GhJob[] }>(`/actions/runs/${id}/jobs?per_page=100`)).jobs ??
+          [];
+        if (r.status === "completed") nextJobs.set(id, jobs);
         return {
           id: r.id ?? 0,
           name: r.name ?? "workflow",
@@ -189,6 +233,7 @@ export class ProjectCiService {
         };
       }),
     );
+    this.jobsCache.set(project.id, nextJobs);
     return {
       ...base,
       provider: "github",

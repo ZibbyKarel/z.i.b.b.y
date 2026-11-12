@@ -100,6 +100,14 @@ describe("ProjectSheet", () => {
     );
   });
 
+  it("an open fix task for the commit disables the button as Oprava běží", () => {
+    h.ci = { ...ci("failing"), fixTaskId: "task_9" };
+    render();
+    const fix = screen.getByTestId(ProjectSheetTestId.FixCi);
+    expect(fix).toBeDisabled();
+    expect(fix).toHaveTextContent("Oprava běží");
+  });
+
   it("green CI: discuss in chat but no Opravit CI", () => {
     h.ci = ci("passing");
     render();

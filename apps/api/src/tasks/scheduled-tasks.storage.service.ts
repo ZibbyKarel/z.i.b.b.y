@@ -287,6 +287,11 @@ export class ScheduledTasksStorageService extends EntityFileStore<ScheduledTask>
     }));
   }
 
+  /** todo-10 — stamp a base-branch "Fix CI" task (`baseFixCi`). Server-only. */
+  async setBaseFixCi(id: string, baseFixCi: ScheduledTask["baseFixCi"]): Promise<ScheduledTask> {
+    return this.updateEntity(id, (existing) => ({ ...existing, baseFixCi }));
+  }
+
   /** CI auto-fix — patch the triage provenance (`prCiTriage`). Server-only. */
   async setPrCiTriage(
     id: string,

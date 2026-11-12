@@ -29,8 +29,10 @@ export const CI_STATE_ICON: Record<CiState, { name: IconName; tone: IconTone }> 
   failing: { name: "x", tone: "bad" },
   running: { name: "run", tone: "run" },
   pending: { name: "clock", tone: "faint" },
+  cancelled: { name: "stop", tone: "faint" },
   skipped: { name: "dots", tone: "faint" },
   none: { name: "dots", tone: "faint" },
+  error: { name: "warn", tone: "warn" },
 };
 
 const ROW_TONE: Record<CiState, BoardRowTone> = {
@@ -38,8 +40,10 @@ const ROW_TONE: Record<CiState, BoardRowTone> = {
   failing: "error",
   running: "working",
   pending: "thinking",
+  cancelled: "idle",
   skipped: "idle",
   none: "idle",
+  error: "blocked",
 };
 
 /** The status glyph with its meaning as accessible name + tooltip. */

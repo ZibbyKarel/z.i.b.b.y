@@ -69,6 +69,24 @@ describe("ProjectStatusWidget", () => {
     expect(icon(busy)).toHaveAttribute("data-state", "running");
   });
 
+  it("an unreachable repo shows the warn icon + CI unavailable; cancelled has its own icon", () => {
+    d.projects = [
+      { id: "down", name: "Down" },
+      { id: "stop", name: "Stop" },
+    ];
+    d.ci = { down: "error", stop: "cancelled" };
+    renderWithProviders(<ProjectStatusWidget {...setup()} />);
+    const [down, stop] = screen.getAllByTestId(ProjectStatusWidgetTestId.Ci) as [
+      HTMLElement,
+      HTMLElement,
+    ];
+    expect(down).toHaveAttribute("data-state", "error");
+    expect(down).toHaveAccessibleName("CI nedostupné");
+    expect(stop).toHaveAttribute("data-state", "cancelled");
+    expect(stop).toHaveAccessibleName("Zrušeno");
+    expect(screen.getAllByTestId(BoardRowTestId.Root)[0]).not.toHaveAttribute("data-alert");
+  });
+
   it("shows only the picked projects and opens the project sheet", async () => {
     const props = setup({ widget: widget({ projectIds: ["green"] }) });
     renderWithProviders(<ProjectStatusWidget {...props} />);

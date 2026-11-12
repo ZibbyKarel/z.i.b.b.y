@@ -3482,7 +3482,9 @@
           "running": "CI running",
           "pending": "CI pending",
           "skipped": "Skipped",
-          "none": "No CI"
+          "none": "No CI",
+          "cancelled": "Cancelled",
+          "error": "CI unavailable"
         }
       }
     },
@@ -3629,7 +3631,9 @@
         "fixFailed": "Could not start the CI fix.",
         "openTask": "Open task",
         "noRuns": "No CI has run on the base branch yet.",
-        "gitlabDeferred": "GitLab CI is not read yet."
+        "gitlabDeferred": "GitLab CI is not read yet.",
+        "fixRunning": "Fix in progress",
+        "unavailable": "CI could not be read: {reason}"
       }
     },
     "moreLayouts": "More layouts",
