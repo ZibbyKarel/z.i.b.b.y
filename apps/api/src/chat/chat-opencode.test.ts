@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   OPENCODE_CHAT_BUILTIN_TOOLS,
@@ -6,6 +9,7 @@ import {
   opencodeChatArgs,
   opencodeChatEnv,
   parseOpencodeChatLine,
+  preferGlobalBin,
   toOpencodeMcpServer,
 } from "./chat-opencode";
 import plugin, {
@@ -25,7 +29,7 @@ describe("buildOpencodeChatConfig (A25)", () => {
           url: "http://x/api/chat/mcp",
           headers: { Authorization: "Bearer t" },
         },
-        plugin_playwright_playwright: { command: "npx", args: ["@playwright/mcp"] },
+        plugin_playwright_playwright: { command: "npx", args: ["@playwright/mcp@0.0.1"] },
         opencode: { type: "http", url: "http://shadow" },
         "bad.id": { type: "http", url: "http://y" },
       },
@@ -57,7 +61,7 @@ describe("buildOpencodeChatConfig (A25)", () => {
           },
           plugin_playwright_playwright: {
             type: "local",
-            command: ["npx", "@playwright/mcp"],
+            command: ["npx", "@playwright/mcp@0.0.1"],
             codemode: false,
           },
         },
@@ -276,5 +280,30 @@ describe("opencode chat gate plugin", () => {
       }
       expect(reason("serena_find_symbol", {})).toMatch(/only the shell/);
     });
+  });
+});
+
+describe("preferGlobalBin", () => {
+  const root = mkdtempSync(join(tmpdir(), "npmroot-"));
+  mkdirSync(join(root, "@scope/pkg"), { recursive: true });
+  writeFileSync(
+    join(root, "@scope/pkg/package.json"),
+    JSON.stringify({ bin: { "pkg-mcp": "cli.js" } }),
+  );
+  writeFileSync(join(root, "@scope/pkg/cli.js"), "");
+  const bin = join(root, "@scope/pkg/cli.js");
+
+  it("rewrites unversioned and @latest, handling -y and keeping other args", () => {
+    expect(preferGlobalBin("npx", ["@scope/pkg"], root)).toEqual([bin]);
+    expect(preferGlobalBin("npx", ["-y", "@scope/pkg@latest", "--x"], root)).toEqual([bin, "--x"]);
+  });
+
+  it("leaves pinned, uninstalled and non-npx commands alone", () => {
+    expect(preferGlobalBin("npx", ["@scope/pkg@0.0.83"], root)).toEqual([
+      "npx",
+      "@scope/pkg@0.0.83",
+    ]);
+    expect(preferGlobalBin("npx", ["other"], root)).toEqual(["npx", "other"]);
+    expect(preferGlobalBin("serena", ["a"], root)).toEqual(["serena", "a"]);
   });
 });

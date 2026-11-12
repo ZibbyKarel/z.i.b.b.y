@@ -447,7 +447,7 @@ tool call's own `cwd`):
    tool-name form (`my.srv` → `my_srv`), exactly. Else `mcp.read` when the tool name is
    read-only (`get`/`list`/`search`/`read`/`fetch`/`find`/`view`/`describe`/`query`/
    `lookup`/`show`/`count`/`retrieve` as its first or second word **and** no write word
-   such as `send`/`create`/`update`/`run`/`click`/`navigate`/`use` anywhere); a
+   such as `send`/`create`/`update`/`run`/`click`/`navigate`/`use` anywhere, or one of the exact names `browser_snapshot`/`browser_take_screenshot`/`browser_console_messages`/`browser_network_requests`/`resolve-library-id`); a
    Never-rule-like name keeps that rule's action (`merge` + `pull`/`pr`/`mr`/`branch` →
    `pr.merge`, `pay`/`charge`/`refund`/`transfer`… → `payment`, `purchase`/`buy`/`checkout`
    → `purchase`, `delete`/`remove`/`destroy`/`purge`/… → `delete`, `deploy` → `deploy`,

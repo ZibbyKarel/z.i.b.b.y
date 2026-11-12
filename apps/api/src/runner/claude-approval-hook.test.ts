@@ -1235,7 +1235,7 @@ describe("A28 — MCP / connector calls", () => {
     ["mcp__claude_ai_Atlassian__atlassianUserInfo", "mcp.write"],
     ["mcp__claude_ai_Figma__use_figma", "mcp.write"],
     ["mcp__playwright__browser_navigate", "mcp.write"],
-    ["mcp__playwright__browser_snapshot", "mcp.write"],
+    ["mcp__playwright__browser_snapshot", "mcp.read"],
     ["mcp__playwright__browser_run_code_unsafe", "mcp.write"],
     ["mcp__x__mark_as_read", "mcp.write"],
     ["mcp__x__get_and_send", "mcp.write"],
@@ -1325,6 +1325,10 @@ describe("A28 — MCP / connector calls", () => {
     expect(isReadOnlyMcpTool("slack_read_channel")).toBe(true);
     expect(isReadOnlyMcpTool("channel_topic_read")).toBe(false);
     expect(isReadOnlyMcpTool("list_and_delete")).toBe(false);
+    expect(isReadOnlyMcpTool("browser_snapshot")).toBe(true);
+    expect(isReadOnlyMcpTool("resolve-library-id")).toBe(true);
+    expect(isReadOnlyMcpTool("browser_click")).toBe(false);
+    expect(isReadOnlyMcpTool("browser_navigate")).toBe(false);
   });
 
   describe("hook process", () => {

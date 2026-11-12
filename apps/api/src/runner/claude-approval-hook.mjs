@@ -1265,6 +1265,15 @@ const MCP_READ_VERBS = new Set([
   "retrieve",
 ]);
 
+/** Read-only tools whose names the verb rule can't see (Playwright inspection, context7's lookup). */
+const MCP_READ_NAMES = new Set([
+  "browser_snapshot",
+  "browser_take_screenshot",
+  "browser_console_messages",
+  "browser_network_requests",
+  "resolve_library_id",
+]);
+
 /** Any of these anywhere in a tool name makes it a write, whatever else it says. */
 const MCP_WRITE_WORDS = new Set(
   (
@@ -1316,6 +1325,7 @@ const words = (name) =>
 /** Read-only by name: a read verb as the first or second word and no write word anywhere. */
 export function isReadOnlyMcpTool(tool) {
   const w = words(tool);
+  if (MCP_READ_NAMES.has(w.join("_"))) return true;
   return w.slice(0, 2).some((x) => MCP_READ_VERBS.has(x)) && !w.some((x) => MCP_WRITE_WORDS.has(x));
 }
 

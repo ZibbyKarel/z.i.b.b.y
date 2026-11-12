@@ -190,6 +190,8 @@ opencode run --standalone --format json -m <provider/model> --agent zibby [--ses
   call (`MCP.awaitStartup`, hard-coded). A stdio server that starts slower — the
   operator's Playwright plugin via `npx @playwright/mcp@latest` connected after ~3.7 s —
   is not in that turn's toolset, and every turn is a fresh process.
+  `toOpencodeMcpServer` therefore swaps `npx [-y] <pkg>[@latest]` for the absolute bin of a globally
+  installed `<pkg>` (`npm i -g @playwright/mcp`; pinned versions stay on `npx`).
 - **Config:** the chat prompt plus `OPENCODE_CHAT_NOTE` (what the chat has, that risky
   steps go to `create_task`, that a server needing login is skipped, no Slack) as the
   `zibby` agent; `permissions` = deny `*`, allow `shell`, `bash`, `read`, `grep`, `glob`,

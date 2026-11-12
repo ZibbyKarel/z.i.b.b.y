@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
 import { agentBaseEnv } from "../shared/agent-env";
 import type { ChatStreamEvent } from "./chat-stream-parser";
@@ -45,6 +46,37 @@ export const OPENCODE_CHAT_REMOTE_SERVERS: Record<string, Record<string, unknown
 /** Operator servers the chat never mounts, whatever their config says (operator: "serena nechci"). */
 export const OPENCODE_CHAT_EXCLUDED_SERVERS = new Set(["serena"]);
 
+/** `npm prefix -g` for the node running us (`<prefix>/bin/node`); tests may override it. */
+export const globalNpmRoot = path.resolve(process.execPath, "../../lib/node_modules");
+
+/**
+ * `npx [-y] <pkg>[@latest] …` → the globally installed bin of `<pkg>` (opencode waits only ~2 s
+ * for an MCP server and `npx` startup eats that); anything else is returned unchanged.
+ */
+export function preferGlobalBin(
+  command: unknown,
+  args: unknown[],
+  root = globalNpmRoot,
+): unknown[] {
+  if (command !== "npx") return [command, ...args];
+  const rest = args.filter((a) => a !== "-y" && a !== "--yes");
+  const spec = rest[0];
+  const m = typeof spec === "string" ? /^(@?[^@]+)(?:@latest)?$/.exec(spec) : null;
+  if (!m?.[1]) return [command, ...args];
+  try {
+    const dir = path.join(root, m[1]);
+    const bin = (
+      JSON.parse(readFileSync(path.join(dir, "package.json"), "utf8")) as { bin?: unknown }
+    ).bin;
+    const rel = typeof bin === "string" ? bin : Object.values(bin ?? {})[0];
+    const file = typeof rel === "string" ? path.join(dir, rel) : "";
+    if (file && existsSync(file)) return [file, ...rest.slice(1)];
+  } catch {
+    // not installed globally — keep npx
+  }
+  return [command, ...args];
+}
+
 /**
  * A Claude `mcpServers` entry → opencode's `mcp.servers` shape (stdio → local, http/sse →
  * remote). A remote server that brings its own headers (ZibbyOS's bearer-token servers)
@@ -61,7 +93,7 @@ export function toOpencodeMcpServer(config: Record<string, unknown>): Record<str
   }
   return {
     type: "local",
-    command: [config.command, ...(Array.isArray(config.args) ? config.args : [])],
+    command: preferGlobalBin(config.command, Array.isArray(config.args) ? config.args : []),
     ...(config.env ? { environment: config.env } : {}),
     codemode: false,
   };
