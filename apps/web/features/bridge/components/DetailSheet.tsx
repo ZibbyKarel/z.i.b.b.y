@@ -8,6 +8,7 @@ import { AutomationSheet } from "./sheets/AutomationSheet";
 import { IssueSheet } from "./sheets/IssueSheet";
 import { NoteSheet } from "./sheets/NoteSheet";
 import { PrSheet } from "./sheets/PrSheet";
+import { ProjectSheet } from "./sheets/ProjectSheet";
 import { QuickActionSheet } from "./sheets/QuickActionSheet";
 import { RunSheet } from "./sheets/RunSheet";
 import { TaskSheet } from "./sheets/TaskSheet";
@@ -92,6 +93,7 @@ export function DetailSheet({ selection, onClose, onSideChange, onOpen }: Detail
       {common && kind === "quickAction" ? <QuickActionSheet {...common} /> : null}
       {common && kind === "note" ? <NoteSheet {...common} /> : null}
       {common && kind === "automation" ? <AutomationSheet {...common} /> : null}
+      {common && kind === "project" ? <ProjectSheet {...common} /> : null}
     </>
   );
 }

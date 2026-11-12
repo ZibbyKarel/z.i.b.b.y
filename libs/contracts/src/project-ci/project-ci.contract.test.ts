@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { BridgeWidgetSchema } from "../system/system.schema";
 import { projectCiContract } from "./project-ci.contract";
 import { ProjectCiSchema } from "./project-ci.schema";
 
@@ -33,5 +34,20 @@ describe("projectCiContract", () => {
       checkedAt: "2026-11-12T10:00:00.000Z",
     });
     expect(ci.workflows[0]?.jobs[0]?.steps[0]?.state).toBe("failing");
+  });
+});
+
+describe("BridgeWidgetSchema — projectStatus", () => {
+  it("accepts the type with a project scope", () => {
+    const w = BridgeWidgetSchema.parse({
+      id: "projectStatus",
+      type: "projectStatus",
+      x: 0,
+      y: 0,
+      w: 4,
+      h: 4,
+      scope: { projectIds: ["acme", "zibby"] },
+    });
+    expect(w.scope?.projectIds).toEqual(["acme", "zibby"]);
   });
 });

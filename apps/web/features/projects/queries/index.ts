@@ -15,6 +15,7 @@ export {
   useProjectIntegrationActivityQuery,
 } from "./useProjectIntegrationActivityQuery";
 export { getProjectPrsQueryKey, useProjectPrsQuery } from "./useProjectPrsQuery";
+export { getProjectCiQueryKey, useProjectCiQuery } from "./useProjectCiQuery";
 export { getProjectsQueryKey, useProjectsQuery } from "./useProjectsQuery";
 export {
   getProjectCategoriesQueryKey,
