@@ -123,7 +123,7 @@ and passing = `ready-to-merge` → `awaiting-review`.
 `blocker` stay for back-compat.
 
 A failing repo lands in `errors` and never fails the request. The GitHub part is
-cached in memory for 30 s; any successful merge (`ProjectPrService.onMerged`) clears
+cached in memory for 30 s; any successful merge / close / draft toggle (`ProjectPrService.onPrChanged`) clears
 it. `codeReview` (the latest review task, of any level, per `repo#number`, from the tasks
 store) is joined on every read, uncached. A `running` review whose task failed or
 whose run errored reads `failed`. `runs` lists every ZIBBY run of the PR (`kind`: review,

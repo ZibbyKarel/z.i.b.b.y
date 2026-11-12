@@ -292,6 +292,7 @@ describe("InboxService.listPrs", () => {
         return json({
           number: n,
           title: `PR ${n}`,
+          body: n === 1 ? "## What\n\nFixes it." : n === 2 ? "   " : null,
           html_url: `https://github.com/Acme/app/pull/${n}`,
           draft: n === 3,
           mergeable: n === 2 ? false : true,
@@ -342,7 +343,7 @@ describe("InboxService.listPrs", () => {
       {} as never,
       { list: async () => tasks } as never,
       {
-        onMerged: (fn: () => void) => {
+        onPrChanged: (fn: () => void) => {
           merged.push(fn);
         },
       } as never,
@@ -630,6 +631,10 @@ describe("InboxService.listPrs", () => {
     expect(byNumber[3]).toMatchObject({ headRef: "feat-3", baseRef: "feat-1" });
     expect(byNumber[2]?.headRef).toBeUndefined();
     expect(byNumber[2]?.baseRef).toBe("main");
+    // todo-15 — the description; a blank / null body is omitted.
+    expect(byNumber[1]?.body).toBe("## What\n\nFixes it.");
+    expect(byNumber[2]?.body).toBeUndefined();
+    expect(byNumber[3]?.body).toBeUndefined();
     // #1 is both direct and team -> direct wins.
     expect(byNumber[1]).toMatchObject({
       bucket: "to-review",

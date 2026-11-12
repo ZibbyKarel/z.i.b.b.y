@@ -86,3 +86,15 @@ export class PrNotMergeableError extends Error {
     this.name = "PrNotMergeableError";
   }
 }
+
+/** todo-15 — GitHub refused an operator close / draft toggle (already closed, merged, not allowed). */
+export class PrUpdateRefusedError extends Error {
+  constructor(
+    public readonly id: string,
+    public readonly number: number,
+    detail?: string,
+  ) {
+    super(`PR #${number} on project "${id}" was not updated${detail ? `: ${detail}` : ""}`);
+    this.name = "PrUpdateRefusedError";
+  }
+}

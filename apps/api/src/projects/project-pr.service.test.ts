@@ -1,6 +1,11 @@
 import type { Integration, Project } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { NoGithubLinkError, PrNotMergeableError, ProjectNotFoundError } from "./projects.errors";
+import {
+  NoGithubLinkError,
+  PrNotMergeableError,
+  PrUpdateRefusedError,
+  ProjectNotFoundError,
+} from "./projects.errors";
 import { ProjectPrService } from "./project-pr.service";
 
 const PROJECT: Project = { id: "acme", name: "acme", path: "~/Projects/acme" };
@@ -402,11 +407,99 @@ describe("ProjectPrService", () => {
       const fetchImpl = route({});
       const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
       const merged: string[] = [];
-      service.onMerged((repo, n) => merged.push(`${repo}#${n}`));
+      service.onPrChanged((repo, n) => merged.push(`${repo}#${n}`));
       const result = await service.merge("acme", 42, "squash");
       expect(result.branchDeleted).toBeUndefined();
       expect(fetchImpl).toHaveBeenCalledTimes(1);
       expect(merged).toEqual(["acme/app#42"]);
+    });
+  });
+
+  describe("close (todo-15)", () => {
+    it("PATCHes state=closed and notifies listeners", async () => {
+      const fetchImpl = vi.fn(async () =>
+        jsonResponse(200, { state: "closed", draft: false, html_url: "https://x/pull/42" }),
+      );
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const changed: string[] = [];
+      service.onPrChanged((repo, n) => changed.push(`${repo}#${n}`));
+      const result = await service.close("acme", 42);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "closed", draft: false });
+      const [url, init] = vi.mocked(fetchImpl).mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe("https://api.github.com/repos/acme/app/pulls/42");
+      expect(init.method).toBe("PATCH");
+      expect(JSON.parse(String(init.body))).toEqual({ state: "closed" });
+      expect(changed).toEqual(["acme/app#42"]);
+    });
+
+    it("a GitHub 422 is a refusal", async () => {
+      const service = build({
+        fetchImpl: (async () =>
+          jsonResponse(422, { message: "already closed" })) as unknown as typeof fetch,
+      });
+      await expect(service.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+    });
+
+    it("without a github link it never calls GitHub", async () => {
+      const fetchImpl = vi.fn();
+      const service = build({ token: null, fetchImpl: fetchImpl as never });
+      await expect(service.close("acme", 42)).rejects.toBeInstanceOf(NoGithubLinkError);
+      expect(fetchImpl).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setDraft (todo-15)", () => {
+    const route = (opts: { draft: boolean; state?: string; errors?: unknown[] }) =>
+      vi.fn(async (url: string) =>
+        url.endsWith("/graphql")
+          ? jsonResponse(200, opts.errors ? { errors: opts.errors } : { data: {} })
+          : jsonResponse(200, {
+              node_id: "PR_node",
+              state: opts.state ?? "open",
+              draft: opts.draft,
+              html_url: "https://x/pull/42",
+            }),
+      );
+
+    it("converts a ready PR to draft through the GraphQL mutation", async () => {
+      const fetchImpl = route({ draft: false });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      const result = await service.setDraft("acme", 42, true);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "open", draft: true });
+      const [url, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+      expect(url).toBe("https://api.github.com/graphql");
+      const body = JSON.parse(String(init.body)) as { query: string; variables: unknown };
+      expect(body.query).toContain("convertPullRequestToDraft");
+      expect(body.variables).toEqual({ id: "PR_node" });
+    });
+
+    it("marks a draft ready for review", async () => {
+      const fetchImpl = route({ draft: true });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      await service.setDraft("acme", 42, false);
+      const [, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+      expect(String(init.body)).toContain("markPullRequestReadyForReview");
+    });
+
+    it("is a no-op when the PR is already in the requested state", async () => {
+      const fetchImpl = route({ draft: true });
+      const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+      expect(await service.setDraft("acme", 42, true)).toMatchObject({ draft: true });
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses a closed PR and surfaces GraphQL errors as a refusal", async () => {
+      const closed = build({
+        fetchImpl: route({ draft: false, state: "closed" }) as unknown as typeof fetch,
+      });
+      await expect(closed.setDraft("acme", 42, true)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      const failing = build({
+        fetchImpl: route({
+          draft: false,
+          errors: [{ message: "not allowed" }],
+        }) as unknown as typeof fetch,
+      });
+      await expect(failing.setDraft("acme", 42, true)).rejects.toThrow(/not allowed/);
     });
   });
 });

@@ -118,6 +118,7 @@ the raw manifest from before this externalization existed.
 | `ProjectLocalUnresolvedError` | —    | `resolveForRun`: no local clone, no remote — dispatch fails clearly rather than spawning into nothing |
 | `NoGithubLinkError`           | 422  | `merge`: no resolved github integration + token                                                       |
 | `PrNotMergeableError`         | 409  | GitHub reports 405/409 on the merge attempt                                                           |
+| `PrUpdateRefusedError`        | 409  | `close` / `setDraft`: GitHub refused the change (PR not open, 403/409/422, GraphQL error)             |
 
 ## Per-machine clone resolution (Phase 76/77 — `ProjectLocalService`)
 
@@ -166,8 +167,16 @@ rate-limit error, injectable `fetchImpl` for tests).
   successful merge it reads the PR's head and `DELETE /repos/{repo}/git/refs/heads/{branch}`;
   a fork (head repo ≠ base repo) is skipped, a 422 (ref already gone) counts as deleted.
   The delete never fails the merge: the result carries `branchDeleted` and, when skipped or
-  failed, a `note`. Every successful merge fires the `onMerged(repo, number)` listeners
+  failed, a `note`. Every successful merge fires the `onPrChanged(repo, number)` listeners
   (the PR inbox drops its 30 s cache there; no module cycle).
+- `close(projectId, number)` / `setDraft(projectId, number, draft)` (todo-15) —
+  `POST /projects/:id/prs/:number/close` and `POST /projects/:id/prs/:number/draft` `{ draft }`.
+  Same guard as `merge`: reached only from the operator's click in the PR detail (close behind
+  a confirm dialog), denied to the chat self-API (`DENIED_ROUTES`), never called by a
+  scheduler/monitor/runner. Close is a REST `PATCH state=closed`; the draft toggle reads the
+  PR's `node_id` and runs GraphQL `convertPullRequestToDraft` / `markPullRequestReadyForReview`
+  (no-op when already in that state). Both return `{ url, state, draft }`, fire
+  `onPrChanged`, and map to 404 / 422 (no link) / 409 (`PrUpdateRefusedError`).
 - `getPr(projectId, number)` / `isMerged(projectId, number)` (phase 125e) — one PR's
   live state, for the roadmap gate's merge poll. `getPr` mirrors `listOpen`'s error
   posture exactly (404 → `null`, 429/403 → rate-limit error, other non-2xx → throws).

@@ -49,6 +49,7 @@ interface GhCheckRun {
 interface GhPull {
   number?: number;
   title?: string;
+  body?: string | null;
   html_url?: string;
   draft?: boolean;
   mergeable?: boolean | null;
@@ -217,7 +218,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
   onModuleInit(): void {
     // Phase 129 P3 — a merge (from any surface) drops the 30 s PR cache so the
     // merged PR leaves the list on the very next read instead of lingering.
-    this.projectPrs.onMerged(() => this.dropPrsCache());
+    this.projectPrs.onPrChanged(() => this.dropPrsCache());
     // A ZIBBY action that changes PRs (task opened one, roadmap dispatch…) drops the
     // cache too, so the web's event-driven refetch reaches GitHub, not a stale copy.
     this.activitySub = this.activityEvents.stream().subscribe(({ kind }) => {
@@ -524,6 +525,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           source: "github" as const,
           number,
           title: pull.title ?? "",
+          ...(pull.body?.trim() ? { body: pull.body } : {}),
           url: pull.html_url ?? `https://github.com/${repo}/pull/${number}`,
           repo,
           author,

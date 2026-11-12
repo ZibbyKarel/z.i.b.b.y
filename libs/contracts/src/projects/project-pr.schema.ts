@@ -50,3 +50,15 @@ export const MergeProjectPrResultSchema = z.object({
   note: z.string().optional(),
 });
 export type MergeProjectPrResult = z.infer<typeof MergeProjectPrResultSchema>;
+
+/** todo-15 — body of `setProjectPrDraft`: `true` converts to draft, `false` marks ready for review. */
+export const SetProjectPrDraftBodySchema = z.object({ draft: z.boolean() });
+export type SetProjectPrDraftInput = z.infer<typeof SetProjectPrDraftBodySchema>;
+
+/** todo-15 — the PR's state after an operator close / draft toggle. */
+export const ProjectPrUpdateResultSchema = z.object({
+  url: z.string(),
+  state: z.enum(["open", "closed"]),
+  draft: z.boolean(),
+});
+export type ProjectPrUpdateResult = z.infer<typeof ProjectPrUpdateResultSchema>;

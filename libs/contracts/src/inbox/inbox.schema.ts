@@ -142,6 +142,8 @@ export const InboxPrSchema = z.object({
   source: z.literal("github"),
   number: z.number().int().positive(),
   title: z.string(),
+  /** todo-15 — the PR description (GitHub markdown); absent when empty. */
+  body: z.string().min(1).optional(),
   url: z.string().url(),
   repo: z.string().min(1),
   author: z.string(),
