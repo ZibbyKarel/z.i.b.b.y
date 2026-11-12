@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
@@ -32,6 +33,28 @@ describe("DensityMenu", () => {
     render(<DensityMenu label="Density" labels={labels} onChange={vi.fn()} value="airy" />);
     await userEvent.click(screen.getByTestId(DensityMenuTestId.Trigger));
     await userEvent.keyboard("{Escape}");
+    expect(screen.queryByTestId(DensityMenuTestId.Menu)).toBeNull();
+  });
+});
+
+describe("DensityMenu outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <DensityMenu label="Density" labels={labels} onChange={vi.fn()} value="airy" />
+      </Dialog>,
+    );
+    await userEvent.click(screen.getByTestId(DensityMenuTestId.Trigger));
+    await userEvent.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(DensityMenuTestId.Menu)).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes when the trigger is clicked while open", async () => {
+    render(<DensityMenu label="Density" labels={labels} onChange={vi.fn()} value="airy" />);
+    await userEvent.click(screen.getByTestId(DensityMenuTestId.Trigger));
+    await userEvent.click(screen.getByTestId(DensityMenuTestId.Trigger));
     expect(screen.queryByTestId(DensityMenuTestId.Menu)).toBeNull();
   });
 });

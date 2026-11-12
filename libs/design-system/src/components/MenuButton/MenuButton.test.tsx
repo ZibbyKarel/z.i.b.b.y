@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MenuButton, MenuButtonTestId } from "./MenuButton";
@@ -176,5 +177,53 @@ describe("MenuButton", () => {
       const settingsItem = screen.getByTestId(`${MenuButtonTestId.Item}-settings`);
       expect(trigger).toHaveAttribute("aria-activedescendant", settingsItem.id);
     });
+  });
+});
+
+describe("MenuButton outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <MenuButton items={makeItems()} />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    expect(screen.getByTestId(MenuButtonTestId.Menu)).toBeInTheDocument();
+    await user.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("still selects an item inside a dialog", async () => {
+    const user = userEvent.setup();
+    const items = makeItems();
+    render(
+      <Dialog open title="T">
+        <MenuButton items={items} />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    await user.click(screen.getByText("Pokračovat"));
+    expect(items[0]!.onSelect).toHaveBeenCalledOnce();
+  });
+
+  it("closes exactly once when the trigger is clicked while open", async () => {
+    const user = userEvent.setup();
+    render(<MenuButton items={makeItems()} />);
+    const trigger = screen.getByTestId(MenuButtonTestId.Trigger);
+    await user.click(trigger);
+    await user.click(trigger);
+    expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes on a pointerdown on the document body", async () => {
+    const user = userEvent.setup();
+    render(<MenuButton items={makeItems()} />);
+    await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
   });
 });

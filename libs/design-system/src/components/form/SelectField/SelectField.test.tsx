@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DropdownTestId } from "../../Dropdown/Dropdown";
@@ -81,5 +82,22 @@ describe("SelectField", () => {
     await user.click(trigger);
     await user.click(screen.getAllByTestId(DropdownTestId.Option)[1]!);
     expect(onValueChange).toHaveBeenCalledWith(["opus", "sonnet"]);
+  });
+});
+
+describe("SelectField outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <SelectField label="Model" onValueChange={vi.fn()} options={OPTIONS} value="opus" />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(DropdownTestId.Trigger));
+    expect(screen.getByTestId(DropdownTestId.Panel)).toBeInTheDocument();
+    await user.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(DropdownTestId.Panel)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

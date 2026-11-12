@@ -6,6 +6,7 @@ import { focusRingInset } from "../../utils/focus";
 import { Button, type ButtonIntent, type ButtonSize, buttonClasses } from "../Button/Button";
 import { Icon, type IconName } from "../Icon/Icon";
 import { MenuSurface } from "../MenuSurface/MenuSurface";
+import { useDismissOnOutside } from "../../hooks/useDismissOnOutside";
 
 export enum DropDownButtonTestId {
   Root = "drop-down-button-root",
@@ -78,6 +79,9 @@ export function DropDownButton({
   const itemId = (i: number) => `${baseId}-item-${i}`;
 
   const close = useCallback(() => setOpen(false), []);
+  const menuRef = useRef<HTMLDivElement>(null);
+  // The trigger is "inside", so clicking it while open is handled by its own toggle.
+  useDismissOnOutside({ open, refs: [triggerRef, menuRef], onDismiss: close });
 
   const updateRect = useCallback(() => {
     const el = triggerRef.current;
@@ -211,70 +215,68 @@ export function DropDownButton({
       {open &&
         typeof document !== "undefined" &&
         createPortal(
-          <>
-            <div className="fixed inset-0 z-40" onClick={close} />
-            <MenuSurface
-              scroll
-              align="end"
-              data-testid={DropDownButtonTestId.Menu}
-              id={`${baseId}-menu`}
-              placement="fixed"
-              role="menu"
-              style={menuStyle}
-            >
-              <div className="p-1">
-                {menuItems.map((item, i) => {
-                  const active = i === activeRow;
-                  return (
-                    <button
-                      aria-checked={item.checked}
-                      aria-disabled={item.disabled || undefined}
-                      className={cn(
-                        "w-full flex gap-2.5 px-[11px] py-[9px]",
-                        item.description ? "items-start" : "items-center",
-                        "rounded-sm cursor-pointer border-none text-left",
-                        focusRingInset,
-                        "transition-colors duration-100",
-                        item.disabled
-                          ? "cursor-not-allowed opacity-50"
-                          : cn(active ? "bg-surface" : "bg-transparent hover:bg-surface"),
-                        active && !item.disabled && "ring-1 ring-inset ring-border-strong",
-                      )}
-                      data-testid={`${DropDownButtonTestId.Item}-${item.id}`}
-                      id={itemId(i)}
-                      key={item.id}
-                      onClick={() => activate(i)}
-                      onPointerMove={() => !item.disabled && setActiveIndex(i)}
-                      role={item.checked === undefined ? "menuitem" : "menuitemradio"}
-                      type="button"
-                    >
-                      {item.checked !== undefined && (
+          <MenuSurface
+            scroll
+            align="end"
+            data-testid={DropDownButtonTestId.Menu}
+            id={`${baseId}-menu`}
+            placement="fixed"
+            ref={menuRef}
+            role="menu"
+            style={menuStyle}
+          >
+            <div className="p-1">
+              {menuItems.map((item, i) => {
+                const active = i === activeRow;
+                return (
+                  <button
+                    aria-checked={item.checked}
+                    aria-disabled={item.disabled || undefined}
+                    className={cn(
+                      "w-full flex gap-2.5 px-[11px] py-[9px]",
+                      item.description ? "items-start" : "items-center",
+                      "rounded-sm cursor-pointer border-none text-left",
+                      focusRingInset,
+                      "transition-colors duration-100",
+                      item.disabled
+                        ? "cursor-not-allowed opacity-50"
+                        : cn(active ? "bg-surface" : "bg-transparent hover:bg-surface"),
+                      active && !item.disabled && "ring-1 ring-inset ring-border-strong",
+                    )}
+                    data-testid={`${DropDownButtonTestId.Item}-${item.id}`}
+                    id={itemId(i)}
+                    key={item.id}
+                    onClick={() => activate(i)}
+                    onPointerMove={() => !item.disabled && setActiveIndex(i)}
+                    role={item.checked === undefined ? "menuitem" : "menuitemradio"}
+                    type="button"
+                  >
+                    {item.checked !== undefined && (
+                      <span
+                        aria-hidden
+                        className="w-3 shrink-0 font-mono text-sm"
+                        data-testid={DropDownButtonTestId.ItemCheck}
+                      >
+                        {item.checked ? "✓" : ""}
+                      </span>
+                    )}
+                    {item.icon && <Icon name={item.icon} size="sm" />}
+                    <span className="flex flex-1 flex-col gap-0.5">
+                      <span className="text-md text-foreground">{item.label}</span>
+                      {item.description && (
                         <span
-                          aria-hidden
-                          className="w-3 shrink-0 font-mono text-sm"
-                          data-testid={DropDownButtonTestId.ItemCheck}
+                          className="text-sm text-foreground-dim"
+                          data-testid={DropDownButtonTestId.ItemDescription}
                         >
-                          {item.checked ? "✓" : ""}
+                          {item.description}
                         </span>
                       )}
-                      {item.icon && <Icon name={item.icon} size="sm" />}
-                      <span className="flex flex-1 flex-col gap-0.5">
-                        <span className="text-md text-foreground">{item.label}</span>
-                        {item.description && (
-                          <span
-                            className="text-sm text-foreground-dim"
-                            data-testid={DropDownButtonTestId.ItemDescription}
-                          >
-                            {item.description}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </MenuSurface>
-          </>,
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </MenuSurface>,
           document.body,
         )}
     </div>

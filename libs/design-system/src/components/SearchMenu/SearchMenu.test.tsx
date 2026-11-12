@@ -1,5 +1,6 @@
 import { type Ref, useState } from "react";
 import { screen } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
@@ -135,5 +136,21 @@ describe("SearchMenu", () => {
   it("shows the shortcut hint only when idle and empty", () => {
     render(<Harness />);
     expect(screen.getByTestId(SearchMenuTestId.Shortcut)).toHaveTextContent("⌘K");
+  });
+});
+
+describe("SearchMenu outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <Harness />
+      </Dialog>,
+    );
+    await userEvent.type(screen.getByTestId(SearchMenuTestId.Input), "wr");
+    expect(screen.getByTestId(SearchMenuTestId.Panel)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(SearchMenuTestId.Panel)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

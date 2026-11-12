@@ -1,4 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { DropDownButton, DropDownButtonTestId } from "./DropDownButton";
@@ -196,5 +197,53 @@ describe("DropDownButton", () => {
     expect(item).toHaveRole("menuitem");
     expect(item).not.toHaveAttribute("aria-checked");
     expect(screen.queryByTestId(DropDownButtonTestId.ItemCheck)).not.toBeInTheDocument();
+  });
+});
+
+describe("DropDownButton outside dismiss (todo-12)", () => {
+  it("closes on a pointerdown on the dialog body without closing the dialog", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="T">
+        <DropDownButton label="Run" menuItems={makeItems()} onClick={vi.fn()} />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    expect(screen.getByTestId(DropDownButtonTestId.Menu)).toBeInTheDocument();
+    await user.click(screen.getByTestId(DialogTestId.Body));
+    expect(screen.queryByTestId(DropDownButtonTestId.Menu)).not.toBeInTheDocument();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("still selects an item inside a dialog", async () => {
+    const user = userEvent.setup();
+    const items = makeItems();
+    render(
+      <Dialog open title="T">
+        <DropDownButton label="Run" menuItems={items} onClick={vi.fn()} />
+      </Dialog>,
+    );
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    await user.click(screen.getByText("in 1h"));
+    expect(items[0]!.onSelect).toHaveBeenCalledOnce();
+  });
+
+  it("closes exactly once when the trigger is clicked while open", async () => {
+    const user = userEvent.setup();
+    render(<DropDownButton label="Run" menuItems={makeItems()} onClick={vi.fn()} />);
+    const trigger = screen.getByTestId(DropDownButtonTestId.Trigger);
+    await user.click(trigger);
+    await user.click(trigger);
+    expect(screen.queryByTestId(DropDownButtonTestId.Menu)).not.toBeInTheDocument();
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("closes on a pointerdown on the document body", async () => {
+    const user = userEvent.setup();
+    render(<DropDownButton label="Run" menuItems={makeItems()} onClick={vi.fn()} />);
+    await user.click(screen.getByTestId(DropDownButtonTestId.Trigger));
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByTestId(DropDownButtonTestId.Menu)).not.toBeInTheDocument();
   });
 });
