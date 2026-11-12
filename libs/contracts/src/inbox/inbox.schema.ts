@@ -144,6 +144,8 @@ export const InboxPrSchema = z.object({
   title: z.string(),
   /** todo-15 — the PR description (GitHub markdown); absent when empty. */
   body: z.string().min(1).optional(),
+  /** todo-15 — `body` was capped at 20k chars; the full text is on GitHub (`url`). */
+  descriptionTruncated: z.literal(true).optional(),
   url: z.string().url(),
   repo: z.string().min(1),
   author: z.string(),

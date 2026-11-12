@@ -416,26 +416,40 @@ describe("ProjectPrService", () => {
   });
 
   describe("close (todo-15)", () => {
-    it("PATCHes state=closed and notifies listeners", async () => {
-      const fetchImpl = vi.fn(async () =>
-        jsonResponse(200, { state: "closed", draft: false, html_url: "https://x/pull/42" }),
+    // GET reads the current state; PATCH answers `patch` (status, body).
+    const closeRoute = (opts: { state?: string; readStatus?: number; patch?: [number, unknown] }) =>
+      vi.fn(async (_url: string, init?: RequestInit) =>
+        init?.method === "PATCH"
+          ? jsonResponse(
+              ...(opts.patch ?? [
+                200,
+                { state: "closed", draft: false, html_url: "https://x/pull/42" },
+              ]),
+            )
+          : jsonResponse(opts.readStatus ?? 200, {
+              state: opts.state ?? "open",
+              draft: false,
+              html_url: "https://x/pull/42",
+            }),
       );
+
+    it("PATCHes state=closed and notifies listeners", async () => {
+      const fetchImpl = closeRoute({});
       const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
       const changed: string[] = [];
       service.onPrChanged((repo, n) => changed.push(`${repo}#${n}`));
       const result = await service.close("acme", 42);
       expect(result).toEqual({ url: "https://x/pull/42", state: "closed", draft: false });
-      const [url, init] = vi.mocked(fetchImpl).mock.calls[0] as unknown as [string, RequestInit];
-      expect(url).toBe("https://api.github.com/repos/acme/app/pulls/42");
-      expect(init.method).toBe("PATCH");
-      expect(JSON.parse(String(init.body))).toEqual({ state: "closed" });
+      const patch = fetchImpl.mock.calls.find(([, init]) => init?.method === "PATCH");
+      expect(patch?.[0]).toBe("https://api.github.com/repos/acme/app/pulls/42");
+      expect(JSON.parse(String(patch?.[1]?.body))).toEqual({ state: "closed" });
       expect(changed).toEqual(["acme/app#42"]);
     });
 
     it("records pr-closed on success, nothing on a refusal", async () => {
       const record = vi.fn(async () => {});
       const ok = build({
-        fetchImpl: (async () => jsonResponse(200, { state: "closed" })) as unknown as typeof fetch,
+        fetchImpl: closeRoute({}) as unknown as typeof fetch,
         activity: { record },
       });
       await ok.close("acme", 42);
@@ -448,19 +462,35 @@ describe("ProjectPrService", () => {
       );
       record.mockClear();
       const refused = build({
-        fetchImpl: (async () => jsonResponse(422, {})) as unknown as typeof fetch,
+        fetchImpl: closeRoute({ patch: [422, {}] }) as unknown as typeof fetch,
         activity: { record },
       });
       await expect(refused.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
       expect(record).not.toHaveBeenCalled();
     });
 
-    it("a GitHub 422 is a refusal", async () => {
+    it("an already-closed PR is a no-op: no PATCH, no activity entry", async () => {
+      const record = vi.fn(async () => {});
+      const fetchImpl = closeRoute({ state: "closed" });
       const service = build({
-        fetchImpl: (async () =>
-          jsonResponse(422, { message: "already closed" })) as unknown as typeof fetch,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        activity: { record },
       });
-      await expect(service.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      const result = await service.close("acme", 42);
+      expect(result).toEqual({ url: "https://x/pull/42", state: "closed", draft: false });
+      expect(fetchImpl.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(false);
+      expect(record).not.toHaveBeenCalled();
+    });
+
+    it("a GitHub 404 or 422 is a refusal", async () => {
+      for (const fetchImpl of [
+        closeRoute({ readStatus: 404 }),
+        closeRoute({ patch: [404, {}] }),
+        closeRoute({ patch: [422, { message: "nope" }] }),
+      ]) {
+        const service = build({ fetchImpl: fetchImpl as unknown as typeof fetch });
+        await expect(service.close("acme", 42)).rejects.toBeInstanceOf(PrUpdateRefusedError);
+      }
     });
 
     it("without a github link it never calls GitHub", async () => {

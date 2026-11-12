@@ -173,7 +173,7 @@ rate-limit error, injectable `fetchImpl` for tests).
   `POST /projects/:id/prs/:number/close` and `POST /projects/:id/prs/:number/draft` `{ draft }`.
   Same guard as `merge`: reached only from the operator's click in the PR detail (close behind
   a confirm dialog), denied to the chat self-API (`DENIED_ROUTES`), never called by a
-  scheduler/monitor/runner. Close is a REST `PATCH state=closed`; the draft toggle reads the
+  scheduler/monitor/runner. Close reads the PR first (already closed: no-op, no PATCH, no activity entry; 404 is a refusal), then a REST `PATCH state=closed`; the draft toggle reads the
   PR's `node_id` and runs GraphQL `convertPullRequestToDraft` / `markPullRequestReadyForReview`
   (no-op when already in that state). On success both record an activity entry like merge
   does (`pr-closed` / `pr-draft-changed`, refs `pr-<n>`; nothing on a no-op or refusal),

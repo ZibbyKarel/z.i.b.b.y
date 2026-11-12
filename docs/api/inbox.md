@@ -88,6 +88,9 @@ without one drops a stale override.
 For every distinct repo of a project with a GitHub integration (token via
 `resolveGithubToken`), using GitHub Search:
 
+Each PR carries its description as `body` (todo-15), capped at 20,000 chars (a surrogate pair is
+never split); a capped one also sets `descriptionTruncated: true` and the UI links to GitHub.
+
 - **mine** — `is:pr is:open repo:<repo> author:@me`
 - **to review, direct** — `user-review-requested:@me`
 - **to review, team** — `team-review-requested:<org>/<slug>` for each of the user's

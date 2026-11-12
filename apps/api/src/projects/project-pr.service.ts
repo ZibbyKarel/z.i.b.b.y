@@ -284,12 +284,27 @@ export class ProjectPrService {
    */
   async close(projectId: string, number: number): Promise<ProjectPrUpdateResult> {
     const link = await this.requireLink(projectId);
+    const headers = this.ghHeaders(link.token);
+    const read = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
+      headers,
+    });
+    if (read.status === 404) throw new PrUpdateRefusedError(projectId, number, "PR not found");
+    if (!read.ok) throw new Error(`github read PR #${number}: HTTP ${read.status}`);
+    const current = (await read.json()) as { state?: string; draft?: boolean; html_url?: string };
+    // Already closed (or merged): nothing to do, nothing to record.
+    if (current.state !== "open") {
+      return {
+        url: current.html_url ?? `https://github.com/${link.repo}/pull/${number}`,
+        state: "closed",
+        draft: current.draft === true,
+      };
+    }
     const res = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
       method: "PATCH",
-      headers: this.ghHeaders(link.token),
+      headers,
       body: JSON.stringify({ state: "closed" }),
     });
-    if (res.status === 403 || res.status === 409 || res.status === 422) {
+    if ([403, 404, 409, 422].includes(res.status)) {
       throw new PrUpdateRefusedError(projectId, number, await ghMessage(res));
     }
     if (!res.ok) throw new Error(`github close PR #${number}: HTTP ${res.status}`);
@@ -323,6 +338,7 @@ export class ProjectPrService {
     const read = await this.fetchImpl(`${GITHUB_API}/repos/${link.repo}/pulls/${number}`, {
       headers,
     });
+    if (read.status === 404) throw new PrUpdateRefusedError(projectId, number, "PR not found");
     if (!read.ok) throw new Error(`github read PR #${number}: HTTP ${read.status}`);
     const pull = (await read.json()) as {
       node_id?: string;

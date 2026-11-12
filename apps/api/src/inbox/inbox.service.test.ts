@@ -292,7 +292,12 @@ describe("InboxService.listPrs", () => {
         return json({
           number: n,
           title: `PR ${n}`,
-          body: n === 1 ? "## What\n\nFixes it." : n === 2 ? "   " : null,
+          body:
+            n === 1
+              ? "## What\n\nFixes it."
+              : n === 2
+                ? "   "
+                : `${"x".repeat(19_999)}\u{1F600}tail`,
           html_url: `https://github.com/Acme/app/pull/${n}`,
           draft: n === 3,
           mergeable: n === 2 ? false : true,
@@ -634,7 +639,10 @@ describe("InboxService.listPrs", () => {
     // todo-15 — the description; a blank / null body is omitted.
     expect(byNumber[1]?.body).toBe("## What\n\nFixes it.");
     expect(byNumber[2]?.body).toBeUndefined();
-    expect(byNumber[3]?.body).toBeUndefined();
+    expect(byNumber[1]?.descriptionTruncated).toBeUndefined();
+    // a huge description is capped at 20k chars without splitting a surrogate pair.
+    expect(byNumber[3]?.body).toBe("x".repeat(19_999));
+    expect(byNumber[3]?.descriptionTruncated).toBe(true);
     // #1 is both direct and team -> direct wins.
     expect(byNumber[1]).toMatchObject({
       bucket: "to-review",

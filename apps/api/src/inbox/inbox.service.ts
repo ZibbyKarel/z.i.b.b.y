@@ -525,7 +525,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           source: "github" as const,
           number,
           title: pull.title ?? "",
-          ...(pull.body?.trim() ? { body: pull.body } : {}),
+          ...(pull.body?.trim() ? capDescription(pull.body) : {}),
           url: pull.html_url ?? `https://github.com/${repo}/pull/${number}`,
           repo,
           author,
@@ -689,4 +689,15 @@ export function isDeadTask(task: ScheduledTask): boolean {
     task.status === "dead-letter" ||
     task.outcome?.status === "error"
   );
+}
+
+/** todo-15 — PR descriptions ride the list payload, so a huge one is capped (the UI links out). */
+const DESCRIPTION_CAP = 20_000;
+function capDescription(body: string): { body: string; descriptionTruncated?: true } {
+  if (body.length <= DESCRIPTION_CAP) return { body };
+  let end = DESCRIPTION_CAP;
+  // Never split a surrogate pair: drop a dangling high surrogate.
+  const last = body.charCodeAt(end - 1);
+  if (last >= 0xd800 && last <= 0xdbff) end -= 1;
+  return { body: body.slice(0, end), descriptionTruncated: true };
 }
