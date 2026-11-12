@@ -11,6 +11,7 @@ import {
   Button,
   MobileMenu,
   MobileToolbar,
+  ScreenGlow,
   Stack,
   SubNav,
   Tab,
@@ -31,7 +32,7 @@ import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useNow } from "../../../hooks/useNow";
 import { MINUTE_MS, formatCountdown } from "../../../utils/time";
 import { NotificationBell } from "../../../features/notifications";
-import { ApprovalNotifier, AutopilotToggle } from "../../../features/autopilot";
+import { ApprovalNotifier, AutopilotToggle, useAutopilotQuery } from "../../../features/autopilot";
 import {
   PinPageDialog,
   SubnavPinButton,
@@ -413,6 +414,12 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   );
 }
 
+/** TODO 18: a Siri-like edge glow around the whole app while Autopilot is on. */
+function AutopilotGlow() {
+  const { data } = useAutopilotQuery();
+  return data?.level === "full" ? <ScreenGlow /> : null;
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   return (
     <CatalogProvider>
@@ -421,6 +428,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <NewTaskProvider>
         <ChatProvider>
           <ApprovalNotifier />
+          <AutopilotGlow />
           <Suspense>
             <AppShellChrome>{children}</AppShellChrome>
           </Suspense>

@@ -7,6 +7,7 @@ import {
   MenuButtonTestId,
   MobileMenuTestId,
   MobileToolbarTestId,
+  ScreenGlowTestId,
   SubNavTestId,
   TabsTestId,
 } from "@zibby/design-system";
@@ -15,6 +16,13 @@ import { PinPageDialogTestId } from "../../../features/pins";
 import { AppShell, AppShellTestId } from "./AppShell";
 
 let mockPath = "/chat";
+let mockAutopilotLevel: "off" | "full" | undefined;
+vi.mock("../../../features/autopilot", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../features/autopilot")>()),
+  useAutopilotQuery: () => ({
+    data: mockAutopilotLevel ? { level: mockAutopilotLevel } : undefined,
+  }),
+}));
 let mockPhone = false;
 vi.mock("../../../hooks/useIsPhone", () => ({ useIsPhone: () => mockPhone }));
 vi.mock("next/navigation", () => ({
@@ -37,6 +45,21 @@ vi.mock("next/navigation", () => ({
 // identity/active-run-count source wired up yet) — they're asserted absent,
 // not with stale placeholder text.
 describe("AppShell", () => {
+  it.each([
+    ["full", true],
+    ["off", false],
+    [undefined, false],
+  ] as const)("autopilot level %s shows the screen glow: %s", (level, shown) => {
+    mockAutopilotLevel = level;
+    renderWithProviders(
+      <AppShell>
+        <div />
+      </AppShell>,
+    );
+    expect(screen.queryByTestId(ScreenGlowTestId.Root) !== null).toBe(shown);
+    mockAutopilotLevel = undefined;
+  });
+
   it("mounts and renders its children inside the AppFrame main landmark", () => {
     renderWithProviders(
       <AppShell>
