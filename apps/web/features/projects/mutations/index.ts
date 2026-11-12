@@ -10,3 +10,4 @@ export { useCloneProjectMutation } from "./useCloneProjectMutation";
 export { useMergeProjectPrMutation } from "./useMergeProjectPrMutation";
 export { useCloseProjectPrMutation } from "./useCloseProjectPrMutation";
 export { useSetProjectPrDraftMutation } from "./useSetProjectPrDraftMutation";
+export { useFixProjectCiMutation } from "./useFixProjectCiMutation";

@@ -10,6 +10,7 @@ import { MentionsWidget } from "./MentionsWidget";
 import { PinsWidget } from "./PinsWidget";
 import { PrFilterControls } from "./PrFilterControls";
 import { PrsWidget } from "./PrsWidget";
+import { ProjectStatusWidget, ProjectStatusWidgetSettings } from "./ProjectStatusWidget";
 import { ProposalsWidget } from "./ProposalsWidget";
 import { QuickActionsWidget } from "./QuickActionsWidget";
 import { RunsWidget } from "./RunsWidget";
@@ -19,7 +20,7 @@ import { WidgetSortSettings } from "./widgetFilters";
 
 /** What a row opens in the detail sheet. `key` is the row's `data-rk` value. */
 export interface BridgeSelection {
-  kind: "issue" | "task" | "pr" | "run" | "quickAction" | "note" | "automation";
+  kind: "issue" | "task" | "pr" | "run" | "quickAction" | "note" | "automation" | "project";
   id: string;
   /** Id of the widget the row lives in (J/K navigates within it). */
   widgetId: string;
@@ -187,6 +188,13 @@ export const WIDGETS: Record<WidgetType, WidgetDefinition> = {
     descKey: "bridge.widget.mentions.desc",
     icon: "chat",
     Component: MentionsWidget,
+  },
+  projectStatus: {
+    labelKey: "bridge.widget.projectStatus.label",
+    descKey: "bridge.widget.projectStatus.desc",
+    icon: "branch",
+    Component: ProjectStatusWidget,
+    Settings: ProjectStatusWidgetSettings,
   },
 };
 

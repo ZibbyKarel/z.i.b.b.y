@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ChatPersonaSchema } from "../chat/chat.schema";
+import { ProjectIdSchema } from "../projects/project.schema";
 import { TeamIdSchema } from "../teams/team.schema";
 
 /** Bridge board density — scales the design-system spacing tokens system-wide. */
@@ -63,13 +64,23 @@ export const BridgeWidgetSchema = z.preprocess(
       "budgets",
       "mentions",
       "automationRuns",
+      "projectStatus",
     ]),
     x: z.number().int().min(0).max(11),
     y: z.number().int().min(0),
     w: z.number().int().min(2).max(12),
     h: z.number().int().min(1),
-    /** Optional scope; only the `teamKb` widget reads it (`teamId` = the team it shows). */
-    scope: z.object({ teamId: TeamIdSchema.optional() }).strict().optional(),
+    /**
+     * Optional scope: `teamId` = the team a `teamKb` widget shows; `projectIds` = the projects a
+     * `projectStatus` widget shows (absent / empty = every project).
+     */
+    scope: z
+      .object({
+        teamId: TeamIdSchema.optional(),
+        projectIds: z.array(ProjectIdSchema).optional(),
+      })
+      .strict()
+      .optional(),
     /** Operator-given widget name; absent = the widget type's default label. */
     title: z.string().trim().min(1).max(60).optional(),
     /** Default filter pick of a filterable widget, edited in its settings. */

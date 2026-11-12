@@ -3489,6 +3489,20 @@
         "never": "Never",
         "disabled": "Disabled",
         "failed": "Failed {ago}"
+      },
+      "projectStatus": {
+        "projects": "Projects",
+        "allProjects": "All projects",
+        "state": {
+          "passing": "CI passing",
+          "failing": "CI failing",
+          "running": "CI running",
+          "pending": "CI pending",
+          "skipped": "Skipped",
+          "none": "No CI",
+          "cancelled": "Cancelled",
+          "error": "CI unavailable"
+        }
       }
     },
     "you": "{n} you",
@@ -3540,6 +3554,10 @@
       "automationRuns": {
         "label": "Automation runs",
         "desc": "Automations running now and the ones due in the next 24 hours."
+      },
+      "projectStatus": {
+        "label": "Project status",
+        "desc": "Base-branch CI of the picked projects."
       }
     },
     "sheet": {
@@ -3550,7 +3568,8 @@
         "pr": "Pull request",
         "run": "Run",
         "note": "Note",
-        "automation": "Automation"
+        "automation": "Automation",
+        "project": "Project"
       },
       "needsYou": "Needs you · {kind}",
       "waiting": "Waiting {wait}",
@@ -3642,6 +3661,17 @@
       "run": {
         "open": "Open run ↗",
         "openApproval": "Full approval ↗"
+      },
+      "project": {
+        "fixCi": "Fix CI",
+        "fixStarted": "CI fix started — ZIBBY will open a PR.",
+        "fixRefused": "CI fix refused: {reason}",
+        "fixFailed": "Could not start the CI fix.",
+        "openTask": "Open task",
+        "noRuns": "No CI has run on the base branch yet.",
+        "gitlabDeferred": "GitLab CI is not read yet.",
+        "fixRunning": "Fix in progress",
+        "unavailable": "CI could not be read: {reason}"
       }
     },
     "moreLayouts": "More layouts",

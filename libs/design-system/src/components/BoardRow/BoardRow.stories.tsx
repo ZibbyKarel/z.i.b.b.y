@@ -112,6 +112,15 @@ export const NoBar: Story = {
   ),
 };
 
+/** `alert` + `bar={false}`: an error row emphasised by its background only (red CI). */
+export const Alert: Story = {
+  render: (args) => (
+    <BoardRow {...args} alert bar={false} tone="error">
+      {issue()}
+    </BoardRow>
+  ),
+};
+
 export const TwoLineLead: Story = {
   render: (args) => (
     <BoardRow {...args}>

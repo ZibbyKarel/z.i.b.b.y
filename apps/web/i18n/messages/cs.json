@@ -3489,6 +3489,20 @@
         "never": "Nikdy",
         "disabled": "Vypnuto",
         "failed": "Selhalo {ago}"
+      },
+      "projectStatus": {
+        "projects": "Projekty",
+        "allProjects": "Všechny projekty",
+        "state": {
+          "passing": "CI prochází",
+          "failing": "CI selhává",
+          "running": "CI běží",
+          "pending": "CI čeká",
+          "skipped": "Přeskočeno",
+          "none": "Bez CI",
+          "cancelled": "Zrušeno",
+          "error": "CI nedostupné"
+        }
       }
     },
     "you": "{n} ty",
@@ -3540,6 +3554,10 @@
       "automationRuns": {
         "label": "Běhy automatizací",
         "desc": "Automatizace, které právě běží, a ty, které se spustí v příštích 24 hodinách."
+      },
+      "projectStatus": {
+        "label": "Stav projektů",
+        "desc": "CI základní větve vybraných projektů."
       }
     },
     "sheet": {
@@ -3550,7 +3568,8 @@
         "pr": "Pull request",
         "run": "Běh",
         "note": "Poznámka",
-        "automation": "Automatizace"
+        "automation": "Automatizace",
+        "project": "Projekt"
       },
       "needsYou": "Čeká na tebe · {kind}",
       "waiting": "Čeká {wait}",
@@ -3642,6 +3661,17 @@
       "run": {
         "open": "Otevřít běh ↗",
         "openApproval": "Celé schválení ↗"
+      },
+      "project": {
+        "fixCi": "Opravit CI",
+        "fixStarted": "Oprava CI spuštěna — ZIBBY otevře PR.",
+        "fixRefused": "Oprava CI odmítnuta: {reason}",
+        "fixFailed": "Opravu CI se nepodařilo spustit.",
+        "openTask": "Otevřít úkol",
+        "noRuns": "Na základní větvi zatím neběželo žádné CI.",
+        "gitlabDeferred": "GitLab CI se zatím nenačítá.",
+        "fixRunning": "Oprava běží",
+        "unavailable": "CI nelze načíst: {reason}"
       }
     },
     "moreLayouts": "Další layouty",

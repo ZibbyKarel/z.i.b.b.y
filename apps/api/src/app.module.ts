@@ -38,6 +38,7 @@ import { WebPushModule } from "./web-push/web-push.module";
 import { InventoryModule } from "./inventory/inventory.module";
 import { ProposalsModule } from "./proposals/proposals.module";
 import { ProjectHealthModule } from "./project-health/project-health.module";
+import { ProjectCiModule } from "./project-ci/project-ci.module";
 import { WorkflowsModule } from "./workflows/workflows.module";
 import { ProjectsModule } from "./projects/projects.module";
 import { RegistriesModule } from "./registries/registries.module";
@@ -115,6 +116,7 @@ import { InstanceLockReleaser } from "./shared/instance-role";
     AiProvidersModule,
     // TODO 11: per-project health checks (state + transition activity).
     ProjectHealthModule,
+    ProjectCiModule,
     // TODO 13: read-only machine inventory (Claude Code MCP/skills/plugins) + skill install.
     InventoryModule,
     // TODO 14: structured automation proposals (list / dismiss / edit).
