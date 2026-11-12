@@ -349,9 +349,9 @@ export class InboxPrThreadsService {
       }
       const json = (await res.json()) as {
         data?: T;
-        errors?: { message?: string; type?: string }[];
+        errors?: { message?: string; type?: string; path?: (string | number)[] }[];
       };
-      const scopeOnly = json.errors?.every((e) => e.type && PARTIAL_OK.has(e.type)) ?? true;
+      const scopeOnly = json.errors?.every(isPartialOk) ?? true;
       if (json.data && opts?.partial && scopeOnly) return json.data;
       if (json.errors?.length || !json.data) {
         throw new GithubThreadsError(res.status, json.errors?.[0]?.message ?? "no data");
@@ -370,3 +370,9 @@ type Gql = <T>(
 ) => Promise<T>;
 
 const PARTIAL_OK = new Set(["INSUFFICIENT_SCOPES", "FORBIDDEN"]);
+const CODEOWNERS_ALIASES = new Set(["gh", "root", "docs"]);
+
+/** Missing-scope errors, or a CODEOWNERS spot the repo doesn't use (GitHub NOT_FOUNDs `file(path:)`). */
+const isPartialOk = (e: { type?: string; path?: (string | number)[] }): boolean =>
+  (!!e.type && PARTIAL_OK.has(e.type)) ||
+  (e.type === "NOT_FOUND" && CODEOWNERS_ALIASES.has(String(e.path?.at(-1))));

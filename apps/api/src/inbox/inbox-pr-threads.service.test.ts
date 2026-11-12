@@ -312,6 +312,25 @@ describe("InboxPrThreadsService", () => {
       expect(tree.teams.map((t) => t.slug)).toEqual(["web"]); // CODEOWNERS still names it
     });
 
+    it("tolerates NOT_FOUND for the CODEOWNERS spots the repo doesn't use", async () => {
+      const f = vi.fn(async (_url: string, init: { body: string }) => {
+        const { query } = JSON.parse(init.body) as { query: string };
+        if (query.includes("organization")) return new Response("{}", { status: 403 });
+        return new Response(
+          JSON.stringify({
+            data: { repository: { pullRequest: prNode } },
+            errors: ["gh", "docs"].map((alias) => ({
+              type: "NOT_FOUND",
+              path: ["repository", "pullRequest", "baseRef", "target", alias],
+              message: `Could not resolve file for path '${alias}'.`,
+            })),
+          }),
+        );
+      });
+      const tree = await withFetch(f).reviewers("acme", 7);
+      expect(tree.teams.map((t) => t.slug)).toEqual(["web"]);
+    });
+
     it("other GraphQL errors still fail the read", async () => {
       const f = vi.fn(
         async () =>
