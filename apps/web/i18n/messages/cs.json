@@ -3563,7 +3563,11 @@
         "noDescription": "Zdroj nemá žádný popis.",
         "process": "Zpracovat do úkolu",
         "respond": "Odpovědět",
-        "viewRun": "Zobrazit běh"
+        "viewRun": "Zobrazit běh",
+        "state": "Stav",
+        "zibby": "ZIBBY",
+        "project": "Projekt",
+        "updatedLabel": "Aktualizováno"
       },
       "task": {
         "chain": "Řetězec · {n}",

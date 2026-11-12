@@ -2,14 +2,15 @@ import {
   AnchoredSheetTestId,
   CopyableTextTestId,
   MarkdownTestId,
+  MetricStripTestId,
   NeedsYouCardTestId,
   SheetPartsTestId,
   StatCellTestId,
 } from "@zibby/design-system";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, renderWithProviders, screen } from "../../../../test/render";
+import { fireEvent, renderWithProviders, screen, within } from "../../../../test/render";
 import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
-import { IssueSheet } from "./IssueSheet";
+import { IssueSheet, IssueSheetTestId } from "./IssueSheet";
 import { TaskSheet } from "./TaskSheet";
 
 const { hooks, approve, push } = vi.hoisted(() => ({
@@ -100,6 +101,28 @@ describe("IssueSheet", () => {
     renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
     expect(screen.getAllByText(/In Progress/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Běží/)).toBeNull();
+  });
+
+  it("summarises state, project and last change in the run detail's metric strip", () => {
+    hooks.items = [{ ...item("failed"), sourceStatus: { name: "In Progress", done: false } }];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    const strip = screen.getByTestId(IssueSheetTestId.Summary);
+    const ids = within(strip)
+      .getAllByTestId(/^metric-strip-item-/)
+      .map((el) => el.getAttribute("data-testid"));
+    expect(ids).toEqual(
+      ["state", "zibby", "project", "updated"].map((id) => `${MetricStripTestId.Item}-${id}`),
+    );
+    expect(screen.getByTestId(`${MetricStripTestId.Item}-state`)).toHaveTextContent("In Progress");
+    expect(screen.getByTestId(`${MetricStripTestId.Item}-project`)).toHaveTextContent("Shop");
+    expect(screen.queryByTestId(StatCellTestId.Root)).toBeNull();
+  });
+
+  it("drops the ZIBBY column when the source state already says it", () => {
+    hooks.items = [{ ...item("todo"), sourceStatus: { name: "To Do", done: false } }];
+    renderWithProviders(<IssueSheet anchor={anchor} id="p/i1" onClose={() => {}} />);
+    expect(screen.queryByTestId(`${MetricStripTestId.Item}-zibby`)).toBeNull();
+    expect(screen.getByTestId(MetricStripTestId.Root)).toHaveClass("grid-cols-3");
   });
 
   it("new item without source status shows no state tag", () => {

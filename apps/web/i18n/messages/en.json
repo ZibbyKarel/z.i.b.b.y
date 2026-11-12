@@ -3563,7 +3563,11 @@
         "noDescription": "No description in the source.",
         "process": "Process into a task",
         "respond": "Respond",
-        "viewRun": "View run"
+        "viewRun": "View run",
+        "state": "State",
+        "zibby": "ZIBBY",
+        "project": "Project",
+        "updatedLabel": "Updated"
       },
       "task": {
         "chain": "Chain · {n}",

@@ -2,10 +2,13 @@
 
 import {
   AnchoredSheet,
+  Container,
   CopyableText,
   DetailTable,
   type DetailTableRow,
   Markdown,
+  MetricStrip,
+  type MetricStripItem,
   NeedsYouCard,
   Pressable,
   SheetAction,
@@ -46,7 +49,15 @@ const STATUS_TONE: Record<ReturnType<typeof zibbyStatus>, SheetTone> = {
   done: "done",
 };
 
-/** Issue detail: runs and details table right under the header, then the description; the Issues screen's primary action sits top-right. */
+export enum IssueSheetTestId {
+  Summary = "issue-sheet-summary",
+}
+
+/**
+ * Issue detail: a summary strip (the run detail's look — source state | ZIBBY state when it
+ * differs | project | last change), runs and details, then the description; the Issues screen's
+ * primary action sits top-right.
+ */
 export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
   const router = useRouter();
@@ -106,6 +117,20 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       ...(r.finishedAt && { finishedAt: r.finishedAt }),
     }));
 
+  const summary: MetricStripItem[] = [
+    {
+      id: "state",
+      label: t("bridge.sheet.issue.state"),
+      value: item.sourceStatus?.name ?? "—",
+      hint: source,
+    },
+    ...(sourceShown
+      ? []
+      : [{ id: "zibby", label: t("bridge.sheet.issue.zibby"), value: stateLabel ?? "—" }]),
+    { id: "project", label: t("bridge.sheet.issue.project"), value: item.project.name },
+    { id: "updated", label: t("bridge.sheet.issue.updatedLabel"), value: updated },
+  ];
+
   const href = issueHref(item);
   const primary =
     // Processing is offered only before the first run; after that the runs list carries the issue.
@@ -136,13 +161,9 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
         </>
       }
       chips={[
-        item.sourceStatus ? `${source} · ${item.sourceStatus.name}` : source,
-        ...(sourceShown ? [] : [`ZIBBY · ${stateLabel}`]),
-        item.project.name,
         epic
           ? t("bridge.sheet.issue.epicChip", { key: epic.key ?? epic.title })
           : t("bridge.sheet.issue.noEpic"),
-        t("bridge.sheet.updated", { when: updated }),
       ]}
       closeLabel={t("bridge.sheet.close")}
       kind={
@@ -157,6 +178,9 @@ export function IssueSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       titleHref={item.source.url ?? undefined}
       tone={STATUS_TONE[status]}
     >
+      <Container data-testid={IssueSheetTestId.Summary} padding={["150", "300", "0", "300"]}>
+        <MetricStrip columns={summary.length === 4 ? 4 : 3} items={summary} />
+      </Container>
       {status === "waiting" && item.lastFailureReason ? (
         <NeedsYouCard
           heading={t("bridge.sheet.needsYou", { kind: item.lifecycle })}
