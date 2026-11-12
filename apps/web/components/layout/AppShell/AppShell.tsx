@@ -16,7 +16,6 @@ import {
   Tab,
   TabList,
   Tabs,
-  UsagePanel,
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
@@ -40,6 +39,7 @@ import {
   pinHrefFor,
   usePagePins,
 } from "../../../features/pins";
+import { HeaderLimits } from "../HeaderLimits/HeaderLimits";
 import { PageActionsSlotProvider } from "../PageActions";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { SelfUpgrade } from "../SelfUpgrade";
@@ -293,7 +293,7 @@ function useHeaderTrailing() {
     limits: (
       <Stack align="center" direction="row" gap="100">
         <SelfUpgrade />
-        <UsagePanel
+        <HeaderLimits
           items={[
             {
               label: "5H",
