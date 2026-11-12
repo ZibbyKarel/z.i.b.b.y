@@ -58,13 +58,12 @@ export function selectionFromParams(
  * epicClosed) live in `ui.bridge` (server, debounced by `useUiSettings.setBridge`); a local overlay
  * keeps every change instant so drags and toggles don't wait for the round trip. There is no edit
  * mode: add / remove / updateWidget and drag end persist straight into the active layout
- * (`saved[preset]`, DEFAULT included); drag frames stay local until `endDrag`. Catalog / dragging
- * / selection are local. Esc closes selection → catalog.
+ * (`saved[preset]`, DEFAULT included); drag frames stay local until `endDrag`. Dragging / selection
+ * are local. Esc closes the selection.
  */
 export function useBridgeState() {
   const { ui, setBridge } = useUiSettings();
   const [local, setLocal] = useState<Partial<BridgeUi>>({});
-  const [catalogOpen, setCatalogOpen] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   /** The open detail-sheet row; null until the sheet task wires rows to `setSelection`. */
   const searchParams = useSearchParams();
@@ -200,8 +199,6 @@ export function useBridgeState() {
     [commitLayout],
   );
 
-  const toggleCatalog = useCallback(() => setCatalogOpen((o) => !o), []);
-  const closeCatalog = useCallback(() => setCatalogOpen(false), []);
   const closeSelection = useCallback(() => setSelection(null), []);
   const beginDrag = useCallback((id: string) => setDraggingId(id), []);
   /** Drag end: a final compact WITHOUT priority (reference parity), then persist if anything moved. */
@@ -241,11 +238,10 @@ export function useBridgeState() {
       )
         return;
       if (selection) setSelection(null);
-      else if (catalogOpen) setCatalogOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [selection, catalogOpen]);
+  }, [selection]);
 
   return {
     layout,
@@ -256,7 +252,6 @@ export function useBridgeState() {
     nextName,
     collapsed,
     epicClosed,
-    catalogOpen,
     draggingId,
     selection,
     setSelection,
@@ -274,8 +269,6 @@ export function useBridgeState() {
     updateWidget,
     beginDrag,
     endDrag,
-    toggleCatalog,
-    closeCatalog,
   };
 }
 

@@ -1,15 +1,13 @@
 import { fireEvent } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
-import { WidgetCatalogTestId } from "@zibby/design-system";
-import { type BridgeSelection, WIDGET_TYPES } from "../widgets/registry";
+import type { BridgeSelection } from "../widgets/registry";
 import { BridgeScreen } from "./BridgeScreen";
 
 const h = vi.hoisted(() => ({
   phone: true,
   push: vi.fn(),
   setSelection: vi.fn(),
-  catalogOpen: false,
   add: vi.fn(),
 }));
 
@@ -26,11 +24,14 @@ vi.mock("../state/useBridgeState", () => ({
     layouts: { shown: [], hidden: [] },
     selection: null,
     setSelection: h.setSelection,
-    catalogOpen: h.catalogOpen,
     add: h.add,
   }),
 }));
-vi.mock("./BridgeHeader", () => ({ BridgeHeader: () => null }));
+vi.mock("./BridgeHeader", () => ({
+  BridgeHeader: ({ onAddWidget }: { onAddWidget: (type: string) => void }) => (
+    <button onClick={() => onAddWidget("prs")}>add-prs</button>
+  ),
+}));
 vi.mock("./ManageLayoutsDialog", () => ({ ManageLayoutsDialog: () => null }));
 vi.mock("./DetailSheet", () => ({ DetailSheet: () => null }));
 vi.mock("./BridgeBoard", () => ({
@@ -51,16 +52,10 @@ vi.mock("./BridgeBoard", () => ({
   ),
 }));
 
-describe("BridgeScreen catalog", () => {
-  it("lists every widget type with its icon, including types already on the board", () => {
-    h.catalogOpen = true;
+describe("BridgeScreen add widget", () => {
+  it("adds the widget the header's dropdown picked", () => {
     renderWithProviders(<BridgeScreen />);
-    h.catalogOpen = false;
-    for (const type of WIDGET_TYPES) {
-      expect(screen.getByTestId(`${WidgetCatalogTestId.Entry}-${type}`)).toBeInTheDocument();
-      expect(screen.getByTestId(`${WidgetCatalogTestId.Icon}-${type}`)).toBeInTheDocument();
-    }
-    fireEvent.click(screen.getByTestId(`${WidgetCatalogTestId.Add}-prs`));
+    fireEvent.click(screen.getByText("add-prs"));
     expect(h.add).toHaveBeenCalledWith("prs");
   });
 });

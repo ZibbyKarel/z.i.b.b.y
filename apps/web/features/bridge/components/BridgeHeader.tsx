@@ -6,12 +6,15 @@ import {
   Container,
   DENSITIES,
   DensityMenu,
+  MenuButton,
   SegmentedControl,
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import { PageActions } from "../../../components/layout/PageActions";
 import { useUiSettings } from "../../system";
 import { CUSTOM_PRESET } from "../state/useBridgeState";
+import type { WidgetType } from "../grid/layout";
+import { WIDGETS, WIDGET_TYPES } from "../widgets/registry";
 
 export enum BridgeHeaderTestId {
   Manage = "bridge-header-manage",
@@ -23,7 +26,8 @@ export interface BridgeHeaderProps {
   layouts: { shown: readonly string[]; hidden: readonly string[] };
   onPreset: (name: string) => void;
   onManage: () => void;
-  onToggleCatalog: () => void;
+  /** Adds a widget of the picked type (the add-widget dropdown). */
+  onAddWidget: (type: WidgetType) => void;
   /** Phone toolbar: only the manage-layouts button. */
   compact?: boolean;
 }
@@ -35,10 +39,11 @@ export function BridgeHeader({
   layouts,
   onPreset,
   onManage,
-  onToggleCatalog,
+  onAddWidget,
   compact = false,
 }: BridgeHeaderProps) {
   const t = useTranslations("bridge");
+  const tRoot = useTranslations();
   const { ui, setDensity } = useUiSettings();
 
   const presetLabel = (name: string) =>
@@ -91,13 +96,19 @@ export function BridgeHeader({
         value={ui.density}
       />
       <CommandBarGroup>
-        <Button
-          aria-label={t("addWidget")}
+        {/* Every type, even ones already on the board — a widget type can have several instances. */}
+        <MenuButton
+          ariaLabel={t("addWidget")}
           icon="plus"
           intent="secondary"
-          onClick={onToggleCatalog}
+          items={WIDGET_TYPES.map((type) => ({
+            id: type,
+            label: tRoot(WIDGETS[type].labelKey),
+            description: tRoot(WIDGETS[type].descKey),
+            icon: WIDGETS[type].icon,
+            onSelect: () => onAddWidget(type),
+          }))}
           size="md"
-          title={t("addWidget")}
         />
         <Container data-testid={BridgeHeaderTestId.Manage}>
           <Button

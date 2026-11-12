@@ -1,14 +1,13 @@
 "use client";
 
-import { Stack, WidgetCatalog } from "@zibby/design-system";
+import { Stack } from "@zibby/design-system";
 import type { Route } from "next";
-import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useIsPhone } from "../../../hooks/useIsPhone";
 import { useUiSettings } from "../../system";
 import { useBridgeState } from "../state/useBridgeState";
-import { type BridgeSelection, WIDGETS, WIDGET_TYPES } from "../widgets/registry";
+import type { BridgeSelection } from "../widgets/registry";
 import { BridgeBoard } from "./BridgeBoard";
 import { BridgeHeader } from "./BridgeHeader";
 import { ManageLayoutsDialog } from "./ManageLayoutsDialog";
@@ -20,21 +19,12 @@ export enum BridgeScreenTestId {
 
 /** `/dashboard` — the Bridge: header bar + configurable widget board (+ detail sheet overlay). */
 export function BridgeScreen() {
-  const t = useTranslations();
   const state = useBridgeState();
   const { ui } = useUiSettings();
   const phone = useIsPhone();
   const router = useRouter();
   const [manageOpen, setManageOpen] = useState(false);
   const [sheetSide, setSheetSide] = useState<"left" | "right">("right");
-
-  // Every type, even ones already on the board — a widget type can have several instances.
-  const entries = WIDGET_TYPES.map((type) => ({
-    id: type,
-    label: t(WIDGETS[type].labelKey),
-    description: t(WIDGETS[type].descKey),
-    icon: WIDGETS[type].icon,
-  }));
 
   // Phones skip the side sheet: a row with a detail page navigates there.
   const openOnPhone = (sel: BridgeSelection) =>
@@ -50,9 +40,9 @@ export function BridgeScreen() {
       <BridgeHeader
         compact={phone}
         layouts={state.layouts}
+        onAddWidget={state.add}
         onManage={() => setManageOpen(true)}
         onPreset={state.applyPreset}
-        onToggleCatalog={state.toggleCatalog}
         preset={state.preset}
       />
       <Stack grow minH0 direction="col" style={{ position: "relative" }}>
@@ -83,17 +73,6 @@ export function BridgeScreen() {
         preset={state.preset}
         saved={state.saved}
       />
-      {state.catalogOpen ? (
-        <WidgetCatalog
-          addLabel={t("bridge.catalog.add")}
-          closeLabel={t("bridge.catalog.close")}
-          emptyText={t("bridge.catalog.empty")}
-          entries={entries}
-          onAdd={(id) => state.add(id as (typeof WIDGET_TYPES)[number])}
-          onClose={state.closeCatalog}
-          title={t("bridge.catalog.title")}
-        />
-      ) : null}
     </Stack>
   );
 }

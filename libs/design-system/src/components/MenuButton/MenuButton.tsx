@@ -16,11 +16,15 @@ export enum MenuButtonTestId {
   Menu = "menu-button-menu",
   Item = "menu-button-item",
   Divider = "menu-button-divider",
+  /** Suffixed with the item id. */
+  Description = "menu-button-item-description",
 }
 
 export interface MenuButtonItem {
   id: string;
   label: string;
+  /** Second, dimmer line under the label (e.g. what an "add widget" option adds). */
+  description?: string;
   icon?: IconName;
   disabled?: boolean;
   /** Paints the row's icon + label with the `bad` token (a destructive action). */
@@ -57,6 +61,8 @@ export interface MenuButtonProps {
   disabled?: boolean;
   /** Accessible name for the trigger. Defaults to "Actions". */
   ariaLabel?: string;
+  /** Glyph of the `"kebab"` trigger. Defaults to `dots`. */
+  icon?: IconName;
   /** Overrides the rendered anchor for `href` items — pass the app's
    *  `next/link` `Link`, same contract as `SubNav`. Defaults to `<a>`. */
   linkComponent?: SubNavLinkComponent;
@@ -93,6 +99,7 @@ export function MenuButton({
   size = "sm",
   disabled = false,
   ariaLabel = "Actions",
+  icon = "dots",
   linkComponent,
   variant = "kebab",
 }: MenuButtonProps) {
@@ -196,7 +203,9 @@ export function MenuButton({
     }
   };
 
-  const panelMinWidth = bordered ? 220 : 200;
+  // Two-line (described) rows need room for the description to wrap sensibly.
+  const described = items.some((e) => !isDivider(e) && e.description);
+  const panelMinWidth = described ? 280 : bordered ? 220 : 200;
 
   // Position the fixed surface from the trigger rect, right-aligned under the
   // trigger. Flip above the trigger when there's more room there, and clamp
@@ -252,7 +261,7 @@ export function MenuButton({
           aria-label={ariaLabel}
           data-testid={MenuButtonTestId.Trigger}
           disabled={disabled}
-          icon="dots"
+          icon={icon}
           intent={intent}
           onClick={() => (open ? close() : openMenu())}
           onKeyDown={handleKeyDown}
@@ -316,9 +325,23 @@ export function MenuButton({
                     {item.icon && (
                       <Icon name={item.icon} size="sm" tone={danger ? "bad" : undefined} />
                     )}
-                    <span className={cn("flex-1", !bordered && "text-md", toneClass)}>
-                      {item.label}
-                    </span>
+                    {item.description ? (
+                      <span className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                        <span className={cn(!bordered && "text-md", "font-medium", toneClass)}>
+                          {item.label}
+                        </span>
+                        <span
+                          className="text-[12px] text-ink-2"
+                          data-testid={`${MenuButtonTestId.Description}-${item.id}`}
+                        >
+                          {item.description}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className={cn("flex-1", !bordered && "text-md", toneClass)}>
+                        {item.label}
+                      </span>
+                    )}
                     {item.trailing && <span className="text-ink-3">{item.trailing}</span>}
                   </>
                 );

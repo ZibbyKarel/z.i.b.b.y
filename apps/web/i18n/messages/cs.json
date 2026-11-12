@@ -3276,12 +3276,6 @@
       "deselectAll": "Zrušit vše"
     },
     "editLayout": "Upravit rozložení",
-    "catalog": {
-      "title": "Katalog widgetů",
-      "add": "Přidat",
-      "close": "Zavřít",
-      "empty": "Všechny widgety už jsou na plochě."
-    },
     "collapse": "Sbalit",
     "resize": "Změnit velikost",
     "resizeNw": "vlevo nahoře",

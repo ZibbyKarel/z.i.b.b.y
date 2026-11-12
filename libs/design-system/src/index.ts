@@ -601,11 +601,6 @@ export type {
 } from "./components/CommandBar/CommandBar";
 export { DensityMenu, DensityMenuTestId } from "./components/DensityMenu/DensityMenu";
 export type { DensityMenuProps } from "./components/DensityMenu/DensityMenu";
-export { WidgetCatalog, WidgetCatalogTestId } from "./components/WidgetCatalog/WidgetCatalog";
-export type {
-  WidgetCatalogEntry,
-  WidgetCatalogProps,
-} from "./components/WidgetCatalog/WidgetCatalog";
 export {
   BoardColumnHeader,
   BoardGrid,

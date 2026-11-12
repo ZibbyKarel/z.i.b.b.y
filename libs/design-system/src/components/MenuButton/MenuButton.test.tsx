@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { ButtonTestId } from "../Button/Button";
+import { IconTestId } from "../Icon/Icon";
 import { Dialog, DialogTestId } from "../Dialog/Dialog";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -217,6 +219,35 @@ describe("MenuButton outside dismiss (todo-12)", () => {
     await user.click(trigger);
     expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("renders a custom trigger icon", () => {
+    render(<MenuButton icon="plus" items={makeItems()} />);
+    expect(
+      within(screen.getByTestId(MenuButtonTestId.Trigger)).getByTestId(ButtonTestId.Icon),
+    ).toHaveAttribute("data-icon", "plus");
+  });
+
+  it("renders icon, label and description rows; selecting one fires onSelect and closes", async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <MenuButton
+        items={[
+          { id: "prs", label: "PRs", description: "Open pull requests", icon: "bug", onSelect },
+        ]}
+      />,
+    );
+    await user.click(screen.getByTestId(MenuButtonTestId.Trigger));
+    const row = screen.getByTestId(`${MenuButtonTestId.Item}-prs`);
+    expect(within(row).getByTestId(IconTestId.Root)).toHaveAttribute("data-icon", "bug");
+    expect(row).toHaveTextContent("PRs");
+    expect(screen.getByTestId(`${MenuButtonTestId.Description}-prs`)).toHaveTextContent(
+      "Open pull requests",
+    );
+    await user.click(row);
+    expect(onSelect).toHaveBeenCalledOnce();
+    expect(screen.queryByTestId(MenuButtonTestId.Menu)).not.toBeInTheDocument();
   });
 
   it("closes on a pointerdown on the document body", async () => {
