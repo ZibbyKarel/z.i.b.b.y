@@ -212,4 +212,12 @@ describe("relativeLabel", () => {
     const now = Date.parse("2026-06-12T12:00:00.000Z");
     expect(relativeLabel(now + 2 * 60 * 60_000, now, "en")).toMatch(/2/);
   });
+
+  it("a sub-minute diff reads < 1 min in any locale", () => {
+    const now = Date.parse("2026-06-12T12:00:00.000Z");
+    expect(relativeLabel(now + 20_000, now, "cs")).toBe("< 1 min");
+    expect(relativeLabel(now - 20_000, now, "cs")).toBe("< 1 min");
+    expect(relativeLabel(now + 20_000, now, "en")).toBe("< 1 min");
+    expect(relativeLabel(now + 90_000, now, "en")).toMatch(/2/);
+  });
 });

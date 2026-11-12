@@ -342,14 +342,18 @@ function weekdayName(day: number, locale: string, weekday: "long" | "short"): st
 
 /**
  * Localized relative phrase between `targetMs` and `nowMs` — past renders as
- * "5 min ago", future as "in 2 hr". Coarsens to minutes, then hours, then days,
+ * "5 min ago", future as "in 2 hr". Coarsens to minutes, then hours, then days (a diff that rounds to 0 min reads "< 1 min"),
  * leaning on `Intl.RelativeTimeFormat` for the wording in the active locale.
  */
 export function relativeLabel(targetMs: number, nowMs: number, locale: string): string {
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "short" });
   const diffMs = targetMs - nowMs;
   const absMs = Math.abs(diffMs);
-  if (absMs < HOUR_MS) return rtf.format(Math.round(diffMs / MINUTE_MS), "minute");
+  if (absMs < HOUR_MS) {
+    const minutes = Math.round(diffMs / MINUTE_MS);
+    if (minutes === 0) return "< 1 min"; // also true for -0
+    return rtf.format(minutes, "minute");
+  }
   if (absMs < DAY_MS) return rtf.format(Math.round(diffMs / HOUR_MS), "hour");
   return rtf.format(Math.round(diffMs / DAY_MS), "day");
 }
