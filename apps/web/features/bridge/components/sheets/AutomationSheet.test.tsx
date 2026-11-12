@@ -1,17 +1,18 @@
-import type { Automation } from "@zibby/contracts";
+import type { AutomationView } from "@zibby/contracts";
 import { AnchoredSheetTestId } from "@zibby/design-system";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../../test/render";
+import { AutomationFiresTestId } from "../../../automations/components/AutomationFires";
 import { AutomationSheet, AutomationSheetTestId } from "./AutomationSheet";
 
-const d = vi.hoisted(() => ({ trigger: vi.fn(), push: vi.fn() }));
+const d = vi.hoisted(() => ({ trigger: vi.fn(), push: vi.fn(), lastFire: undefined as unknown }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: d.push }),
   usePathname: () => "/",
   useSearchParams: () => new URLSearchParams(),
 }));
-const automation: Automation = {
+const automation: AutomationView = {
   id: "nightly",
   name: "Nightly review",
   trigger: { type: "cron", expr: "0 3 * * *" },
@@ -22,7 +23,13 @@ const automation: Automation = {
 };
 
 vi.mock("../../../automations/queries", () => ({
-  useAutomationsQuery: () => ({ data: [automation] }),
+  useAutomationsQuery: () => ({ data: [{ ...automation, lastFire: d.lastFire }] }),
+}));
+vi.mock("../../../runs/useRunLogStream", () => ({
+  useAutomationFireLogStream: (_a: string, fireId: string | null) => ({
+    text: fireId ? "start target=gap-detect\n" : "",
+    done: false,
+  }),
 }));
 vi.mock("../../../automations/mutations", () => ({
   useTriggerAutomationMutation: () => ({ mutate: d.trigger, isPending: false }),
@@ -57,6 +64,40 @@ describe("AutomationSheet", () => {
       within(screen.getByTestId(AnchoredSheetTestId.Title)).getByRole("button"),
     );
     expect(d.push).toHaveBeenCalledWith("/work/automations/nightly");
+  });
+
+  it("shows a running in-process fire with its streamed log (todo-5)", () => {
+    d.lastFire = {
+      id: "fire_1_aaaaaa",
+      automationId: "nightly",
+      source: "manual",
+      startedAt: "2026-11-12T08:00:00Z",
+      status: "running",
+    };
+    renderWithProviders(<AutomationSheet anchor={anchor} id="nightly" onClose={vi.fn()} />);
+    expect(screen.getByTestId(AutomationSheetTestId.LastFire)).toHaveTextContent("Běží");
+    expect(screen.getByTestId(AutomationFiresTestId.Log)).toHaveTextContent(
+      "start target=gap-detect",
+    );
+  });
+
+  it("links a run-backed last fire to its run", () => {
+    d.lastFire = {
+      id: "fire_2_bbbbbb",
+      automationId: "nightly",
+      source: "cron",
+      startedAt: "2026-11-12T08:00:00Z",
+      finishedAt: "2026-11-12T08:00:01Z",
+      durationMs: 1000,
+      status: "done",
+      runRef: "reviewer_42",
+    };
+    renderWithProviders(<AutomationSheet anchor={anchor} id="nightly" onClose={vi.fn()} />);
+    expect(screen.getByTestId(AutomationFiresTestId.OpenRun)).toHaveAttribute(
+      "href",
+      "/activity/runs/reviewer_42",
+    );
+    d.lastFire = undefined;
   });
 
   it("renders nothing for an unknown id", () => {

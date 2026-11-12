@@ -7,6 +7,7 @@ import {
   SheetBlock,
   SheetSection,
   SheetText,
+  Stack,
 } from "@zibby/design-system";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
@@ -14,12 +15,18 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useTriggerAutomationMutation } from "../../../automations/mutations";
 import { useAutomationsQuery } from "../../../automations/queries";
 import { useCronLabel } from "../../../automations/useCronLabel";
+import { SCHEDULE_TIME_ZONE } from "../../../automations/schedule";
+import { AutomationFireLog } from "../../../automations/components/AutomationFireLog";
+import { AutomationFireStatus } from "../../../automations/components/AutomationFires";
+import { formatDuration } from "../../../../utils/time";
 import { type SheetProps, geometry } from "./sheetTypes";
 
 export enum AutomationSheetTestId {
   Schedule = "automation-sheet-schedule",
   Prompt = "automation-sheet-prompt",
   RunNow = "automation-sheet-run-now",
+  /** The latest fire's summary line (status · start · duration) — todo-5. */
+  LastFire = "automation-sheet-last-fire",
 }
 
 /** What the automation fires, as one short label. */
@@ -45,7 +52,14 @@ export function AutomationSheet({ id, anchor, onClose }: SheetProps) {
 
   const automation = automations?.find((x) => x.id === id);
   if (!automation) return null;
-  const { trigger: when, prompt, lastFiredAt } = automation;
+  const { trigger: when, prompt, lastFiredAt, lastFire } = automation;
+  const stamp = (iso: string) =>
+    format.dateTime(new Date(iso), {
+      dateStyle: "short",
+      timeStyle: "short",
+      hourCycle: "h23",
+      timeZone: SCHEDULE_TIME_ZONE,
+    });
 
   return (
     <AnchoredSheet
@@ -83,17 +97,32 @@ export function AutomationSheet({ id, anchor, onClose }: SheetProps) {
           </SheetBlock>
         ) : null}
         <SheetBlock label={a("lastFired")}>
-          <SheetText
-            lines={[
-              lastFiredAt
-                ? format.dateTime(new Date(lastFiredAt), {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                    hourCycle: "h23",
-                  })
-                : a("never"),
-            ]}
-          />
+          {lastFire ? (
+            // todo-5: the latest fire — status · start · duration, then its log (live
+            // while running) or, for a run-backed fire, a link to the run.
+            <Stack gap="100">
+              <div data-testid={AutomationSheetTestId.LastFire}>
+                <Stack align="center" direction="row" gap="100">
+                  <AutomationFireStatus fire={lastFire} />
+                  <SheetText
+                    lines={[
+                      [
+                        stamp(lastFire.startedAt),
+                        lastFire.durationMs === undefined
+                          ? undefined
+                          : formatDuration(lastFire.durationMs),
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                    ]}
+                  />
+                </Stack>
+              </div>
+              <AutomationFireLog fire={lastFire} key={lastFire.id} />
+            </Stack>
+          ) : (
+            <SheetText lines={[lastFiredAt ? stamp(lastFiredAt) : a("never")]} />
+          )}
         </SheetBlock>
       </SheetSection>
     </AnchoredSheet>

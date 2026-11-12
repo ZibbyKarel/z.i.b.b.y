@@ -6,6 +6,7 @@ import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import { type ActivityEntry, INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import { getProposalsQueryKey } from "../proposals/queries/useProposalsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
+import { getAutomationsQueryKey } from "../automations/queries";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
@@ -29,8 +30,18 @@ import { taskRunsRootKey } from "./queries/keys";
  * {@link onRunEvent} without re-declaring the shape.
  */
 export interface RunStatusEvent {
-  scope: "agent-runs" | "workflow-runs" | "goal-runs" | "channel-items" | "activity" | "approvals";
+  scope:
+    | "agent-runs"
+    | "workflow-runs"
+    | "goal-runs"
+    | "channel-items"
+    | "activity"
+    | "approvals"
+    | "automation-fires";
   runId?: string;
+  /** Automation-fires scope only (todo-4): the fired automation and the fire record. */
+  automationId?: string;
+  fireId?: string;
   status?: string;
   /** Activity-scope only: the recorded kind (drives the briefing refetch). */
   kind?: string;
@@ -187,6 +198,10 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
         if (parsed.kind?.startsWith("pr-")) {
           void qc.invalidateQueries({ queryKey: getInboxRootKey() });
         }
+      } else if (parsed.scope === "automation-fires" && parsed.automationId) {
+        // todo-4/5: a fire started or finished — the `["automations"]` prefix refetches the
+        // list's `lastFire` (widget, sheet) and every automation's fire history (detail page).
+        void qc.invalidateQueries({ queryKey: getAutomationsQueryKey() });
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).

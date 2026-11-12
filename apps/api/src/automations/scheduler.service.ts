@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
-import type { Automation, Signal, TaskTarget } from "@zibby/contracts";
+import type { Automation, AutomationFire, Signal, TaskTarget } from "@zibby/contracts";
 import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { ExternalSkillsService } from "../external-skills/external-skills.service";
@@ -18,9 +18,16 @@ import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { TaskSchedulerService } from "../tasks/task-scheduler.service";
+import { AutomationFiresStore } from "./automation-fires.store";
 import { AutomationsStorageService } from "./automations.storage.service";
 import { SignalBusService } from "./signal-bus.service";
 import { matchesCron } from "./cron";
+
+/** What a dispatch produced: its ref, and `runRef` only when that ref is a live run. */
+interface DispatchResult {
+  ref: string;
+  runRef?: string;
+}
 
 /**
  * The heartbeat (Phase 5). A once-a-minute tick fires due cron automations,
@@ -59,22 +66,29 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly signalBus: SignalBusService,
     private readonly vaultLint: VaultLintService,
     private readonly externalSkills: ExternalSkillsService,
+    private readonly fires: AutomationFiresStore,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
   }
 
-  onModuleInit(): void {
-    // Loop interval from the operator-owned system config; `0` disables it (the test
-    // default — tests drive `tick()` directly). Re-arm live when the config changes.
-    this.arm();
+  async onModuleInit(): Promise<void> {
     // Signal-triggered automations dispatch through this same path (the bus is a leaf
     // module the producers inject, so it can't depend on the scheduler directly).
-    this.signalBus.registerDispatcher((automation, signal) => this.dispatch(automation, signal));
+    this.signalBus.registerDispatcher((automation, signal) =>
+      this.recordFire(automation, "signal", signal),
+    );
     this.unsubscribe = this.systemConfig.onChange(() => this.arm());
     // F6c: self-register the heartbeat probe (the base's lastTickAt, stamped on the
     // timer path; the M8 `health()` below keeps its own tick()-stamped field).
     this.watcherHealthRegistry.register(() => this.watcherHealth());
+    // Fires a crashed process left `running` are closed out before the loop arms.
+    await this.fires
+      .reconcile()
+      .catch((error) => this.log.warn("fire reconcile failed", { error: String(error) }));
+    // Loop interval from the operator-owned system config; `0` disables it (the test
+    // default — tests drive `tick()` directly). Re-arm live when the config changes.
+    this.arm();
   }
 
   protected tickMs(): number {
@@ -135,14 +149,59 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
   /** Fire an automation now (manual/event path); returns a run reference. */
   async trigger(id: string): Promise<string> {
     const automation = await this.storage.get(id);
-    const ref = await this.dispatch(automation);
+    const ref = await this.recordFire(automation, "manual");
     await this.storage.markFired(id, new Date().toISOString());
     return ref;
   }
 
   private async fire(automation: Automation, at: string): Promise<void> {
-    await this.dispatch(automation);
+    await this.recordFire(automation, "cron");
     await this.storage.markFired(automation.id, at);
+  }
+
+  /**
+   * Wrap {@link dispatch} in a fire record + log (todo-4) — every path (cron, manual,
+   * signal) goes through here. A run-backed target's record carries the run ref (the
+   * run owns its own lifecycle and log); an in-process handler's log is the only
+   * trace it leaves. Store failures are only warned about — they never block the
+   * dispatch — and a throwing handler still rejects to the caller after recording.
+   */
+  private async recordFire(
+    automation: Automation,
+    source: AutomationFire["source"],
+    signal?: Signal,
+  ): Promise<string> {
+    const { id } = automation;
+    const warn = (error: unknown) =>
+      this.log.warn("automation fire record failed", { id, error: String(error) });
+    const fire = await this.fires.begin(id, source).catch(warn);
+    const note = async (line: string) => {
+      if (fire) await this.fires.appendLog(id, fire.id, line).catch(warn);
+    };
+    const end = async (patch: Parameters<AutomationFiresStore["finish"]>[2]) => {
+      if (fire) await this.fires.finish(id, fire.id, patch).catch(warn);
+    };
+    const startedAt = Date.now();
+    await note(
+      `start target=${automation.target.type} prompt=${(automation.prompt ?? "").slice(0, 200)}`,
+    );
+    try {
+      const { ref, runRef } = await this.dispatch(automation, signal);
+      await note(`done in ${Date.now() - startedAt} ms: ${ref}`);
+      await end({ status: "done", result: ref, ...(runRef ? { runRef } : {}) });
+      return ref;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // Only the stack's frame lines — its header (and a multi-line message) is logged above.
+      const frames =
+        error instanceof Error
+          ? (error.stack ?? "").split("\n").filter((line) => /^\s+at /.test(line))
+          : [];
+      await note([`error: ${message}`, ...frames].join("\n"));
+      await note(`failed in ${Date.now() - startedAt} ms`);
+      await end({ status: "error", error: message });
+      throw error;
+    }
   }
 
   /**
@@ -150,7 +209,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
    * `signal` (signal-trigger path) appends its title+body to the run's text/prompt
    * and attributes a `task` target to the signal's project.
    */
-  private async dispatch(automation: Automation, signal?: Signal): Promise<string> {
+  private async dispatch(automation: Automation, signal?: Signal): Promise<DispatchResult> {
     const { target } = automation;
     const signalText = signal ? `${signal.title}\n\n${signal.body}` : undefined;
     const prompt = signalText
@@ -181,20 +240,22 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
           explicit,
           false,
         );
-        return result.outcome === "dispatched" ? result.runRef : result.task.id;
+        return result.outcome === "dispatched"
+          ? { ref: result.runRef, runRef: result.runRef }
+          : { ref: result.task.id };
       }
       case "briefing": {
         // Deterministic assembly, not a claude run — dispatch straight to the
         // briefing service and return the vault note id as the run ref. The prompt
         // steers the optional butler-voice headline ("how to write the briefing").
         const { noteId } = await this.briefing.generate(new Date(), prompt);
-        return noteId;
+        return { ref: noteId };
       }
       case "memory-distill": {
         // Nightly system automation: distil durable learnings out of finished runs
         // into the vault. Not a claude run in the usual sense — a single cheap model
         // pass owned by the system; the ref is `memory-distill:<count>`.
-        return this.distiller.distill();
+        return { ref: await this.distiller.distill() };
       }
       case "pattern-extract": {
         // M4 nightly job: scan 30 days of approval-decision activity, draft rule
@@ -202,7 +263,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         const { proposals } = await this.patterns.extract(new Date(), {
           automationId: automation.id,
         });
-        return `patterns:${proposals.length}`;
+        return { ref: `patterns:${proposals.length}` };
       }
       case "gap-detect": {
         // M5: scan recurring task creation for automatable manual work, draft
@@ -210,14 +271,14 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         const { suggestions } = await this.gaps.detect(new Date(), {
           automationId: automation.id,
         });
-        return `gaps:${suggestions.length}`;
+        return { ref: `gaps:${suggestions.length}` };
       }
       case "agent-factory": {
         // Phase 4b: scan recurring orchestrator-fallback telemetry for a missing
         // specialist agent, park a deterministic candidate behind the
         // `agent-proposal` Tier-3 approval. Deterministic; ref = `agent-proposals:<count>`.
         const { proposed } = await this.agentFactory.detect();
-        return `agent-proposals:${proposed.length}`;
+        return { ref: `agent-proposals:${proposed.length}` };
       }
       case "task": {
         // Phase 116b — the "prompt automation": fire through the EXISTING task
@@ -246,7 +307,9 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // A synchronous (`background: false`) create only ever resolves to
         // "dispatched" (a live run) or "scheduled" (held/queued/limit-deferred) —
         // "pending" is exclusively the interactive dialog's background path.
-        return result.outcome === "dispatched" ? result.runRef : result.task.id;
+        return result.outcome === "dispatched"
+          ? { ref: result.runRef, runRef: result.runRef }
+          : { ref: result.task.id };
       }
       case "self-knowledge": {
         // F4c nightly system automation: deterministic re-compose + AUTO-block
@@ -255,46 +318,46 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         try {
           const drift = await this.selfKnowledge.check();
           await this.selfKnowledge.write();
-          return `self-knowledge:${drift ? "refreshed" : "clean"}`;
+          return { ref: `self-knowledge:${drift ? "refreshed" : "clean"}` };
         } catch (error) {
           this.log.warn("self-knowledge refresh failed", { error: String(error) });
-          return "self-knowledge:error";
+          return { ref: "self-knowledge:error" };
         }
       }
       case "vault-lint": {
         // Nightly report-only vault lint → knowledge/vault-lint.md. Fail-open.
         try {
           const r = await this.vaultLint.run();
-          return `vault-lint:${r.brokenLinks}/${r.orphans}/${r.stale}`;
+          return { ref: `vault-lint:${r.brokenLinks}/${r.orphans}/${r.stale}` };
         } catch (error) {
           this.log.warn("vault lint failed", { error: String(error) });
-          return "vault-lint:error";
+          return { ref: "vault-lint:error" };
         }
       }
       case "security-scan": {
         // NS2 F5a: weekly system automation — dependency CVEs (Dependabot REST)
         // + a bounded secret scan, deterministic; ref = `security:<count>`.
         const { findings } = await this.security.scan();
-        return `security:${findings.length}`;
+        return { ref: `security:${findings.length}` };
       }
       case "arch-audit": {
         // NS2 F5c: nightly system automation — graphify god-node/community deltas
         // + a madge circular-dep check, deterministic; ref = `arch:<count>`.
         const { findings } = await this.arch.audit();
-        return `arch:${findings.length}`;
+        return { ref: `arch:${findings.length}` };
       }
       case "review-learn": {
         // PR review learning v1: ingest new review comments on ZIBBY's own PRs,
         // distil them into candidate rules, park an approval for any rule that just
         // hit its 2nd occurrence. Proposes ≠ activates; ref = `review-rules:<count>`.
         const { observations } = await this.reviewLearning.learn();
-        return `review-rules:${observations}`;
+        return { ref: `review-rules:${observations}` };
       }
       case "external-skills-sync": {
         // Weekly: check every installed GitHub skill, replace changed folders (each
         // reported as `skill-updated`). Per-repo failures land in `lastError`.
         const { updated } = await this.externalSkills.syncAll();
-        return `external-skills:${updated.length}`;
+        return { ref: `external-skills:${updated.length}` };
       }
     }
   }

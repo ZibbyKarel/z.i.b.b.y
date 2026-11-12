@@ -45,6 +45,22 @@ export function useStageRunLogStream(
 }
 
 /**
+ * Tail one automation fire's log (todo-5) over SSE (`…/fires/:fireId/logs/stream`),
+ * with the same offset-poll fallback. Only in-process fires have a fire log; a
+ * run-backed fire's log is its run's. A `null` fire renders nothing.
+ */
+export function useAutomationFireLogStream(
+  automationId: string,
+  fireId: string | null,
+): { text: string; done: boolean } {
+  return useLogTail(
+    fireId
+      ? `${API_URL}/api/automations/${encodeURIComponent(automationId)}/fires/${encodeURIComponent(fireId)}/logs`
+      : null,
+  );
+}
+
+/**
  * The shared tail engine: SSE stream at `${logsBase}/stream` preferred, 1s offset
  * poll against `${logsBase}` when the stream never opens. A `null` base is idle.
  */

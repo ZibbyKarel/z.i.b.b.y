@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Automation } from "@zibby/contracts";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders as render, screen } from "../../test/render";
+import { AutomationFiresTestId } from "./components/AutomationFires";
 import { AutomationDetailScreenTestId, DetailScreen } from "./DetailScreen";
 import { MarkdownEditorTestId } from "@zibby/design-system";
 
@@ -53,6 +54,7 @@ const { hooks } = vi.hoisted(() => ({
 
 vi.mock("./queries", () => ({
   useAutomationQuery: () => hooks.automation,
+  useAutomationFiresQuery: () => ({ data: [], isPending: false }),
 }));
 vi.mock("./mutations", () => ({
   useUpdateAutomationMutation: () => ({ mutate: hooks.update, isPending: false }),
@@ -82,6 +84,11 @@ describe("automations DetailScreen (N4f grammar)", () => {
       expect(Object.keys(body)).toEqual(["trigger", "name", "description"]);
       expect(body.trigger).toEqual({ type: "event", events: ["file.created", "pr.opened"] });
     });
+  });
+
+  it("renders the fire history panel below the editor (todo-4)", () => {
+    render(<DetailScreen automationId="on-file" />);
+    expect(screen.getByTestId(AutomationFiresTestId.List)).toBeInTheDocument();
   });
 
   it("Run now fires the trigger mutation from the top-right", async () => {

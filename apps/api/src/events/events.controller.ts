@@ -1,9 +1,10 @@
 import { Controller, type MessageEvent, Sse } from "@nestjs/common";
 import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
-import { type Observable, map, merge } from "rxjs";
+import { Observable, map, merge } from "rxjs";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { AgentRunnerService } from "../agents/agent-runner.service";
 import { ApprovalsService } from "../approvals/approvals.service";
+import { AutomationFiresStore } from "../automations/automation-fires.store";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import { GoalRunnerService } from "../goals/goal-runner.service";
 import { WorkflowRunnerService } from "../workflows/workflow-runner.service";
@@ -27,6 +28,7 @@ export class EventsController {
     private readonly channels: ChannelEventsService,
     private readonly activity: ActivityEventsService,
     private readonly approvals: ApprovalsService,
+    private readonly fires: AutomationFiresStore,
   ) {}
 
   @Sse("api/events")
@@ -73,6 +75,13 @@ export class EventsController {
       this.approvals
         .settled()
         .pipe(map((e): MessageEvent => ({ data: JSON.stringify({ scope: "approvals", ...e }) }))),
+      // todo-4 — an automation fire started or finished (cron, manual or signal). The
+      // automations list (`lastFire`) and the fire history refetch off this scope.
+      new Observable<MessageEvent>((subscriber) =>
+        this.fires.onChange((e) =>
+          subscriber.next({ data: JSON.stringify({ scope: "automation-fires", ...e }) }),
+        ),
+      ),
       heartbeats(),
     );
   }

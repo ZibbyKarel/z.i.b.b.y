@@ -51,6 +51,7 @@ export * from "./release/release.schema";
 export * from "./release/release.contract";
 export * from "./automations/signal.schema";
 export * from "./automations/automation.schema";
+export * from "./automations/automation-fire.schema";
 export * from "./automations/automations.contract";
 export * from "./integrations/integration.schema";
 export * from "./integrations/integration-routing";

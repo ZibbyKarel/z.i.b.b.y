@@ -193,6 +193,28 @@ when the config changes.
    minute is safe).
 5. Logs the fire; missed triggers are skipped, not caught up.
 
+### Fire history (todo-4)
+
+Every fire — cron tick (`source: "cron"`), manual `trigger` (`"manual"`) and signal
+dispatch (`"signal"`) — goes through `SchedulerService.recordFire`, which wraps
+`dispatch` in an `AutomationFire` record written by `AutomationFiresStore`
+(`apps/api/src/automations/automation-fires.store.ts`):
+
+- `begin` writes `{ id: "fire_<epochMs>_<hex>", status: "running", startedAt }` and an
+  empty log, then prunes beyond `AUTOMATION_FIRES_KEEP` (50) record+log pairs.
+- The log gets `start target=<type> prompt=<first 200 chars>`, then
+  `done in <ms> ms: <ref>` or `error: <message>` + stack.
+- `finish` sets `done`/`error`, `finishedAt`, `durationMs`, `result` (the ref) and,
+  for a run-backed target (`agent` / `workflow` / `task`), `runRef` — that run owns
+  its own lifecycle and log.
+- A throwing handler is recorded as `error` and still rejects to the caller. A store
+  failure is only warned about; it never blocks the dispatch.
+- Ids are checked against `/^[A-Za-z0-9_-]+$/` before any path join; a corrupt record
+  is skipped by the list and 404s on the log endpoint.
+
+Each transition is pushed on `/api/events` as the `automation-fires` scope
+(see [events.md](./events.md)).
+
 ## API
 
 ```
@@ -203,12 +225,21 @@ GET    /api/automations/:id       get one
 PATCH  /api/automations/:id       update (enable/disable, retarget; system: reschedule/toggle only, else 409)
 DELETE /api/automations/:id       delete (409 for a system automation)
 POST   /api/automations/:id/trigger  fire now (returns runRef)
+GET    /api/automations/:id/fires     fire history, newest first (404 unknown automation)
+GET    /api/automations/:id/fires/:fireId/logs?offset=  fire log chunk (RunLogChunk; 404 unknown fire)
+GET    /api/automations/:id/fires/:fireId/logs/stream   SSE tail of the same log (outside ts-rest)
 ```
+
+`GET /api/automations` and `GET /api/automations/:id` return `AutomationView` — the
+automation plus `lastFire?: AutomationFire` (its newest fire). `lastFire` is
+response-only; it is never written into the automation file.
 
 ## Persistence
 
 Each automation is a JSON file in `.zibby/data/automations/<id>.json`.
-`lastFiredAt` is written back after every fire.
+`lastFiredAt` is written back after every fire. Fire history lives in
+`.zibby/data/automation-fires/<automationId>/<fireId>.json` + `<fireId>.log`
+(`AUTOMATION_FIRES_DIR` overrides the dir).
 
 ## System automations
 

@@ -2111,7 +2111,21 @@
     "signalMinSeverityLabel": "Minimum severity",
     "signalSeverityAny": "Any severity",
     "approvalLabel": "Approval before dispatch",
-    "approvalHint": "Park the run behind an approval instead of dispatching immediately."
+    "approvalHint": "Park the run behind an approval instead of dispatching immediately.",
+    "firesTitle": "Runs",
+    "firesEmpty": "No runs yet",
+    "fireOpenRun": "Open run",
+    "fireStatus": {
+      "running": "Running",
+      "done": "Done",
+      "error": "Failed",
+      "dispatched": "Dispatched"
+    },
+    "fireSource": {
+      "cron": "Schedule",
+      "manual": "Manual",
+      "signal": "Signal"
+    }
   },
   "hooks": {
     "title": "Hooks",
@@ -3471,7 +3485,8 @@
         "prompt": "Prompt",
         "lastFired": "Last run",
         "never": "Never",
-        "disabled": "Disabled"
+        "disabled": "Disabled",
+        "failed": "Failed {ago}"
       }
     },
     "you": "{n} you",

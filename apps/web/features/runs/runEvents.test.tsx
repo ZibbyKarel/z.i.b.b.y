@@ -12,6 +12,7 @@ import { getScheduledTasksQueryKey } from "../tasks/queries/useScheduledTasksQue
 import { getTaskDetailRootKey } from "../tasks/queries/useTaskQuery";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
 import { getBriefingQueryKey } from "../briefing/queries/useBriefingQuery";
+import { getAutomationFiresQueryKey, getAutomationsQueryKey } from "../automations/queries";
 import { taskRunsRootKey } from "./queries/keys";
 
 // `API_URL` gates the provider (no URL → no stream); pin it so the EventSource opens.
@@ -38,6 +39,17 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
   });
   afterEach(() => {
     mock.restore();
+  });
+
+  it("an automation-fires event refreshes the automations list and that automation's fires (todo-4)", () => {
+    act(() => {
+      mock
+        .last()
+        .emit({ scope: "automation-fires", automationId: "a", fireId: "f", status: "done" });
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: getAutomationsQueryKey() });
+    // The fires key sits under the `["automations"]` prefix, so the one call covers it.
+    expect(getAutomationFiresQueryKey("a").slice(0, 1)).toEqual(getAutomationsQueryKey());
   });
 
   it("an approval-* activity event refreshes the pending approvals queue", () => {

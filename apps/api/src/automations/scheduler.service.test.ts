@@ -1,6 +1,10 @@
 import type { Automation, Signal } from "@zibby/contracts";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeSystemConfigStore } from "../system/system-config.fixture";
+import { promises as fs } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
+import { AutomationFiresStore } from "./automation-fires.store";
 import { SchedulerService } from "./scheduler.service";
 
 const fakeLogger = {
@@ -103,6 +107,8 @@ function makeService(opts: {
   arch?: { audit: ReturnType<typeof vi.fn> };
   reviewLearning?: { learn: ReturnType<typeof vi.fn> };
   externalSkills?: { syncAll: ReturnType<typeof vi.fn> };
+  gaps?: { detect: ReturnType<typeof vi.fn> };
+  fires?: AutomationFiresStore;
 }): {
   service: SchedulerService;
   storage: { markFired: ReturnType<typeof vi.fn> };
@@ -125,7 +131,7 @@ function makeService(opts: {
     { generate: vi.fn() } as never,
     { distill: vi.fn() } as never,
     { extract: vi.fn() } as never,
-    { detect: vi.fn() } as never,
+    (opts.gaps ?? { detect: vi.fn() }) as never,
     fakeSystemConfigStore(),
     { detect: opts.detect ?? vi.fn() } as never,
     (opts.taskScheduler ?? { createTask: vi.fn() }) as never,
@@ -147,6 +153,10 @@ function makeService(opts: {
     { run: vi.fn(async () => ({ brokenLinks: 0, orphans: 0, stale: 0 })) } as never,
     (opts.externalSkills ?? {
       syncAll: vi.fn(async () => ({ checked: 0, updated: [], failed: [] })),
+    }) as never,
+    (opts.fires ?? {
+      begin: vi.fn(async () => Promise.reject(new Error("no store"))),
+      reconcile: vi.fn(async () => {}),
     }) as never,
   );
   return { service, storage, registered: () => registered };
@@ -518,5 +528,187 @@ describe("SchedulerService — T7 TickingWatcherBase adoption", () => {
     // No `onModuleInit()` here (systemConfig defaults tickMs to 0 in tests) — the
     // timer is never armed, so `running` stays false regardless of any in-flight tick.
     expect(service.health().running).toBe(false);
+  });
+});
+
+describe("SchedulerService — every fire is recorded (todo-4)", () => {
+  let dir: string;
+  let fires: AutomationFiresStore;
+  const gapAutomation = (over: Partial<Automation> = {}): Automation => ({
+    id: "gap-detect",
+    trigger: { type: "cron", expr: "* * * * *" },
+    target: { type: "gap-detect" },
+    prompt: "look for gaps",
+    enabled: true,
+    system: true,
+    ...over,
+  });
+
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "scheduler-fires-"));
+    fires = new AutomationFiresStore(dir);
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  const logOf = async (automationId: string, fireId: string) =>
+    (await fires.readLog(automationId, fireId, 0)).content;
+
+  it("records a manual in-process fire as done with its result ref and a log", async () => {
+    const detect = vi.fn(async () => ({ suggestions: [1, 2] }));
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect }, fires });
+
+    expect(await service.trigger("gap-detect")).toBe("gaps:2");
+
+    const [fire, ...rest] = await fires.list("gap-detect");
+    expect(rest).toHaveLength(0);
+    expect(fire).toMatchObject({ source: "manual", status: "done", result: "gaps:2" });
+    expect(fire?.durationMs).toBeGreaterThanOrEqual(0);
+    const log = await logOf("gap-detect", fire?.id ?? "");
+    expect(log).toContain("start target=gap-detect prompt=look for gaps");
+    expect(log).toContain("gaps:2");
+  });
+
+  it("records a throwing handler as error (message + stack in the log) and still rejects", async () => {
+    const detect = vi.fn(async () => {
+      throw new Error("vault offline");
+    });
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect }, fires });
+
+    await expect(service.trigger("gap-detect")).rejects.toThrow("vault offline");
+
+    const fire = await fires.latest("gap-detect");
+    expect(fire).toMatchObject({ status: "error", error: "vault offline" });
+    const log = await logOf("gap-detect", fire?.id ?? "");
+    expect(log).toContain("error: vault offline");
+    expect(log).toContain("scheduler.service.test.ts");
+  });
+
+  it("records a task target's runRef", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "dispatched" as const,
+      runRef: "run_42",
+      task: { id: "task_1" },
+    }));
+    const { service } = makeService({
+      automation: taskAutomation(),
+      taskScheduler: { createTask },
+      fires,
+    });
+
+    await service.trigger("prompt-automation");
+
+    expect(await fires.latest("prompt-automation")).toMatchObject({
+      status: "done",
+      runRef: "run_42",
+    });
+  });
+
+  it("records a cron tick fire with source cron", async () => {
+    const detect = vi.fn(async () => ({ suggestions: [] }));
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect }, fires });
+
+    expect(await service.tick(new Date("2026-11-12T08:00:00Z"))).toEqual(["gap-detect"]);
+
+    expect(await fires.latest("gap-detect")).toMatchObject({ source: "cron", result: "gaps:0" });
+  });
+
+  it("records a signal dispatch with source signal", async () => {
+    const detect = vi.fn(async () => ({ suggestions: [] }));
+    const { service, registered } = makeService({
+      automation: gapAutomation(),
+      gaps: { detect },
+      fires,
+    });
+    service.onModuleInit();
+
+    const signal: Signal = {
+      from: "security",
+      kind: "cve",
+      title: "CVE",
+      body: "x",
+      fingerprint: "f1",
+    };
+    await registered()?.(gapAutomation(), signal);
+
+    expect(await fires.latest("gap-detect")).toMatchObject({ source: "signal" });
+    service.onModuleDestroy();
+  });
+
+  it("still dispatches when the store itself fails", async () => {
+    const detect = vi.fn(async () => ({ suggestions: [] }));
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect } });
+
+    expect(await service.trigger("gap-detect")).toBe("gaps:0");
+  });
+
+  it("records no runRef when a task is only queued (the ref is a task id)", async () => {
+    const createTask = vi.fn(async () => ({
+      outcome: "scheduled" as const,
+      task: { id: "task_9" },
+    }));
+    const { service } = makeService({
+      automation: taskAutomation(),
+      taskScheduler: { createTask },
+      fires,
+    });
+
+    expect(await service.trigger("prompt-automation")).toBe("task_9");
+
+    const fire = await fires.latest("prompt-automation");
+    expect(fire).toMatchObject({ status: "done", result: "task_9" });
+    expect(fire).not.toHaveProperty("runRef");
+  });
+
+  it("logs a failure's message once, followed by the stack frames", async () => {
+    const detect = vi.fn(async () => {
+      throw new Error("vault offline");
+    });
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect }, fires });
+
+    await expect(service.trigger("gap-detect")).rejects.toThrow();
+
+    const log = await logOf("gap-detect", (await fires.latest("gap-detect"))?.id ?? "");
+    expect(log.match(/vault offline/g)).toHaveLength(1);
+    expect(log).toMatch(/error: vault offline\n\s+at /);
+  });
+
+  it("records two overlapping triggers as distinct fires; the newest start wins lastFire", async () => {
+    let release: () => void = () => {};
+    const gate = new Promise<void>((r) => (release = r));
+    const detect = vi
+      .fn()
+      .mockImplementationOnce(async () => {
+        await gate;
+        return { suggestions: [1] };
+      })
+      .mockImplementationOnce(async () => ({ suggestions: [1, 2] }));
+    const { service } = makeService({ automation: gapAutomation(), gaps: { detect }, fires });
+
+    const first = service.trigger("gap-detect");
+    await vi.waitFor(() => expect(detect).toHaveBeenCalledTimes(1));
+    await new Promise((r) => setTimeout(r, 5));
+    const second = service.trigger("gap-detect");
+    await second;
+    release();
+    await first;
+
+    const all = await fires.list("gap-detect");
+    expect(all).toHaveLength(2);
+    expect(new Set(all.map((f) => f.id)).size).toBe(2);
+    expect(await fires.latest("gap-detect")).toMatchObject({ result: "gaps:2" });
+  });
+
+  it("reconciles interrupted fires on init", async () => {
+    const stuck = await fires.begin("gap-detect", "cron");
+    const { service } = makeService({ automation: gapAutomation(), fires });
+    await service.onModuleInit();
+    service.onModuleDestroy();
+    expect(await fires.latest("gap-detect")).toMatchObject({
+      id: stuck.id,
+      status: "error",
+      error: "interrupted (process restart)",
+    });
   });
 });

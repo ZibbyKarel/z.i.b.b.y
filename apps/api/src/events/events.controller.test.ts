@@ -1,3 +1,6 @@
+import { promises as fs } from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import type { MessageEvent } from "@nestjs/common";
 import type { AgentRun, GoalRun, WorkflowRun } from "@zibby/contracts";
 import { describe, expect, it } from "vitest";
@@ -8,6 +11,7 @@ import type { AgentRunnerService } from "../agents/agent-runner.service";
 import { ChannelEventsService } from "../channels/channel-events.service";
 import type { GoalRunnerService } from "../goals/goal-runner.service";
 import type { WorkflowRunnerService } from "../workflows/workflow-runner.service";
+import { AutomationFiresStore } from "../automations/automation-fires.store";
 import { EventsController } from "./events.controller";
 
 /** A bare `onRunStatus` stub — the only surface the controller reads off any runner. */
@@ -41,6 +45,7 @@ describe("EventsController — merged `/api/events` SSE", () => {
       new ChannelEventsService(),
       new ActivityEventsService(),
       approvalsStub(),
+      new AutomationFiresStore("/nonexistent"),
     );
 
     const events: MessageEvent[] = [];
@@ -69,6 +74,7 @@ describe("EventsController — merged `/api/events` SSE", () => {
       new ChannelEventsService(),
       new ActivityEventsService(),
       approvalsStub(settled),
+      new AutomationFiresStore("/nonexistent"),
     );
     const events: MessageEvent[] = [];
     const sub = controller.events().subscribe((e) => events.push(e));
@@ -79,6 +85,39 @@ describe("EventsController — merged `/api/events` SSE", () => {
       approvalId: "a1",
       kind: "pr-rebase",
       status: "rejected",
+    });
+  });
+
+  it("carries automation fire transitions as the `automation-fires` scope (todo-4)", async () => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "events-fires-"));
+    const fires = new AutomationFiresStore(dir);
+    const controller = new EventsController(
+      fakeRunner<AgentRun>() as unknown as AgentRunnerService,
+      fakeRunner<WorkflowRun>() as unknown as WorkflowRunnerService,
+      fakeRunner<GoalRun>() as unknown as GoalRunnerService,
+      new ChannelEventsService(),
+      new ActivityEventsService(),
+      approvalsStub(),
+      fires,
+    );
+    const events: MessageEvent[] = [];
+    const sub = controller.events().subscribe((e) => events.push(e));
+    const fire = await fires.begin("nightly", "cron");
+    await fires.finish("nightly", fire.id, { status: "error", error: "boom" });
+    sub.unsubscribe();
+    await fs.rm(dir, { recursive: true, force: true });
+    const parsed = events.map((e) => JSON.parse(String(e.data)));
+    expect(parsed).toContainEqual({
+      scope: "automation-fires",
+      automationId: "nightly",
+      fireId: fire.id,
+      status: "running",
+    });
+    expect(parsed).toContainEqual({
+      scope: "automation-fires",
+      automationId: "nightly",
+      fireId: fire.id,
+      status: "error",
     });
   });
 });
