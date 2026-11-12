@@ -3576,7 +3576,6 @@
         "openApproval": "Open approval ↗"
       },
       "pr": {
-        "review": "Review",
         "checks": "Checks",
         "changes": "Changes",
         "stack": "Stack",
@@ -3594,8 +3593,6 @@
           "unknown": "Unknown"
         },
         "diff": "Diff · vs {base}",
-        "by": "By {who}",
-        "mine": "Yours",
         "note": {
           "ready": "Ready to merge",
           "approved": "Approved",
@@ -3606,7 +3603,24 @@
           "needsApproval": "Needs approval",
           "reviewRequested": "Review requested",
           "draft": "Draft"
-        }
+        },
+        "state": "State",
+        "issue": "Issue",
+        "author": "Author",
+        "project": "Project",
+        "files": "{count, plural, one {# file} other {# files}}",
+        "convertToDraft": "Convert to draft",
+        "readyForReview": "Ready for review",
+        "draftFailed": "Changing the draft state failed: {reason}",
+        "moreActions": "More actions",
+        "closePr": "Close pull request",
+        "closeConfirmTitle": "Close PR #{number}?",
+        "closeConfirmBody": "PR #{number} will be closed on GitHub without merging. You can reopen it later.",
+        "closeFailed": "Closing the PR failed: {reason}",
+        "copyBranch": "Copy branch",
+        "copyNumber": "Copy PR number",
+        "tabOverview": "Overview",
+        "noDescription": "No description provided."
       },
       "run": {
         "open": "Open run ↗",

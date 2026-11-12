@@ -3576,7 +3576,6 @@
         "openApproval": "Otevřít schválení ↗"
       },
       "pr": {
-        "review": "Review",
         "checks": "Kontroly",
         "changes": "Změny",
         "stack": "Stack",
@@ -3594,8 +3593,6 @@
           "unknown": "Neznámé"
         },
         "diff": "Diff · vůči {base}",
-        "by": "Od {who}",
-        "mine": "Tvoje",
         "note": {
           "ready": "Připraveno ke sloučení",
           "approved": "Schváleno",
@@ -3606,7 +3603,24 @@
           "needsApproval": "Vyžaduje schválení",
           "reviewRequested": "Žádost o review",
           "draft": "Draft"
-        }
+        },
+        "state": "Stav",
+        "issue": "Issue",
+        "author": "Autor",
+        "project": "Projekt",
+        "files": "{count, plural, one {# soubor} few {# soubory} other {# souborů}}",
+        "convertToDraft": "Převést na draft",
+        "readyForReview": "Připravit k review",
+        "draftFailed": "Změna stavu draftu selhala: {reason}",
+        "moreActions": "Další akce",
+        "closePr": "Zavřít pull request",
+        "closeConfirmTitle": "Zavřít PR #{number}?",
+        "closeConfirmBody": "PR #{number} se na GitHubu zavře bez sloučení. Později jde znovu otevřít.",
+        "closeFailed": "Zavření PR selhalo: {reason}",
+        "copyBranch": "Kopírovat větev",
+        "copyNumber": "Kopírovat číslo PR",
+        "tabOverview": "Přehled",
+        "noDescription": "PR nemá žádný popis."
       },
       "run": {
         "open": "Otevřít běh ↗",

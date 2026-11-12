@@ -89,6 +89,7 @@ export const WithActionsAndLink: Story = {
     <AnchoredSheet
       {...args}
       actions={<SheetAction intent="primary">MERGE</SheetAction>}
+      meta={<span>feat/pr-detail → main · +12 −3</span>}
       titleHref="https://github.com"
     >
       {body}

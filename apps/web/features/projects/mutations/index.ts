@@ -8,3 +8,5 @@ export { useSetProjectSecretsMutation } from "./useSetProjectSecretsMutation";
 export { useDeleteProjectSecretsMutation } from "./useDeleteProjectSecretsMutation";
 export { useCloneProjectMutation } from "./useCloneProjectMutation";
 export { useMergeProjectPrMutation } from "./useMergeProjectPrMutation";
+export { useCloseProjectPrMutation } from "./useCloseProjectPrMutation";
+export { useSetProjectPrDraftMutation } from "./useSetProjectPrDraftMutation";
