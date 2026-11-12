@@ -145,6 +145,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     repo: string,
     cursor: string | undefined,
     creds: CredentialsInput,
+    onResponse?: (res: Response) => void,
   ): Promise<GitHubIssue[]> {
     const params = new URLSearchParams({
       state: "open",
@@ -156,6 +157,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/issues?${params}`, {
       headers: this.headers(creds),
     });
+    onResponse?.(res);
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
@@ -177,6 +179,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     qualifier: string,
     cursor: string | undefined,
     creds: CredentialsInput,
+    onResponse?: (res: Response) => void,
   ): Promise<GitHubIssue[]> {
     const since = cursor ? ` updated:>=${cursor}` : "";
     const q = `repo:${repo} is:open ${qualifier}${since}`;
@@ -184,6 +187,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const res = await this.fetchImpl(`${GITHUB_API}/search/issues?${params}`, {
       headers: this.headers(creds),
     });
+    onResponse?.(res);
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
@@ -258,12 +262,20 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const { teams, note } = includeTeams
       ? await this.teamsFor(integration, repo, creds)
       : { teams: [] as string[], note: undefined };
+    // todo-8: the heartbeat's main authenticated call also reports the token
+    // expiry header, so the UI shows it without a manual connection test.
+    let tokenExpiresAt: string | null | undefined;
+    const captureExpiry = (res: Response) => {
+      tokenExpiresAt = parseTokenExpiration(
+        res.headers.get("github-authentication-token-expiration"),
+      );
+    };
     const scoped = username
       ? [
-          ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds)),
+          ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds, captureExpiry)),
           ...(await this.searchScoped(repo, `assignee:${username}`, cursor, creds)),
         ]
-      : await this.listAll(repo, cursor, creds);
+      : await this.listAll(repo, cursor, creds, captureExpiry);
     const teamScoped: GitHubIssue[] = [];
     // ponytail: one Search call per team per poll (Search API ~30/min);
     // batch/OR the legs if an operator has many teams.
@@ -308,7 +320,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       });
       if (newest === undefined || updated > newest) newest = updated;
     }
-    return { items, cursor: newest, ...(note ? { notes: [note] } : {}) };
+    return { items, cursor: newest, tokenExpiresAt, ...(note ? { notes: [note] } : {}) };
   }
 
   async send(

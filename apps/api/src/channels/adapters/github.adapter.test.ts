@@ -295,6 +295,23 @@ describe("GitHubChannelAdapter", () => {
     expect(result.tokenExpiresAt).toBe("2026-12-11T10:00:00.000Z");
   });
 
+  it("poll reports the token expiry header from its search call (todo-8)", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ items: [] }), {
+          headers: { "github-authentication-token-expiration": "2026-12-11 10:00:00 UTC" },
+        }),
+    ) as unknown as typeof fetch;
+    const adapter = new GitHubChannelAdapter(fetchImpl);
+    const result = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+    expect(result.tokenExpiresAt).toBe("2026-12-11T10:00:00.000Z");
+
+    const noHeader = new GitHubChannelAdapter(jsonFetch({ items: [] }));
+    expect(
+      (await noHeader.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z")).tokenExpiresAt,
+    ).toBeNull();
+  });
+
   describe("parseTokenExpiration", () => {
     it("parses the UTC and offset header forms to ISO", () => {
       expect(parseTokenExpiration("2026-12-11 10:00:00 UTC")).toBe("2026-12-11T10:00:00.000Z");

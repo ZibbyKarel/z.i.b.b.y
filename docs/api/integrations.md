@@ -87,8 +87,9 @@ onto the sync-state sidecar: `connected` + `lastSyncAt` on success, `error` +
 The GitHub probe (`GET /user`) also reads the `github-authentication-token-expiration`
 response header into `tokenExpiresAt` (on the `TestResult` and stamped onto the
 sidecar): an ISO date, `null` when the header is absent (the token never expires),
-or absent when unknown. A later stamp that doesn't carry it (watcher poll, failed
-test) keeps the previous value. The web card and detail page render it as
+or absent when unknown. The watcher's GitHub poll captures the same header from its
+main search/list call on every heartbeat, so the value appears without a manual
+test. A stamp that doesn't carry it (failed test, first poll) keeps the previous value. The web card and detail page render it as
 "NO EXPIRATION DATE" / "expires in N days" / "token expired".
 
 ## Project scoping
