@@ -61,9 +61,13 @@ const rowHref = (row: BudgetHealthRow): Route => {
 /**
  * Budgets & limits: the account limits, company rollups and project budgets, worst first, with
  * what is running out highlighted. Rows link to the owning detail page. Collapses to the header
- * when nothing is set.
+ * when nothing is set. Takes only the report callbacks, so the top bar's limits popover
+ * (`HeaderLimits`) renders it outside the board too.
  */
-export function BudgetsWidget({ onEmptyChange, onCountChange }: BridgeWidgetProps) {
+export function BudgetsWidget({
+  onEmptyChange,
+  onCountChange,
+}: Pick<BridgeWidgetProps, "onEmptyChange" | "onCountChange">) {
   const t = useTranslations("bridge.widgets.budgets");
   const budgetQuery = useBudgetQuery();
   const projectsQuery = useProjectsQuery();

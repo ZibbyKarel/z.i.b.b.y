@@ -1,0 +1,54 @@
+import { UsagePanelTestId } from "@zibby/design-system";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, renderWithProviders, screen } from "../../../test/render";
+import { HeaderLimits, HeaderLimitsTestId } from "./HeaderLimits";
+
+vi.mock("../../../features/bridge/widgets/BudgetsWidget", () => ({
+  BudgetsWidget: () => <div data-testid="budgets-widget-stub" />,
+}));
+
+const items = [
+  { label: "5H", value: 40 },
+  { label: "TÝDEN", value: 10 },
+];
+
+const setup = () => {
+  renderWithProviders(<HeaderLimits items={items} />);
+  return {
+    root: screen.getByTestId(HeaderLimitsTestId.Root),
+    trigger: screen.getByTestId(HeaderLimitsTestId.Trigger),
+    popover: () => screen.queryByTestId(HeaderLimitsTestId.Popover),
+  };
+};
+
+describe("HeaderLimits", () => {
+  it("links the usage panel to the Budgets & limits page", () => {
+    const { trigger } = setup();
+    expect(trigger).toHaveAttribute("href", "/governance/budgets");
+    expect(trigger).toHaveAccessibleName("Budgety a limity");
+    expect(screen.getByTestId(UsagePanelTestId.Root)).toBeInTheDocument();
+  });
+
+  it("shows the Budgets & limits widget on hover and hides it on leave", () => {
+    const { root, popover } = setup();
+    expect(popover()).not.toBeInTheDocument();
+    fireEvent.mouseEnter(root);
+    expect(popover()).toBeInTheDocument();
+    expect(screen.getByTestId("budgets-widget-stub")).toBeInTheDocument();
+    expect(screen.getByTestId(HeaderLimitsTestId.Title)).toHaveTextContent("Budgety a limity");
+    fireEvent.mouseLeave(root);
+    expect(popover()).not.toBeInTheDocument();
+  });
+
+  it("opens on keyboard focus, closes on Escape and on blur out", () => {
+    const { trigger, popover } = setup();
+    fireEvent.focus(trigger);
+    expect(popover()).toBeInTheDocument();
+    fireEvent.keyDown(trigger, { key: "Escape" });
+    expect(popover()).not.toBeInTheDocument();
+    fireEvent.focus(trigger);
+    expect(popover()).toBeInTheDocument();
+    fireEvent.blur(trigger, { relatedTarget: document.body });
+    expect(popover()).not.toBeInTheDocument();
+  });
+});
