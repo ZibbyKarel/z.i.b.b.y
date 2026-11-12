@@ -34,6 +34,8 @@ export const ProposalProvenanceSchema = z
     agentId: z.string().optional(),
     /** `gap-detect`: the most recent task of the recurring group — prefills the automation. */
     taskId: z.string().optional(),
+    /** `gap-detect`: the recurring task's title — the approve dialog's fallback prompt. */
+    sample: z.string().max(PROPOSAL_TEXT_MAX).optional(),
   })
   .strict();
 export type ProposalProvenance = z.infer<typeof ProposalProvenanceSchema>;

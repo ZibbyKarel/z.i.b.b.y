@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import { PROPOSAL_TEXT_MAX } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { VaultService } from "../memory/vault.service";
 import { ProposalsService } from "../proposals/proposals.service";
@@ -96,12 +97,17 @@ export class GapDetectorService {
     };
     const suggestions: string[] = [];
     for (const g of gaps) {
+      const sample = g.sample.replace(/^task created:\s*/i, "").slice(0, PROPOSAL_TEXT_MAX);
       const [line] = await this.proposals.syncNoteLines(
         "gap-detect",
         [{ key: g.pattern, text: toSuggestion(g), occurrences: g.count }],
         {
           minOccurrences: MIN_OCCURRENCES,
-          provenance: { ...provenance, ...(g.taskId ? { taskId: g.taskId } : {}) },
+          provenance: {
+            ...provenance,
+            ...(g.taskId ? { taskId: g.taskId } : {}),
+            ...(sample ? { sample } : {}),
+          },
           now,
         },
       );

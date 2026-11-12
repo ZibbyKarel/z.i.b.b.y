@@ -147,8 +147,19 @@ describe("GapDetectorService", () => {
         source: "gap-detect",
         occurrences: 7,
         confidence: "high",
-        provenance: { automationId: "gap-detect", noteId: "automation-gaps" },
+        provenance: {
+          automationId: "gap-detect",
+          noteId: "automation-gaps",
+          sample: "Deploy to staging",
+        },
       });
+    });
+
+    it("strips the activity 'task created:' prefix from the stored sample", async () => {
+      const { svc, proposals } = makeService(recurring("task created: Standup", 3));
+      await svc.detect(new Date());
+      const listed = await proposals.list();
+      expect(listed[0]?.provenance.sample).toBe("Standup");
     });
 
     it("a dismissed proposal is omitted from the note on rerun", async () => {
