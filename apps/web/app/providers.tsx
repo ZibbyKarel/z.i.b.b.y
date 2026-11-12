@@ -2,6 +2,7 @@
 
 import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type ReactNode, useState } from "react";
+import { useDesktopSwipeNavigation } from "../features/desktop/useDesktopSwipeNavigation";
 import { useSystemConfigQuery } from "../features/system";
 import { apiClient } from "../state/api";
 import { AppearanceProvider } from "../state/appearance";
@@ -18,6 +19,7 @@ function DensityAppearance({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
+  useDesktopSwipeNavigation();
   const [client] = useState(
     () =>
       new QueryClient({
