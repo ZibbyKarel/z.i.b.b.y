@@ -27,6 +27,20 @@ describe("BoardRow", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it("an alert row gets the error background instead of the panel fill", () => {
+    const { rerender } = render(<BoardRow tone="error">x</BoardRow>);
+    expect(screen.getByTestId(BoardRowTestId.Root)).toHaveClass("bg-panel");
+    rerender(
+      <BoardRow alert bar={false} tone="error">
+        x
+      </BoardRow>,
+    );
+    const row = screen.getByTestId(BoardRowTestId.Root);
+    expect(row).toHaveClass("bg-bad/15");
+    expect(row).not.toHaveClass("bg-panel");
+    expect(row).toHaveAttribute("data-alert", "true");
+  });
+
   it("draws a muted row at half opacity", () => {
     const { rerender } = render(<BoardRow tone="idle">x</BoardRow>);
     expect(screen.getByTestId(BoardRowTestId.Root)).not.toHaveClass("opacity-50");

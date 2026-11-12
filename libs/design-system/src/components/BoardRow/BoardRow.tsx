@@ -55,6 +55,11 @@ export interface BoardRowProps {
   sheetSide?: "left" | "right";
   /** Needs the operator: 1px ink ring. */
   needsYou?: boolean;
+  /**
+   * Error state that must stand out (e.g. red CI): the row fill turns to the error tint. Pair with
+   * `bar={false}` for a background-only emphasis.
+   */
+  alert?: boolean;
   /** Context-only row (e.g. a stack member a filter didn't pick): drawn at half opacity. */
   muted?: boolean;
   /** Unique row key within the board; set as `data-rk` (the sheet anchors to it). */
@@ -102,6 +107,7 @@ export function BoardRow({
   sheetSide = "right",
   needsYou = false,
   muted = false,
+  alert = false,
   rowKey,
   onClick,
   action,
@@ -116,8 +122,9 @@ export function BoardRow({
 
   /** The visual row: bar, hairline, panel fill, hover and the selected / needsYou rings. */
   const chrome = cn(
-    "relative box-border w-full border-solid bg-panel text-left text-ink",
-    interactive && "hover:bg-panel-2",
+    "relative box-border w-full border-solid text-left text-ink",
+    alert ? "bg-bad/15" : "bg-panel",
+    interactive && (alert ? "hover:bg-bad/20" : "hover:bg-panel-2"),
     muted && "opacity-50",
     "[border-bottom:var(--bridge-row-border)]",
     bar && cn("border-l-[length:var(--bridge-bar)]", BAR[tone]),
@@ -148,6 +155,7 @@ export function BoardRow({
           ? cn("box-border min-w-0 flex-1 border-0 bg-transparent text-left text-ink", body)
           : cn(chrome, body)
       }
+      data-alert={alert || undefined}
       data-rk={rowKey}
       data-testid={BoardRowTestId.Root}
       onClick={onClick}
