@@ -51,7 +51,7 @@ Every route requires the operator token.
     { id: "claude", available: boolean, version?: string },
     { id: "opencode", available: boolean, version?: string,
       providers?: string[],                     // `auth list` + model prefixes
-      models?: { id: string; free: boolean; subscription: boolean }[] } // `opencode models`
+      models?: { id: string; free: boolean; subscription: boolean; variants: string[] }[] } // `opencode models`
   ] }
   ```
 
@@ -61,6 +61,9 @@ Every route requires the operator token.
   opencode's background service), only an `opencode/…-free` id counts as free.
   `subscription` is true for a `claude-agent` model whose catalog `cost` is an empty
   array: it runs on the operator's Claude Code login (neither free nor paid per token).
+  `variants` are the catalog's variant ids (e.g. `low|medium|high|xhigh|max`; `[]` = none
+  or no catalog). A model listing a `thinking` level supports thinking on opencode: the
+  run selects the variant of the same id (A26).
 
 - `GET /api/ai-providers/usage?days=N` (`days` 1–365, default 30) maps
   `opencode stats --json --days N --models`:

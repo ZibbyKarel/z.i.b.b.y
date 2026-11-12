@@ -47,17 +47,63 @@ export type AiProvidersSpend = z.infer<typeof AiProvidersSpendSchema>;
 export const AiEngineSchema = z.enum(["claude", "opencode"]);
 export type AiEngine = z.infer<typeof AiEngineSchema>;
 
+/**
+ * A19 — engine-independent model tiers, cheapest first (haiku = 1 … fable = 4). The
+ * names are Claude's CLI aliases, so the claude engine passes a tier as `--model`
+ * unchanged; opencode maps it through `SystemConfig.opencodeTierModels`.
+ */
+export const MODEL_TIERS = ["haiku", "sonnet", "opus", "fable"] as const;
+export const ModelTierSchema = z.enum(MODEL_TIERS);
+export type ModelTier = z.infer<typeof ModelTierSchema>;
+
+/** A20 — the opencode `provider/model[#variant]` each tier runs on (unmapped = absent). */
+export const OpencodeTierModelsSchema = z
+  .object({
+    haiku: z.string().min(1).optional(),
+    sonnet: z.string().min(1).optional(),
+    opus: z.string().min(1).optional(),
+    fable: z.string().min(1).optional(),
+  })
+  .strict();
+export type OpencodeTierModels = z.infer<typeof OpencodeTierModelsSchema>;
+
+/**
+ * A20 — the opencode model a tier runs on: its own mapping, else the nearest mapped
+ * LOWER tier, else the nearest mapped HIGHER tier, else `fallback` (the global
+ * `opencodeModel`). No tier → `fallback`. "" means nothing is chosen at all.
+ */
+export function resolveTierModel(
+  tier: ModelTier | undefined,
+  tierModels: OpencodeTierModels | undefined,
+  fallback: string,
+): string {
+  if (!tier || !tierModels) return fallback;
+  const i = MODEL_TIERS.indexOf(tier);
+  const order = [
+    ...MODEL_TIERS.slice(0, i + 1).reverse(), // itself, then downwards
+    ...MODEL_TIERS.slice(i + 1), // then upwards
+  ];
+  for (const t of order) {
+    const model = tierModels[t];
+    if (model) return model;
+  }
+  return fallback;
+}
+
 /** One engine's availability, from `GET /api/ai-providers/engines`. */
 /**
  * One opencode model. `free`: provider `opencode` with an all-zero price list in
  * opencode's model catalog (or, without a catalog, an `opencode/…-free` id).
  * `subscription`: provider `claude-agent` with an empty price list — covered by the
- * operator's Claude login, so neither free nor paid per token.
+ * operator's Claude login, so neither free nor paid per token. `variants`: the
+ * catalog's variant ids (A26 — a run's `thinking` level selects the variant of the same
+ * id, so a model listing `low`/`medium`/`high` supports thinking); `[]` = none / unknown.
  */
 export const AiEngineModelSchema = z.object({
   id: z.string(),
   free: z.boolean(),
   subscription: z.boolean(),
+  variants: z.array(z.string()).default([]),
 });
 export type AiEngineModel = z.infer<typeof AiEngineModelSchema>;
 

@@ -81,7 +81,13 @@ const CATALOG = JSON.stringify({
     { id: "gpt-5", providerID: "openai", cost: price(0) },
     { id: "claude-sonnet-4", providerID: "anthropic", cost: price(3) },
     // claude-agent on a Claude Code login: `cost: []` (v2.2.7); an API-key login is priced.
-    { id: "haiku", providerID: "claude-agent", cost: [] },
+    // `variants: [{ id, settings }]` (v2.2.7) — A26 exposes the ids.
+    {
+      id: "haiku",
+      providerID: "claude-agent",
+      cost: [],
+      variants: [{ id: "low", settings: { effort: "low" } }, { id: "high" }],
+    },
     { id: "sonnet", providerID: "claude-agent", cost: price(3) },
   ],
 });
@@ -105,16 +111,16 @@ describe("markFree", () => {
         freeInCatalog(CATALOG),
       ),
     ).toEqual([
-      { id: "opencode/big-pickle", free: true, subscription: false },
-      { id: "opencode/beam-free", free: false, subscription: false }, // priced, despite -free
-      { id: "opencode/no-price", free: false, subscription: false }, // no cost = not free
-      { id: "openai/gpt-5", free: false, subscription: false }, // zero cost, not opencode
-      { id: "anthropic/claude-sonnet-4", free: false, subscription: false },
-      { id: "opencode/unlisted-free", free: true, subscription: false }, // id rule
-      { id: "opencode/unlisted", free: false, subscription: false },
-      { id: "claude-agent/haiku", free: false, subscription: true }, // Claude login
-      { id: "claude-agent/sonnet", free: false, subscription: false }, // API key = paid
-      { id: "claude-agent/unlisted", free: false, subscription: false }, // unknown = paid
+      { id: "opencode/big-pickle", free: true, subscription: false, variants: [] },
+      { id: "opencode/beam-free", free: false, subscription: false, variants: [] }, // priced, despite -free
+      { id: "opencode/no-price", free: false, subscription: false, variants: [] }, // no cost = not free
+      { id: "openai/gpt-5", free: false, subscription: false, variants: [] }, // zero cost, not opencode
+      { id: "anthropic/claude-sonnet-4", free: false, subscription: false, variants: [] },
+      { id: "opencode/unlisted-free", free: true, subscription: false, variants: [] }, // id rule
+      { id: "opencode/unlisted", free: false, subscription: false, variants: [] },
+      { id: "claude-agent/haiku", free: false, subscription: true, variants: ["low", "high"] }, // Claude login
+      { id: "claude-agent/sonnet", free: false, subscription: false, variants: [] }, // API key = paid
+      { id: "claude-agent/unlisted", free: false, subscription: false, variants: [] }, // unknown = paid
     ]);
   });
 
@@ -123,9 +129,9 @@ describe("markFree", () => {
       expect(freeInCatalog(out)).toBeNull();
     }
     expect(markFree(["opencode/a-free", "opencode/big-pickle", "openai/x-free"], null)).toEqual([
-      { id: "opencode/a-free", free: true, subscription: false },
-      { id: "opencode/big-pickle", free: false, subscription: false },
-      { id: "openai/x-free", free: false, subscription: false },
+      { id: "opencode/a-free", free: true, subscription: false, variants: [] },
+      { id: "opencode/big-pickle", free: false, subscription: false, variants: [] },
+      { id: "openai/x-free", free: false, subscription: false, variants: [] },
     ]);
   });
 });

@@ -12,7 +12,7 @@ name: Kodér # display name
 description: | # description for the task classifier
   Implements features against a spec.
 glyph: "💻" # emoji icon (optional)
-model: opus # opus | sonnet | haiku
+model: opus # model tier: haiku | sonnet | opus | fable
 thinking: high # high | medium | low  (extended thinking)
 tools: # tools allowed for the claude CLI
   - bash
@@ -34,6 +34,11 @@ engine: opencode # claude | opencode (optional; absent = global SystemConfig.aiE
 engineModel: opencode/big-pickle # opencode provider/model (optional; absent = SystemConfig.opencodeModel)
 ```
 
+`model` is an engine-independent tier (A19): the claude engine passes it as `--model`;
+on opencode it picks `SystemConfig.opencodeTierModels[model]` (nearest lower, then higher
+mapped tier, then `opencodeModel`) unless the agent sets `engineModel` (A20). `thinking`
+is `--effort` on claude; on opencode it selects the model's variant of the same id when
+the model lists one and has no explicit `#variant` (A26).
 `engine` / `engineModel` pick the run engine per agent. The claude engine ignores
 `engineModel` (it keeps using `model`). In `PUT /api/agents/:id`, `engine: null` /
 `engineModel: null` clears the override. Setting or changing either (on create or

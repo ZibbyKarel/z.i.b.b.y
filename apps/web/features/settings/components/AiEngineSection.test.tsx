@@ -1,7 +1,7 @@
 import userEvent from "@testing-library/user-event";
 import { type AiEngineStatus, type SystemConfig, SystemConfigSchema } from "@zibby/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderWithProviders as render, screen } from "../../../test/render";
+import { renderWithProviders as render, screen, within } from "../../../test/render";
 import { OperatorTokenNoticeTestId } from "../../ai-providers/components/OperatorTokenNotice";
 import { AiEngineSection, AiEngineSectionTestId } from "./AiEngineSection";
 
@@ -29,8 +29,8 @@ const opencode = (over: Partial<AiEngineStatus> = {}): AiEngineStatus => ({
   version: "1.2.3",
   providers: [],
   models: [
-    { id: "anthropic/claude-x", free: false, subscription: false },
-    { id: "opencode/big-pickle", free: true, subscription: false },
+    { id: "anthropic/claude-x", free: false, subscription: false, variants: [] },
+    { id: "opencode/big-pickle", free: true, subscription: false, variants: [] },
   ],
   ...over,
 });
@@ -81,11 +81,30 @@ describe("AiEngineSection", () => {
 
   it("choosing a model spread-PUTs opencodeModel", async () => {
     render(<AiEngineSection />);
-    await userEvent.click(screen.getByTestId("dropdown-trigger"));
+    // the first picker is the default model
+    await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0] as HTMLElement);
     await userEvent.click(screen.getAllByTestId("dropdown-option")[0] as HTMLElement);
     expect(setConfig).toHaveBeenCalledWith({
       body: { ...config, opencodeModel: "opencode/big-pickle" },
     });
+  });
+
+  it("maps a level to an opencode model, and clearing it drops the key", async () => {
+    config = { ...config, opencodeTierModels: { opus: "anthropic/claude-x" } };
+    render(<AiEngineSection />);
+    const level = (tier: string) => screen.getByTestId(`${AiEngineSectionTestId.Level}-${tier}`);
+    expect(screen.getByTestId(AiEngineSectionTestId.Levels)).toBeInTheDocument();
+    await userEvent.click(within(level("haiku")).getByTestId("dropdown-trigger"));
+    await userEvent.click(await screen.findByRole("option", { name: /big-pickle/ }));
+    expect(setConfig).toHaveBeenLastCalledWith({
+      body: {
+        ...config,
+        opencodeTierModels: { opus: "anthropic/claude-x", haiku: "opencode/big-pickle" },
+      },
+    });
+    await userEvent.click(within(level("opus")).getByTestId("dropdown-trigger"));
+    await userEvent.click(await screen.findByRole("option", { name: "— žádný —" }));
+    expect(setConfig).toHaveBeenLastCalledWith({ body: { ...config, opencodeTierModels: {} } });
   });
 
   it("with no connected provider hints at opencode auth login; with some lists them", () => {

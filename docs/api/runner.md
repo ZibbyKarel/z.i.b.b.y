@@ -426,7 +426,14 @@ hard boundary — see _Known ceiling_ in `docs/api/approvals.md`.
 Agent runs and workflow agent stages run on `claude -p` (unchanged) or on
 `opencode run`. The engine is `agent.engine ?? SystemConfig.aiEngine`
 (`resolveAiEngine` in `runner/ai-engine.ts`, exposed as
-`ClaudeRunCommandService.resolveEngine`). The full picture is in
+`ClaudeRunCommandService.resolveEngine`). On opencode the model is the explicit
+`engineModel`, else the model tier mapped through `SystemConfig.opencodeTierModels`
+(`resolveTierModel` in `@zibby/contracts`), else `opencodeModel`. A workflow stage
+passes `stageEngineTarget(phase, agent, rung)` (phase `engine`/`engineModel` over the
+agent's, tier = rung ?? phase ?? agent); `stageSpendsClaude` checks every attempt. Both
+runners then pass the resolved engine through `applyThinkingVariant(engine, thinking)`
+(A26): an opencode model without an explicit `#variant` gets `#<thinking>` when the
+cached catalog lists that variant id. The full picture is in
 [ai-engines.md](./ai-engines.md).
 
 - **Command.** `ClaudeRunCommandService.buildOpencodeCommand(opts, model)` builds

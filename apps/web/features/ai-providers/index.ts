@@ -3,3 +3,4 @@ export * from "./queries";
 export * from "./mutations";
 export * from "./components/AiEngineModelPicker";
 export * from "./components/OperatorTokenNotice";
+export * from "./useTierLabel";

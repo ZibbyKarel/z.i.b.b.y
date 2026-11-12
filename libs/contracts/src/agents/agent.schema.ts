@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
+import { AiEngineSchema, ModelTierSchema } from "../ai-providers/ai-providers.schema";
 import { AvatarSchema, RiskSchema } from "../common.schema";
 import { GateRuleInputSchema } from "../gates/gate.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
@@ -19,8 +19,11 @@ export const AgentIdSchema = z
   .max(128)
   .regex(AGENT_ID_REGEX, "id may only contain letters, numbers, '.', '_' and '-'");
 
-/** Model the agent runs on. Mirrors the dashboard's `ModelName`. */
-export const AgentModelSchema = z.enum(["opus", "sonnet", "haiku"]);
+/**
+ * The agent's / phase's model TIER (A19), engine-independent: the claude engine
+ * passes it as `--model`, opencode maps it via `SystemConfig.opencodeTierModels`.
+ */
+export const AgentModelSchema = ModelTierSchema;
 export type AgentModel = z.infer<typeof AgentModelSchema>;
 
 /** Thinking budget. Mirrors the dashboard's `ThinkingLevel`. */

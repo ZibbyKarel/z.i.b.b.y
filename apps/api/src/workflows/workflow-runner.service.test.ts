@@ -18,6 +18,7 @@ import {
   StageBuildError,
   WorkflowRunNotFoundError,
   WorkflowRunnerService,
+  opencodeThinkingNote,
 } from "./workflow-runner.service";
 
 /** Minimal logger double matching the LoggerService surface the service uses. */
@@ -735,6 +736,91 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         delete process.env.OPENCODE_BIN;
         clearOpencodeCache();
       }
+    });
+
+    it("opencode: the stage target carries the phase engine/model and the escalation tier (A21)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const bin = path.join(dir, "fake-opencode.sh");
+      await fs.writeFile(bin, "#!/bin/sh\necho opencode/big-pickle\n", { mode: 0o755 });
+      process.env.OPENCODE_BIN = bin;
+      clearOpencodeCache();
+      const resolveEngine = vi.fn(() => ({ engine: "opencode", model: "opencode/big-pickle" }));
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: vi.fn(),
+        buildOpencodeCommand: vi.fn(async () => ({ command: "opencode", args: ["run"] })),
+        resolveEngine,
+      };
+      try {
+        const cmd = await (
+          h.service as unknown as {
+            buildStageCommand(
+              phase: WorkflowPhase,
+              cwd: string,
+              project: Project | null,
+              escalation: { model?: string } | null,
+            ): Promise<{ tier?: string }>;
+          }
+        ).buildStageCommand(
+          agentPhase({ engine: "opencode", engineModel: "opencode/big-pickle", model: "haiku" }),
+          dir,
+          null,
+          { model: "opus" },
+        );
+        expect(resolveEngine).toHaveBeenCalledWith(
+          expect.objectContaining({
+            engine: "opencode",
+            engineModel: "opencode/big-pickle",
+            model: "opus",
+          }),
+        );
+        expect(cmd.tier).toBe("opus");
+      } finally {
+        delete process.env.OPENCODE_BIN;
+        clearOpencodeCache();
+      }
+    });
+
+    it("opencode: the thinking level runs as the model's matching variant (A26)", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const bin = path.join(dir, "fake-opencode.sh");
+      const catalog = JSON.stringify({
+        data: [{ providerID: "claude-agent", id: "haiku", variants: [{ id: "high" }] }],
+      });
+      await fs.writeFile(
+        bin,
+        `#!/bin/sh\nif [ "$1" = api ]; then echo '${catalog}'; else echo claude-agent/haiku; fi\n`,
+        { mode: 0o755 },
+      );
+      process.env.OPENCODE_BIN = bin;
+      clearOpencodeCache();
+      const buildOpencode = vi.fn(async () => ({ command: "opencode", args: ["run"] }));
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: vi.fn(),
+        buildOpencodeCommand: buildOpencode,
+        resolveEngine: () => ({ engine: "opencode", model: "claude-agent/haiku" }),
+      };
+      try {
+        const cmd = await build(agentPhase({ thinking: "high" }), PROJECT);
+        expect(buildOpencode).toHaveBeenCalledWith(expect.anything(), "claude-agent/haiku#high");
+        expect(cmd).toMatchObject({
+          engine: { engine: "opencode", model: "claude-agent/haiku#high" },
+          thinking: "high",
+        });
+      } finally {
+        delete process.env.OPENCODE_BIN;
+        clearOpencodeCache();
+      }
+    });
+
+    it("opencodeThinkingNote says when thinking did not apply (A26)", () => {
+      expect(opencodeThinkingNote("claude-agent/haiku#high", "high")).toBe("");
+      expect(opencodeThinkingNote("opencode/big-pickle", undefined)).toBe("");
+      expect(opencodeThinkingNote("opencode/big-pickle", "high")).toMatch(
+        /not supported by this model/,
+      );
+      expect(opencodeThinkingNote("claude-agent/haiku#low", "high")).toMatch(
+        /explicit variant "low"/,
+      );
     });
 
     it("tool: joins several commands with && under one shell", async () => {

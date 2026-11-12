@@ -720,7 +720,10 @@ agent run's own, a workflow run's latest stage that recorded one; absent = claud
 
 An exhausted Claude window defers a task unless its known target runs wholly off the
 Claude subscription: an agent on an opencode model other than `claude-agent/*`, or a
-workflow whose every agent phase is (no sub-workflow phases). A `claude-agent/*` target
+workflow whose every agent phase is, with the phase's own `engine` / `engineModel` and
+every escalation rung's tier resolved (no sub-workflow phases). The same check skips the
+budget's global Claude % ceiling (`pauseAtRollingPct` / `pauseAtWeeklyPct`, see
+[budget.md](./budget.md)). A `claude-agent/*` target
 defers like a claude one (A18).
 
 Workflow runs also expose per-stage timing: every non-synthetic `stageRuns[]` entry

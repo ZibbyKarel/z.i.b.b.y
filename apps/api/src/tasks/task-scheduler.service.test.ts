@@ -931,6 +931,51 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(await onOpencode("nested")).toBe(false);
   });
 
+  it("tells the budget gate a target runs off Claude, so its Claude % ceiling is skipped", async () => {
+    agentsStore.listActive.mockResolvedValue([
+      { id: "oc", name: "OC", engine: "opencode", engineModel: "opencode/big-pickle" },
+      { id: "cl", name: "CL" },
+    ]);
+    await service.createTask({ text: "do", target: { kind: "agent", id: "oc", name: "OC" } });
+    expect(fakeBudget.check).toHaveBeenLastCalledWith(undefined, expect.any(Date), {
+      offClaude: true,
+    });
+    await service.createTask({ text: "do", target: { kind: "agent", id: "cl", name: "CL" } });
+    expect(fakeBudget.check).toHaveBeenLastCalledWith(undefined, expect.any(Date), {
+      offClaude: false,
+    });
+  });
+
+  it("a phase's own engine decides (A21): a claude agent moved onto opencode is off Claude", async () => {
+    agentsStore.listActive.mockResolvedValue([{ id: "cl", name: "CL" }]);
+    workflowsStore.list.mockResolvedValue([
+      {
+        id: "moved",
+        phases: [
+          {
+            id: "a",
+            type: "agent",
+            agent: "cl",
+            engine: "opencode",
+            engineModel: "opencode/big-pickle",
+          },
+        ],
+      },
+      {
+        id: "pinned-back",
+        phases: [{ id: "a", type: "agent", agent: "cl", engine: "claude" }],
+      },
+    ]);
+    const off = (id: string) =>
+      (service as unknown as { targetOffClaude(t: unknown): Promise<boolean> }).targetOffClaude({
+        kind: "workflow",
+        id,
+        name: id,
+      });
+    expect(await off("moved")).toBe(true);
+    expect(await off("pinned-back")).toBe(false);
+  });
+
   it("a stale/headroom reading does NOT defer — the dispatch proceeds (fail-open)", async () => {
     fakeLimits.windowExhausted.mockResolvedValue({ exhausted: false, resumeAt: null });
     const result = await service.createTask({ text: "do the thing" });

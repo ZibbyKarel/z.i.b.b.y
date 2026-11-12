@@ -893,7 +893,9 @@
       "promptLabel": "Prompt pro tento krok",
       "promptPlaceholder": "Vlastní pokyny pro agenta… / vybere skill",
       "runsOnLabel": "Kde běží",
-      "runsOnClaude": "Claude (lokálně)",
+      "runsOnClaude": "Výchozí (agent / globální engine)",
+      "runsOnClaudeCode": "Claude Code",
+      "runsOnOpencode": "opencode",
       "openaiHint": "Krok běží jen jako text přes OpenAI API s klíčem z Nastavení → AI modely. Thinking určuje reasoning effort.",
       "includeLabel": "Přiložené soubory",
       "includeHint": "Jedna cesta k souboru v rámci běhu na řádek.",
@@ -3521,7 +3523,8 @@
         "free": "zdarma",
         "subscription": "předplatné Claude",
         "line": "{steps} kroků · {input} vstup / {output} výstup",
-        "totals": "Celkem, {days} dní"
+        "totals": "Celkem, {days} dní",
+        "claudeStillApplies": "Limity Claude dál platí pro chat, pomocné jednorázové dotazy a každý model claude-agent/*."
       }
     },
     "you": "{n} ty",
@@ -3869,6 +3872,15 @@
     "operatorTokenRequired": "Změna AI enginu vyžaduje operátorský token.",
     "operatorTokenLink": "Nastav ho v Nastavení → Obecné",
     "noModels": "Nepodařilo se načíst žádné modely opencode (katalog modelů není dostupný). Zkontroluj, že opencode funguje v terminálu.",
-    "noFreeModels": "Žádný z nabízených modelů není ověřený jako zdarma; jeho výběr může stát peníze."
+    "noFreeModels": "Žádný z nabízených modelů není ověřený jako zdarma; jeho výběr může stát peníze.",
+    "level": "Úroveň {n}",
+    "levelShort": "Ú{n}",
+    "notSet": "nenastaveno",
+    "levelsTitle": "Úrovně modelů",
+    "levelsHint": "Agenti volí úroveň, ne model. Prázdná úroveň se nahradí nejbližší nižší namapovanou, pak nejbližší vyšší a nakonec výchozím modelem.",
+    "levelRow": "Úroveň {n} ({name})",
+    "defaultModel": "Výchozí model",
+    "modelNone": "— žádný —",
+    "exactModel": "Přesný model (volitelné přepsání úrovně)"
   }
 }

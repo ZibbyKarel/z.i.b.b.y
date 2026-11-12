@@ -13,7 +13,7 @@ of the conversation.
 | Method       | Path                                   | Description                                                                                                                                                                                                                                                 |
 | ------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST`       | `/api/chat/messages`                   | Adds the operator's turn and starts the streaming reply. Body: see [Send body](#send-body) → `{ conversationId, turnId }` (returns immediately; tokens arrive over SSE).                                                                                    |
-| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, messages }`). Without `conversationId` → the active thread.                                                                                                                        |
+| `GET`        | `/api/chat/transcript?conversationId=` | Plain read of the conversation transcript (`{ conversationId, sessionId, sessionEngine?, messages }`). Without `conversationId` → the active thread.                                                                                                        |
 | `GET`        | `/api/chat/conversations?q=`           | Past conversations for the history sidebar, newest first: `[{ conversationId, title, messageCount, updatedAt }]`. `title` = first operator turn (truncated to 80 chars); empty threads skipped; `q` = case-insensitive substring over every message's text. |
 | `POST`       | `/api/chat/handoff`                    | "Create task" from chat. Body `{ conversationId, upToMessageId? }` → `{ text, compacted, transcriptPath }`: a task description carrying the conversation up to that reply — see [Hand-off](#hand-off-create-task-from-chat). No messages → 404.             |
 | `GET`        | `/api/chat/stream?conversationId=`     | **SSE** (raw `@Sse()`, outside ts-rest) — live tokens. Each `data` is a JSON `ChatTurnEvent`.                                                                                                                                                               |
@@ -111,6 +111,53 @@ claude -p <msg> [--resume <sid>] \
   send or Jira create/transition** — is decided by the CLI's auto-mode
   classifier, no longer hard-denied. `--disallowedTools` is still absolute.
 - The model is overridable via `ZIBBY_CHAT_MODEL` (default `sonnet`).
+- **Operator MCP servers (A23).** The `--mcp-config` file also carries the operator's
+  own MCP servers, read by `readOperatorMcpServers` (`inventory/operator-mcp-servers.ts`):
+  user scope (`~/.claude.json` → `mcpServers`) plus the `.mcp.json` of each plugin
+  enabled in `~/.claude/settings.json` (id `plugin_<plugin>_<server>`,
+  `${CLAUDE_PLUGIN_ROOT}` expanded). A server disabled for the turn's cwd
+  (`projects[cwd].disabledMcpServers`) is skipped; `zibby` / `zibby-kb` win a name clash.
+  Their tools are not on `--allowedTools`, so the auto-mode classifier decides each
+  call. Measured: no noticeable per-turn cost (decision A23). OAuth-backed HTTP servers
+  (e.g. claude-design, context7) come up `failed` / `needs-auth` this way; stdio servers
+  connect.
+
+### Chat on opencode (A24 / A25)
+
+A turn runs on the **effective engine**: `resolveAiEngine` with the mentioned `@agent`
+(its `engine` / `engineModel`), else `SystemConfig.aiEngine`. The model tier is the
+per-turn `model` ?? the agent's `model` ?? `ZIBBY_CHAT_MODEL` (when it is a tier), and the
+opencode model comes from `opencodeTierModels` (`resolveTierModel`, an agent's
+`engineModel` wins).
+
+```
+opencode run --standalone --format json -m <provider/model> --agent zibby [--session <id>] -- <msg>
+  env: OPENCODE_CONFIG=<0600 file, deleted after the turn>, OPENCODE_DISABLE_PROJECT_CONFIG=1,
+       PWD=<turn cwd>, ZIBBY_CHAT_MCP_SERVERS=zibby,zibby-kb  (no inherited OPENCODE_*)
+```
+
+- **Config:** the chat prompt (plus a note that shell, files and connectors need the
+  Claude engine) as the `zibby` agent; MCP servers `zibby` + `zibby-kb` (remote, bearer
+  header); `permissions` = deny `*`, allow `zibby_*` / `zibby-kb_*` (and deny
+  `zibby_create_task` when an `@agent` is mentioned); plugin
+  `chat/opencode-chat-gate/index.mjs`. No `--auto`.
+- **Tool gating is fail-closed (A25):** only the mounted MCP tools run. Shell, edit,
+  write, execute, question, skill, subagent, web and `opencode_*` tools are denied, by
+  config and again by the plugin. Chat has no approval card for an `ask`, so nothing
+  is routed to the gate; it is refused.
+- **Not on opencode:** the operator's own MCP servers (A23) — opencode has no auto-mode
+  classifier, and Playwright alone brings `browser_run_code_unsafe`; claude.ai
+  connectors (Slack, Jira, …) don't exist outside Claude.
+- **Session:** the transcript stores `sessionEngine` next to `sessionId`. A stored session
+  of the other engine is not resumed — the turn starts a fresh session.
+- **Stream:** `text` parts → `delta` (whole parts, joined with a blank line); `tool_use`
+  → `tool` (`zibby_get_status` → `mcp__zibby__get_status`; a blocked call shows as
+  `status: "error"`); `error` → `error` (`opencode: <message>`); a nonzero exit with no
+  text → `error`. There is no `result` line; the turn ends when the process exits.
+- **Unusable opencode** (no binary, no model, model not in `opencode models`) → one
+  `error` event with the preflight message, no Claude fallback (A7).
+- The assistant message records `model` (the tier) plus `engine: "opencode"` and
+  `engineModel`. Nothing Claude-limit-specific runs in the chat path.
 
 Chat spawns get their env from `agentBaseEnv()`, which strips the operator-token env vars
 (approval decisions are operator-only; see `docs/api/approvals.md`).
@@ -154,7 +201,7 @@ it only ever returns a 405.
 `SendChatMessageBody.model?: "haiku" | "sonnet" | "opus" | "fable"` picks the
 model for that turn (`claude --model <model>`); omitted → the API
 falls back to `ZIBBY_CHAT_MODEL ?? "sonnet"`. The persisted assistant `ChatMessage` carries the same
-`model?` so the transcript records what answered. The dock keeps the pick
+`model?` so the transcript records what answered (on opencode also `engine: "opencode"` + `engineModel`, A24). The dock keeps the pick
 sticky in `localStorage` (`zibby.chat.model`); it applies from the next turn and
 the thread (`--resume`) is kept.
 

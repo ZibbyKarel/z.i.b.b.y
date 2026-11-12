@@ -12,7 +12,12 @@ import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.stora
 import { ISOLATED_SETTING_SOURCES } from "../shared/spawn-claude-cli";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { SystemConfigStore } from "../system/system-config.store";
-import { type ResolvedAiEngine, opencodeBin, resolveAiEngine } from "./ai-engine";
+import {
+  type EngineTarget,
+  type ResolvedAiEngine,
+  opencodeBin,
+  resolveAiEngine,
+} from "./ai-engine";
 import { mapTools, toSubagentTools } from "./claude-tools";
 import { GRANT_DIRS_ENV } from "./runner-core";
 
@@ -545,9 +550,13 @@ export class ClaudeRunCommandService {
     @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {}
 
-  /** The engine `agent` runs on: its own override ?? the global setting (A3). */
-  resolveEngine(agent: Pick<Agent, "engine" | "engineModel">): ResolvedAiEngine {
-    return resolveAiEngine(agent, this.systemConfig?.current());
+  /**
+   * The engine a run executes on: the target's own override ?? the global setting (A3);
+   * on opencode the model follows the tier mapping (A20). A stage passes
+   * {@link stageEngineTarget}.
+   */
+  resolveEngine(target: EngineTarget): ResolvedAiEngine {
+    return resolveAiEngine(target, this.systemConfig?.current());
   }
 
   /**
@@ -560,7 +569,8 @@ export class ClaudeRunCommandService {
    * ({@link opencodeToolRules}), plus the gate plugin that runs the Claude approval
    * hook on every call. Project `opencode.json` files are ignored (RunnerCore sets
    * `OPENCODE_DISABLE_PROJECT_CONFIG`), mirroring `--setting-sources ""`.
-   * Not carried over: the `--agents` catalog, custom hooks, plugin dirs, effort.
+   * Not carried over: the `--agents` catalog, custom hooks, plugin dirs. Thinking rides
+   * the model's `#variant`, chosen by the caller (`applyThinkingVariant`, A26).
    */
   async buildOpencodeCommand(
     opts: ClaudeRunOptions,

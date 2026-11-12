@@ -172,6 +172,29 @@ describe("BudgetService.check — global ceiling", () => {
     if (!result.ok) expect(result.over).toBe("global");
   });
 
+  it("never holds a dispatch that runs off the Claude subscription (A16/A18)", async () => {
+    const svc = build({
+      config: { read: async () => ({ pauseAtRollingPct: 80, pauseAtWeeklyPct: 80 }) },
+      limitsSnapshot: async () =>
+        limits({
+          rolling: { usedPct: 100, resetsAt: null },
+          weekly: { usedPct: 100, resetsAt: null },
+        }),
+    });
+    expect(await svc.check(undefined, new Date(), { offClaude: true })).toEqual({ ok: true });
+    expect((await svc.check(undefined, new Date(), { offClaude: false })).ok).toBe(false);
+  });
+
+  it("still enforces the project's own run caps off Claude", async () => {
+    const svc = build({
+      project: project({ dailyRuns: 1 }),
+      ledger: { countDaily: async () => 1 },
+    });
+    const result = await svc.check("alpha", new Date(), { offClaude: true });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.over).toBe("project-daily");
+  });
+
   it("ignores the threshold when the reading is stale", async () => {
     const svc = build({
       config: { read: async () => ({ pauseAtRollingPct: 80 }) },

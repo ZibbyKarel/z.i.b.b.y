@@ -13,6 +13,7 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  AiEngine,
   CreateWorkflowInput,
   OpenAiTextModel,
 } from "@zibby/contracts";
@@ -60,6 +61,10 @@ export interface GraphNode {
   skill?: string;
   /** Agent phase only: run on this OpenAI text model instead of local claude. */
   openaiModel?: OpenAiTextModel;
+  /** Agent phase only: force this engine for the step (absent = agent / global engine). */
+  engine?: AiEngine;
+  /** Agent phase with `engine: "opencode"` only: exact `provider/model` (absent = the tier's). */
+  engineModel?: string;
   /** Agent phase with `openaiModel` only: extra run-relative files, one path per entry. */
   include?: string[];
   model: AgentModel;
@@ -175,6 +180,10 @@ export function phasesToGraph(initial: Workflow | undefined, agents: Agent[]): W
     ...(ph.prompt ? { prompt: ph.prompt } : {}),
     ...(ph.skill ? { skill: ph.skill } : {}),
     ...(ph.type === "agent" && ph.openaiModel ? { openaiModel: ph.openaiModel } : {}),
+    ...(ph.type === "agent" && ph.engine ? { engine: ph.engine } : {}),
+    ...(ph.type === "agent" && ph.engine === "opencode" && ph.engineModel
+      ? { engineModel: ph.engineModel }
+      : {}),
     ...(ph.type === "agent" && ph.openaiModel && ph.include?.length ? { include: ph.include } : {}),
     model: ph.model ?? "sonnet",
     thinking: ph.thinking ?? "medium",
@@ -317,6 +326,10 @@ export function graphToPhases(graph: WorkflowGraph, assignment: string): Contrac
       ...(node.prompt?.trim() ? { prompt: node.prompt } : {}),
       ...(node.skill ? { skill: node.skill } : {}),
       ...(node.openaiModel ? { openaiModel: node.openaiModel } : {}),
+      ...(node.engine && !node.openaiModel ? { engine: node.engine } : {}),
+      ...(node.engine === "opencode" && node.engineModel && !node.openaiModel
+        ? { engineModel: node.engineModel }
+        : {}),
       ...(node.openaiModel && cleanInclude(node).length ? { include: cleanInclude(node) } : {}),
       ...(loop ? { loop } : {}),
       ...approval,

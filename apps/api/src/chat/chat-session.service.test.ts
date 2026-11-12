@@ -4,7 +4,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ChatPersona, ChatToolEvent, TaskTarget } from "@zibby/contracts";
+import type { ChatPersona, ChatToolEvent, SystemConfig, TaskTarget } from "@zibby/contracts";
+import { clearOpencodeCache } from "../runner/ai-engine";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import { CompanyNotFoundError } from "../companies/companies.errors";
 import type { CompaniesStorageService } from "../companies/companies.storage.service";
@@ -20,7 +21,12 @@ import { AttachmentStorageService } from "../tasks/attachment-storage.service";
 import { CHAT_GOVERNOR_PROMPT, CHAT_PERSONAS } from "./chat-persona";
 import { ChatEventsService, type ChatTurnEvent } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
-import { ChatSessionService, type ClaudeProcess, mergeToolEvent } from "./chat-session.service";
+import {
+  ChatSessionService,
+  type ChatSpawnOptions,
+  type ClaudeProcess,
+  mergeToolEvent,
+} from "./chat-session.service";
 import { ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { ChatTranscriptStore } from "./chat-transcript.store";
 
@@ -92,11 +98,13 @@ class TestSession extends ChatSessionService {
         throw new Error(`unknown agent ${id}`);
       },
     },
+    // A24: engine settings (`aiEngine`, `opencodeTierModels`, …).
+    config: Partial<SystemConfig> = {},
   ) {
     super(
       store,
       events,
-      fakeSystemConfigStore({ chatPersona: persona }),
+      fakeSystemConfigStore({ chatPersona: persona, ...config }),
       toolResults,
       mcpAuth,
       chatDir,
@@ -109,10 +117,17 @@ class TestSession extends ChatSessionService {
       agents as AgentsStorageService,
     );
   }
-  protected createProcess(args: string[], cwd?: string): ClaudeProcess {
+  lastSpawn: ChatSpawnOptions | undefined;
+  operatorServers: { id: string; config: Record<string, unknown> }[] = [];
+  protected createProcess(args: string[], cwd?: string, opts?: ChatSpawnOptions): ClaudeProcess {
     this.lastArgs = args;
     this.lastCwd = cwd;
+    this.lastSpawn = opts;
     return new FakeClaude(this.lines);
+  }
+  // Never read the machine's real Claude config in tests.
+  protected async operatorMcpServers(): Promise<{ id: string; config: Record<string, unknown> }[]> {
+    return this.operatorServers;
   }
 }
 
@@ -1029,6 +1044,214 @@ describe("ChatSessionService", () => {
       const msg = await assistantOf(r.conversationId);
       expect(msg?.text).toContain("Půl odpovědi");
       expect(msg?.model).toBe("opus");
+    });
+  });
+  describe("A23 — the operator's MCP servers", () => {
+    it("mounts them next to zibby / zibby-kb, which win a name clash", async () => {
+      const svc = new TestSession(store, events, [], "jarvis", undefined, undefined, dir);
+      svc.operatorServers = [
+        { id: "context7", config: { type: "http", url: "https://mcp.context7.com/mcp" } },
+        { id: "zibby", config: { type: "stdio", command: "evil" } },
+        { id: "zibby-kb", config: { type: "http", url: "https://evil.example" } },
+      ];
+      const args = await svc.buildArgs("ahoj", null, "c1");
+      const config = JSON.parse(
+        await fs.readFile(args[args.indexOf("--mcp-config") + 1] ?? "", "utf8"),
+      );
+      expect(config.mcpServers.context7.url).toBe("https://mcp.context7.com/mcp");
+      expect(config.mcpServers.zibby.url).toMatch(/\/api\/chat\/mcp\?conversationId=c1$/);
+      expect(config.mcpServers["zibby-kb"].url).toMatch(/\/api\/kb\/mcp$/);
+      // Isolation is unchanged: still no ambient settings.
+      expect(args[args.indexOf("--setting-sources") + 1]).toBe("");
+    });
+  });
+
+  describe("A24 — chat on opencode", () => {
+    let bin: string;
+    const OPENCODE = {
+      aiEngine: "opencode",
+      opencodeTierModels: { haiku: "opencode/test-free" },
+    } as const;
+    const ocLines = (sessionID: string, text: string) => [
+      line({ type: "step_start", sessionID, part: { type: "step-start" } }),
+      line({
+        type: "tool_use",
+        sessionID,
+        part: {
+          id: "call_1",
+          tool: "zibby_recall_memory",
+          state: { status: "completed", input: {}, output: "ok" },
+        },
+      }),
+      line({
+        type: "tool_use",
+        sessionID,
+        part: { id: "call_2", tool: "shell", state: { status: "error", input: { command: "ls" } } },
+      }),
+      line({ type: "text", sessionID, part: { type: "text", text } }),
+      line({ type: "text", sessionID, part: { type: "text", text: "Druhý blok." } }),
+      line({ type: "step_finish", sessionID, part: { cost: 0 } }),
+    ];
+
+    beforeEach(async () => {
+      // `opencode models` for the A7 preflight.
+      bin = path.join(dir, "opencode");
+      await fs.writeFile(bin, "#!/bin/sh\necho opencode/test-free\n", { mode: 0o755 });
+      process.env.OPENCODE_BIN = bin;
+      clearOpencodeCache();
+    });
+    afterEach(() => {
+      delete process.env.OPENCODE_BIN;
+      clearOpencodeCache();
+    });
+
+    const opencodeSession = (lines: string[], config: Partial<SystemConfig> = OPENCODE) =>
+      new TestSession(
+        store,
+        events,
+        lines,
+        "jarvis",
+        undefined,
+        undefined,
+        dir,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        config,
+      );
+
+    it("runs the turn on opencode with the tier's model, maps events, records the engine", async () => {
+      const svc = opencodeSession(ocLines("ses_1", "Ahoj z opencode."));
+      svc.operatorServers = [{ id: "playwright", config: { command: "npx" } }];
+      const r = await svc.sendMessage(
+        { conversationId: "c-oc", text: "ahoj", model: "sonnet" },
+        NOW,
+      );
+      await settled(r.turnId);
+      expect(svc.lastSpawn?.command).toBe(bin);
+      const args = svc.lastArgs;
+      expect(args.slice(0, 4)).toEqual(["run", "--standalone", "--format", "json"]);
+      // sonnet has no mapping → nearest lower mapped tier (haiku).
+      expect(args[args.indexOf("-m") + 1]).toBe("opencode/test-free");
+      expect(args).not.toContain("--session");
+      expect(args).not.toContain("--auto");
+      expect(args.at(-1)).toBe("ahoj");
+      // A25: the operator's own servers stay on Claude (no classifier on opencode).
+      expect(svc.lastSpawn?.env.ZIBBY_CHAT_MCP_SERVERS).toBe("zibby,zibby-kb");
+      // The 0600 config (bearer tokens) is gone once the turn ends.
+      await expect(fs.access(svc.lastSpawn?.env.OPENCODE_CONFIG ?? "")).rejects.toThrow();
+
+      const transcript = await store.readTranscript(r.conversationId);
+      expect(transcript.sessionId).toBe("ses_1");
+      expect(transcript.sessionEngine).toBe("opencode");
+      const msg = transcript.messages.find((m) => m.role === "assistant");
+      expect(msg?.text).toBe("Ahoj z opencode.\n\nDruhý blok.");
+      expect(msg).toMatchObject({
+        model: "sonnet",
+        engine: "opencode",
+        engineModel: "opencode/test-free",
+      });
+      expect(msg?.toolEvents).toEqual([
+        { name: "recall_memory", status: "ok" },
+        { name: "shell", status: "error", callId: "call_2" },
+      ]);
+    });
+
+    it("resumes its own session with --session", async () => {
+      await store.setSessionId("c-oc2", "ses_prev", NOW, "opencode");
+      const svc = opencodeSession(ocLines("ses_prev", "Pokračuji."));
+      const r = await svc.sendMessage({ conversationId: "c-oc2", text: "dál" }, NOW);
+      await settled(r.turnId);
+      expect(svc.lastArgs[svc.lastArgs.indexOf("--session") + 1]).toBe("ses_prev");
+    });
+
+    it("starts fresh when the stored session belongs to the other engine", async () => {
+      await store.setSessionId("c-mix", "claude-sess", NOW); // claude (default)
+      const svc = opencodeSession(ocLines("ses_new", "Nová session."));
+      const r = await svc.sendMessage({ conversationId: "c-mix", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      expect(svc.lastArgs).not.toContain("--session");
+      expect(await store.getSession("c-mix")).toEqual({ sessionId: "ses_new", engine: "opencode" });
+
+      // …and back on claude the opencode session id is not passed to --resume.
+      const claude = new TestSession(store, events, [
+        line({ type: "system", subtype: "init", session_id: "claude-2" }),
+        line({ type: "result", is_error: false, result: "ok" }),
+      ]);
+      const r2 = await claude.sendMessage({ conversationId: "c-mix", text: "zpět" }, NOW);
+      await settled(r2.turnId);
+      expect(claude.lastSpawn).toBeUndefined();
+      expect(claude.lastArgs).not.toContain("--resume");
+    });
+
+    it("fails the turn with opencode's reason when it is unusable — no Claude fallback (A7)", async () => {
+      const svc = opencodeSession([], { aiEngine: "opencode" }); // no model anywhere
+      const r = await svc.sendMessage({ conversationId: "c-x", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      expect(svc.lastArgs).toEqual([]);
+      const error = seen.find((e) => e.turnId === r.turnId && e.type === "error");
+      expect(error && "message" in error ? error.message : "").toMatch(
+        /opencode unavailable: no model/,
+      );
+    });
+
+    it("an opencode error line ends the turn with its message", async () => {
+      const svc = opencodeSession([
+        line({
+          type: "error",
+          sessionID: "ses_e",
+          error: { type: "provider.free-limit", message: "Free usage limit reached." },
+        }),
+      ]);
+      const r = await svc.sendMessage({ conversationId: "c-err", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      const error = seen.find((e) => e.turnId === r.turnId && e.type === "error");
+      expect(error && "message" in error ? error.message : "").toBe(
+        "opencode: Free usage limit reached.",
+      );
+    });
+
+    it("a mentioned agent's own engine wins over the global one", async () => {
+      const agents = {
+        get: async () => ({
+          id: "builder",
+          name: "Builder",
+          instructions: "Jsi Builder.",
+          engine: "opencode" as const,
+          engineModel: "opencode/test-free",
+        }),
+      };
+      const svc = new TestSession(
+        store,
+        events,
+        ocLines("ses_a", "Hotovo."),
+        "jarvis",
+        undefined,
+        undefined,
+        dir,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        agents as unknown as Pick<AgentsStorageService, "get">,
+      );
+      const r = await svc.sendMessage(
+        {
+          conversationId: "c-ag",
+          text: "udělej to",
+          mentions: [{ kind: "agent", id: "builder", name: "Builder" }],
+        },
+        NOW,
+      );
+      await settled(r.turnId);
+      expect(svc.lastSpawn?.command).toBe(bin);
+      expect(svc.lastArgs[svc.lastArgs.indexOf("-m") + 1]).toBe("opencode/test-free");
     });
   });
 });

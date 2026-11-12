@@ -12,11 +12,20 @@ import { useTranslations } from "next-intl";
  */
 
 /** Per-run model badge (opus / sonnet / haiku …); an OpenAI model reads `openai · <id>` in its own tone. */
-export function ModelBadge({ model, provider }: { model: string; provider?: "openai" }) {
+export function ModelBadge({
+  model,
+  provider,
+  label,
+}: {
+  model: string;
+  provider?: "openai";
+  /** Replaces the text (e.g. "Level 2 · Sonnet" or an exact engine model). */
+  label?: string;
+}) {
   const t = useTranslations("phase");
   return (
     <Tag title={t("modelTitle")} tone={provider === "openai" ? "working" : "accent"}>
-      {provider ? `${provider} · ${model}` : model}
+      {label ?? (provider ? `${provider} · ${model}` : model)}
     </Tag>
   );
 }

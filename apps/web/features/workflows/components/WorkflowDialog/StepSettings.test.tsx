@@ -128,8 +128,32 @@ describe("StepSettings — runs on", () => {
     await user.click(
       within(screen.getByTestId("step-runs-on-a1")).getByTestId(DropdownTestId.Trigger),
     );
-    await user.click(await screen.findByRole("option", { name: "Claude (lokálně)" }));
+    await user.click(
+      await screen.findByRole("option", { name: "Výchozí (agent / globální engine)" }),
+    );
     expect(node()?.openaiModel).toBeUndefined();
     expect(node()?.include).toBeUndefined();
+  });
+
+  it("Claude Code / opencode are exclusive with OpenAI; opencode takes an exact model", async () => {
+    const user = userEvent.setup();
+    const pick = async (name: string) => {
+      await user.click(
+        within(screen.getByTestId("step-runs-on-a1")).getByTestId(DropdownTestId.Trigger),
+      );
+      await user.click(await screen.findByRole("option", { name }));
+    };
+    const { node } = renderSteps([agentNode({ openaiModel: "gpt-6-luna", include: ["a.md"] })]);
+    await pick("opencode");
+    expect(node()).toMatchObject({ engine: "opencode" });
+    expect(node()?.openaiModel).toBeUndefined();
+    expect(node()?.include).toBeUndefined();
+    expect(screen.getByTestId("step-engine-model-a1")).toBeInTheDocument();
+    await pick("Claude Code");
+    expect(node()?.engine).toBe("claude");
+    expect(screen.queryByTestId("step-engine-model-a1")).not.toBeInTheDocument();
+    await pick("OpenAI · gpt-6-luna");
+    expect(node()?.engine).toBeUndefined();
+    expect(node()?.openaiModel).toBe("gpt-6-luna");
   });
 });

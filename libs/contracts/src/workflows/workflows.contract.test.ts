@@ -595,3 +595,51 @@ describe("phase advisor (todo-9)", () => {
     expect(resolvePhaseAdvisor(wf, "review")).not.toBeNull();
   });
 });
+
+describe("per-step engine + model (A21)", () => {
+  const wf = (phases: unknown[]) =>
+    WorkflowSchema.safeParse({ id: "w", instructions: "x", phases });
+  const msgs = (r: ReturnType<typeof wf>) =>
+    r.success ? [] : r.error.issues.map((i) => i.message);
+
+  it("accepts engine / engineModel on an agent phase", () => {
+    expect(
+      wf([phase("a", { engine: "opencode", engineModel: "opencode/big-pickle" })]).success,
+    ).toBe(true);
+    expect(wf([phase("a", { engine: "claude" })]).success).toBe(true);
+    expect(wf([phase("a", { model: "fable" })]).success).toBe(true);
+  });
+
+  it("rejects engineModel without engine: opencode", () => {
+    expect(msgs(wf([phase("a", { engineModel: "x/y" })]))).toContain(
+      'engineModel requires engine: "opencode"',
+    );
+    expect(wf([phase("a", { engine: "claude", engineModel: "x/y" })]).success).toBe(false);
+  });
+
+  it("rejects engine next to openaiModel", () => {
+    expect(msgs(wf([phase("a", { engine: "opencode", openaiModel: "gpt-6-luna" })]))).toContain(
+      "engine / engineModel can't be combined with openaiModel",
+    );
+  });
+
+  it("rejects engine on tool and workflow phases", () => {
+    const tool = {
+      id: "t",
+      type: "tool",
+      commands: ["true"],
+      produces: "o.md",
+      engine: "opencode",
+    };
+    expect(msgs(wf([tool]))).toContain('a tool phase must not set "engine"');
+    const sub = {
+      id: "s",
+      type: "workflow",
+      workflow: "other",
+      consumes: "i.md",
+      produces: "o.md",
+      engine: "claude",
+    };
+    expect(msgs(wf([sub]))).toContain('a workflow phase must not set "engine"');
+  });
+});

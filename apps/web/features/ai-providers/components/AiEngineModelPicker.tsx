@@ -20,6 +20,12 @@ export interface AiEngineModelPickerProps {
   onChange: (id: string) => void;
   /** The engine list has loaded — only then can a chosen model be called missing. */
   loaded?: boolean;
+  /** Field label; defaults to "opencode model". */
+  label?: string;
+  /** Offer an empty "none" choice (an optional override). */
+  clearable?: boolean;
+  /** Skip the list-wide "no models / none free" warnings (when several pickers stack). */
+  quiet?: boolean;
 }
 
 /** Whether `value` names a model that is chosen but absent from the engine's list. */
@@ -37,6 +43,9 @@ export function AiEngineModelPicker({
   value,
   onChange,
   loaded = true,
+  label,
+  clearable = false,
+  quiet = false,
 }: AiEngineModelPickerProps) {
   const t = useTranslations("aiEngine");
   // Groups: free, Claude subscription, other (paid). Array sort is stable within a group.
@@ -53,18 +62,19 @@ export function AiEngineModelPicker({
   const missing = loaded && isModelMissing(models, value);
   // Keep a no-longer-listed choice visible so the control does not look empty.
   if (missing) options.unshift({ value, label: value });
+  if (clearable) options.unshift({ value: "", label: t("modelNone") });
   const chosen = models.find((m) => m.id === value);
 
   return (
     <>
       <SelectField
-        label={t("model")}
+        label={label ?? t("model")}
         onValueChange={onChange}
         options={options}
         placeholder={t("modelPlaceholder")}
         value={value}
       />
-      {loaded && models.length === 0 && (
+      {!quiet && loaded && models.length === 0 && (
         <Typography
           data-testid={AiEngineModelPickerTestId.NoModels}
           size="sm"
@@ -74,7 +84,7 @@ export function AiEngineModelPicker({
           {t("noModels")}
         </Typography>
       )}
-      {loaded && models.length > 0 && !models.some((m) => m.free) && (
+      {!quiet && loaded && models.length > 0 && !models.some((m) => m.free) && (
         <Typography
           data-testid={AiEngineModelPickerTestId.NoFree}
           size="sm"

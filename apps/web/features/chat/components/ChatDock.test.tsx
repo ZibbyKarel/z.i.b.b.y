@@ -197,10 +197,10 @@ describe("ChatDock (ZB-12)", () => {
       renderDock();
       await userEvent.setup().click(trigger());
       expect(screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent)).toEqual([
-        "Haiku",
-        "Sonnet",
-        "Opus",
-        "Fable",
+        "Úroveň 1 · Haiku",
+        "Úroveň 2 · Sonnet",
+        "Úroveň 3 · Opus",
+        "Úroveň 4 · Fable",
       ]);
     });
 
@@ -211,7 +211,7 @@ describe("ChatDock (ZB-12)", () => {
       await user.click(trigger());
       const fable = screen
         .getAllByTestId(DropdownTestId.Option)
-        .find((o) => o.textContent === "Fable");
+        .find((o) => o.textContent?.endsWith("Fable"));
       if (!fable) throw new Error("Fable option missing");
       await user.click(fable);
       await typeAndSend("two");

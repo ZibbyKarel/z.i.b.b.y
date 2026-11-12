@@ -893,7 +893,9 @@
       "promptLabel": "Prompt for this step",
       "promptPlaceholder": "Custom instructions for the agent… / picks a skill",
       "runsOnLabel": "Runs on",
-      "runsOnClaude": "Claude (local)",
+      "runsOnClaude": "Default (agent / global engine)",
+      "runsOnClaudeCode": "Claude Code",
+      "runsOnOpencode": "opencode",
       "openaiHint": "The step runs text-only via the OpenAI API with the key from Settings → AI models. Thinking = reasoning effort.",
       "includeLabel": "Attached files",
       "includeHint": "One run-relative path per line.",
@@ -3521,7 +3523,8 @@
         "free": "free",
         "subscription": "subscription",
         "line": "{steps} steps · {input} in / {output} out",
-        "totals": "Total, {days} days"
+        "totals": "Total, {days} days",
+        "claudeStillApplies": "The Claude limits still apply to chat, helper one-shots and any claude-agent/* model."
       }
     },
     "you": "{n} you",
@@ -3869,6 +3872,15 @@
     "operatorTokenRequired": "Changing the AI engine needs the operator token.",
     "operatorTokenLink": "Set it in Settings → General",
     "noModels": "No opencode models could be listed (model catalog unavailable). Check that opencode works in a terminal.",
-    "noFreeModels": "None of the listed models is confirmed free; picking one may cost money."
+    "noFreeModels": "None of the listed models is confirmed free; picking one may cost money.",
+    "level": "Level {n}",
+    "levelShort": "L{n}",
+    "notSet": "not set",
+    "levelsTitle": "Model levels",
+    "levelsHint": "Agents pick a level, not a model. An empty level falls back to the nearest mapped lower level, then the nearest higher one, then the default model.",
+    "levelRow": "Level {n} ({name})",
+    "defaultModel": "Default model",
+    "modelNone": "— none —",
+    "exactModel": "Exact model (optional override of the level)"
   }
 }

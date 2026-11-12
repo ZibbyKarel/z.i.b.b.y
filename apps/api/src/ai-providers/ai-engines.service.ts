@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { AiEngineModel, AiEngines, AiProvidersUsage, AiUsage } from "@zibby/contracts";
-import { opencodeCached, opencodeModels } from "../runner/ai-engine";
+import { opencodeCached, opencodeCatalog, opencodeModels, variantIds } from "../runner/ai-engine";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 
 /**
@@ -19,9 +19,8 @@ export class AiEnginesService {
       opencodeCached(["--version"], 5_000),
       opencodeModels(),
       opencodeCached(["auth", "list", "--format", "json"], 5_000),
-      // The priced catalog. Only the background service answers it (`--standalone`
-      // returns `data: []`); when it can't be read every model falls back to the id rule.
-      opencodeCached(["api", "GET", "/api/model"], 10_000),
+      // The priced catalog; when it can't be read every model falls back to the id rule.
+      opencodeCatalog(),
     ]);
     const available = version !== null && models !== null;
     return {
@@ -59,7 +58,8 @@ const STATS_ARGS = (days: number) => ["stats", "--json", "--days", String(days),
  * provider is the built-in `opencode` one AND the catalog lists a `cost` AND every
  * price component is 0 — a missing or partial price is not free. Subscription when the
  * provider is `claude-agent` and `cost` is an empty array (a Claude Code login; an
- * API-key login lists prices). `null` when the catalog can't be read.
+ * API-key login lists prices). `variants` are the catalog's variant ids (A26 — a thinking
+ * level runs as the variant of the same id). `null` when the catalog can't be read.
  */
 export function freeInCatalog(out: string | null): Map<string, Omit<AiEngineModel, "id">> | null {
   let raw: unknown;
@@ -89,6 +89,7 @@ export function freeInCatalog(out: string | null): Map<string, Omit<AiEngineMode
     free.set(`${provider}/${str(m.id)}`, {
       free: provider === "opencode" && allZero,
       subscription: provider === "claude-agent" && Array.isArray(m.cost) && !m.cost.length,
+      variants: variantIds(m.variants),
     });
   }
   return free;
@@ -108,6 +109,7 @@ export function markFree(
     ...(catalog?.get(id) ?? {
       free: id.startsWith("opencode/") && id.endsWith("-free"),
       subscription: false,
+      variants: [],
     }),
   }));
 }

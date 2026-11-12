@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema, AgentModelSchema, AgentThinkingSchema } from "../agents/agent.schema";
-import { OpenAiTextModelSchema } from "../ai-providers/ai-providers.schema";
+import { AiEngineSchema, OpenAiTextModelSchema } from "../ai-providers/ai-providers.schema";
 import { AvatarSchema } from "../common.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
 import { SkillIdSchema } from "../skills/skill.schema";
@@ -124,6 +124,19 @@ export const WorkflowPhaseSchema = z.object({
    * ignored. Needs the OpenAI key (Settings → AI models).
    */
   openaiModel: OpenAiTextModelSchema.optional(),
+  /**
+   * A21 — agent phase only: run this step on this engine, over the agent's own
+   * `engine` and the global `SystemConfig.aiEngine`. `"claude"` forces the native CLI
+   * (with the tier `model`). Not combinable with `openaiModel`. Changing it needs the
+   * operator token.
+   */
+  engine: AiEngineSchema.optional(),
+  /**
+   * A21 — agent phase on `engine: "opencode"` only: the exact opencode
+   * `provider/model[#variant]` for this step, over the agent's `engineModel` and the
+   * tier mapping. Changing it needs the operator token.
+   */
+  engineModel: z.string().min(1).optional(),
   /**
    * `openaiModel` phase only: extra run-relative text files (e.g. `book/plan.json`)
    * inlined into the request next to `consumes` — the model can't read files itself.
@@ -349,7 +362,15 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
           message: 'a tool phase requires "produces"',
           path: ["phases", i, "produces"],
         });
-      for (const key of ["agent", "model", "thinking", "prompt", "skill"] as const) {
+      for (const key of [
+        "agent",
+        "model",
+        "thinking",
+        "prompt",
+        "skill",
+        "engine",
+        "engineModel",
+      ] as const) {
         if (ph[key] !== undefined)
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -367,7 +388,16 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
             path: ["phases", i, key],
           });
       }
-      for (const key of ["agent", "model", "thinking", "commands", "prompt", "skill"] as const) {
+      for (const key of [
+        "agent",
+        "model",
+        "thinking",
+        "commands",
+        "prompt",
+        "skill",
+        "engine",
+        "engineModel",
+      ] as const) {
         if (ph[key] !== undefined)
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -389,6 +419,18 @@ function refineWorkflow(p: z.infer<typeof WorkflowObject>, ctx: z.RefinementCtx)
         code: z.ZodIssueCode.custom,
         message: "openaiModel is for agent phases only",
         path: ["phases", i, "openaiModel"],
+      });
+    if (ph.openaiModel && (ph.engine !== undefined || ph.engineModel !== undefined))
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "engine / engineModel can't be combined with openaiModel",
+        path: ["phases", i, ph.engine !== undefined ? "engine" : "engineModel"],
+      });
+    if (ph.engineModel !== undefined && ph.engine !== "opencode")
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'engineModel requires engine: "opencode"',
+        path: ["phases", i, "engineModel"],
       });
     if (ph.include && !ph.openaiModel)
       ctx.addIssue({

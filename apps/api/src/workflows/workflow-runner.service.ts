@@ -55,8 +55,10 @@ import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 import {
   type ResolvedAiEngine,
+  applyThinkingVariant,
   assertOpencodeReady,
-  spendsClaudeSubscription,
+  stageEngineTarget,
+  stageSpendsClaude,
 } from "../runner/ai-engine";
 import {
   ClaudeRunCommandService,
@@ -1051,12 +1053,16 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
    * TODO 9 seam for the phase advisor: a stage run's sandbox cwd and captured claude
    * session id. Null for an unknown stage run.
    */
-  stageInfo(stageRunId: string): { cwd: string; sessionId?: string } | null {
+  stageInfo(stageRunId: string): { cwd: string; sessionId?: string; engine?: "opencode" } | null {
     try {
       const rec = this.core.get(stageRunId);
       // The advisor forks a claude session — an opencode stage's id is not one.
       const sessionId = rec.engine === "opencode" ? undefined : rec.sessionId;
-      return { cwd: rec.cwd, ...(sessionId ? { sessionId } : {}) };
+      return {
+        cwd: rec.cwd,
+        ...(sessionId ? { sessionId } : {}),
+        ...(rec.engine === "opencode" ? { engine: "opencode" as const } : {}),
+      };
     } catch {
       return null;
     }
@@ -2746,16 +2752,13 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         : {}),
       extra: { workflowRunId: run.workflowRunId, phaseId: phase.id, attempt },
     });
-    // opencode runs on its configured model only: say so instead of silently dropping
-    // the phase's / escalation rung's claude model and thinking.
-    const claudeOnly = [escalation?.model ?? phase.model, escalation?.thinking ?? phase.thinking]
-      .filter(Boolean)
-      .join(", ");
-    if (engine && claudeOnly) {
+    // A20/A26: say which model (and variant) the tier resolved to on opencode, and when
+    // the thinking level could not be applied.
+    if (engine) {
       await fs
         .appendFile(
           rec.logFile,
-          `ℹ opencode stage on ${engine.model}: ignoring the phase/escalation model settings (${claudeOnly})\n`,
+          `ℹ opencode stage: tier ${built.tier ?? "(none)"} → ${engine.model}${opencodeThinkingNote(engine.model, built.thinking)}\n`,
         )
         .catch(() => {});
     }
@@ -2956,8 +2959,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     if (!phase.agent) return true;
     const agent = await this.agents.get(phase.agent).catch(() => null);
     if (!agent) return true;
-    const engine = this.claude.resolveEngine(agent);
-    return spendsClaudeSubscription(engine.engine, engine.model);
+    return stageSpendsClaude(phase, agent, (t) => this.claude.resolveEngine(t));
   }
 
   private async preflightEngines(workflow: Workflow): Promise<void> {
@@ -2967,13 +2969,18 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
           ? [
               this.agents
                 .get(p.agent)
-                .then((agent) => this.claude.resolveEngine(agent))
+                // Every attempt: an escalation rung may map to another opencode model.
+                .then((agent) =>
+                  [null, ...(p.loop?.escalation ?? [])].map((rung) =>
+                    this.claude.resolveEngine(stageEngineTarget(p, agent, rung)),
+                  ),
+                )
                 .catch(() => null),
             ]
           : [],
       ),
     );
-    const resolved = engines.filter((e) => e !== null);
+    const resolved = engines.flatMap((e) => e ?? []);
     if (!resolved.length || resolved.some((e) => e.engine === "claude")) {
       await this.preflight.assertAvailable();
     }
@@ -3221,6 +3228,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     env?: Record<string, string>;
     /** Set only for an opencode stage (absent = claude / tool / demo). */
     engine?: ResolvedAiEngine;
+    /** opencode stage only: the model tier its model was resolved from (A20). */
+    tier?: string;
+    /** opencode stage only: the effective thinking level (escalation > phase > agent). */
+    thinking?: string;
     opencodeConfig?: string;
   }> {
     const spawnCwd = worktreePath ?? project?.path;
@@ -3334,12 +3345,22 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         // just claude's final message. Mirrors the agent runner.
         streamTranscript: true,
       };
-      const engine = this.claude.resolveEngine(agent);
+      // A21: the phase's engine / exact model over the agent's; the tier picks the
+      // opencode model (A20) or rides `--model` on claude.
+      const target = stageEngineTarget(phase, agent, escalation);
+      // A26: on opencode the thinking level picks the model's matching variant.
+      const engine = await applyThinkingVariant(this.claude.resolveEngine(target), opts.thinking);
       if (engine.engine === "opencode") {
         // A7: refused when opencode or the model is unavailable — never run on claude.
         await assertOpencodeReady(engine.model);
         const oc = await this.claude.buildOpencodeCommand(opts, engine.model ?? "");
-        return { ...oc, engine, ...(spawnCwd ? { spawnCwd } : {}) };
+        return {
+          ...oc,
+          engine,
+          ...(target.model ? { tier: target.model } : {}),
+          ...(opts.thinking ? { thinking: opts.thinking } : {}),
+          ...(spawnCwd ? { spawnCwd } : {}),
+        };
       }
       const built = await this.claude.buildClaudeCommand(opts);
       return spawnCwd ? { ...built, spawnCwd } : built;
@@ -3576,4 +3597,21 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       );
     }
   }
+}
+
+/**
+ * A26 — the opencode log line's thinking suffix: nothing when the variant matches the
+ * thinking level (or there is none), else why it did not apply.
+ */
+export function opencodeThinkingNote(
+  model: string | undefined,
+  thinking: string | undefined,
+): string {
+  if (!thinking) return "";
+  const variant = model?.split("#")[1];
+  if (!variant)
+    return ` (thinking "${thinking}" not supported by this model — no matching variant)`;
+  return variant === thinking
+    ? ""
+    : ` (explicit variant "${variant}" wins over thinking "${thinking}")`;
 }

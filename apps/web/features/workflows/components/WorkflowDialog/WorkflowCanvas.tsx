@@ -1,7 +1,13 @@
 "use client";
 import { type MouseEvent, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import type { Agent, AgentModel, AgentThinking, Department } from "@zibby/contracts";
+import {
+  type Agent,
+  type AgentModel,
+  type AgentThinking,
+  type Department,
+  MODEL_TIERS,
+} from "@zibby/contracts";
 import { Container, Icon, Stack, Typography } from "@zibby/design-system";
 import { ACCENT, BAD } from "./canvas-tokens";
 import { AgentNode, type HoverTarget, type PendingEdge, type PortKind } from "./AgentNode";
@@ -19,7 +25,7 @@ import {
 } from "./workflow-graph";
 import { AGENT_DND_TYPE } from "./AgentPalette";
 
-const CYCLE_MODEL: AgentModel[] = ["opus", "sonnet", "haiku"];
+const CYCLE_MODEL: AgentModel[] = [...MODEL_TIERS];
 const CYCLE_THINK: AgentThinking[] = ["high", "medium", "low"];
 const cycle = <T,>(arr: T[], v: T): T => arr[(arr.indexOf(v) + 1) % arr.length]!;
 

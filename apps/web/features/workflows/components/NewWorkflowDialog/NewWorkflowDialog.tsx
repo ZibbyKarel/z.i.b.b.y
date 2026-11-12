@@ -6,6 +6,8 @@ export interface NewWorkflowDialogProps {
   agents: Agent[];
   /** Disables the submit while the create request is in flight. */
   isPending?: boolean;
+  /** The failed create's error (a 401 shows the operator-token notice). */
+  error?: unknown;
   onClose: () => void;
   onCreate: (input: CreateWorkflowInput) => void;
   /** Pre-fills the created workflow's `department` (Phase 85 Roster tab). */
@@ -20,6 +22,7 @@ export interface NewWorkflowDialogProps {
 export function NewWorkflowDialog({
   agents,
   isPending = false,
+  error,
   onClose,
   onCreate,
   defaultOwnerDepartment,
@@ -28,6 +31,7 @@ export function NewWorkflowDialog({
     <WorkflowDialog
       agents={agents}
       defaultOwnerDepartment={defaultOwnerDepartment}
+      error={error}
       isPending={isPending}
       mode="create"
       onClose={onClose}

@@ -2,7 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { ButtonGroup, Panel, Stack, Typography } from "@zibby/design-system";
-import type { AiEngine, AiEngineStatus, SystemConfig } from "@zibby/contracts";
+import {
+  type AiEngine,
+  type AiEngineStatus,
+  MODEL_TIERS,
+  type ModelTier,
+  type SystemConfig,
+} from "@zibby/contracts";
 import {
   AiEngineModelPicker,
   OperatorTokenNotice,
@@ -20,6 +26,9 @@ export enum AiEngineSectionTestId {
   Providers = "ai-engine-providers",
   NoProviders = "ai-engine-no-providers",
   Blocked = "ai-engine-blocked",
+  Levels = "ai-engine-levels",
+  /** Suffixed with the tier, e.g. `ai-engine-level-haiku`. */
+  Level = "ai-engine-level",
 }
 
 const ENGINES: AiEngine[] = ["claude", "opencode"];
@@ -64,6 +73,15 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
     setConfig.mutate({ body: { ...config, aiEngine: next as AiEngine } });
   };
   const chooseModel = (id: string) => setConfig.mutate({ body: { ...config, opencodeModel: id } });
+
+  const chooseTierModel = (tier: ModelTier, id: string) => {
+    const rest = Object.fromEntries(
+      Object.entries(config.opencodeTierModels).filter(([k]) => k !== tier),
+    );
+    setConfig.mutate({
+      body: { ...config, opencodeTierModels: id ? { ...rest, [tier]: id } : rest },
+    });
+  };
 
   const status = (e: AiEngineStatus | undefined, name: string) =>
     !e
@@ -123,11 +141,33 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
               </Typography>
             )}
             <AiEngineModelPicker
+              label={t("defaultModel")}
               loaded={engines !== undefined}
               models={models}
               onChange={chooseModel}
               value={model}
             />
+            <Typography mono leading="snug" size="2xs" type="note" variant="tertiary">
+              {t("levelsHint")}
+            </Typography>
+            <Stack data-testid={AiEngineSectionTestId.Levels} gap="100">
+              <Typography mono size="sm" type="note" variant="secondary">
+                {t("levelsTitle")}
+              </Typography>
+              {MODEL_TIERS.map((tier, i) => (
+                <span data-testid={`${AiEngineSectionTestId.Level}-${tier}`} key={tier}>
+                  <AiEngineModelPicker
+                    clearable
+                    quiet
+                    label={t("levelRow", { n: i + 1, name: tier })}
+                    loaded={engines !== undefined}
+                    models={models}
+                    onChange={(id) => chooseTierModel(tier, id)}
+                    value={config.opencodeTierModels[tier] ?? ""}
+                  />
+                </span>
+              ))}
+            </Stack>
           </>
         )}
         {setConfig.isError &&

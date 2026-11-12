@@ -24,7 +24,9 @@ AI. Second: Czech dictation inside ZibbyOS (earlier attempts failed; colleague s
 | I2  | Dictation: contract, `SttService`, recorder hook, new-task mic, Electron mic permission | sonnet | implemented, uncommitted; e2e proof: Czech clip → exact transcript, 2.1 s cold / 0.5 s warm. Opus review: 11 findings, all fixed (tmp-dir for `--convert`, spawn `error` handler, lost transcripts, orphaned server, `clipboard-read` dropped, 180 s / 32 kbps cap). Uncommitted — waiting for I1 so the pre-commit typecheck sees a consistent tree |
 | I3  | Engine UI: settings switch + model picker (free first), dashboard usage widget | sonnet | implemented, uncommitted (783/783 web-component tests, web typecheck clean, not viewed in a browser). Settings → AI models card, per-agent override, usage rows inside the Budgets widget (no separate widget type), engine shown on workflow stages only. Follow-up after I1 fixes: show engine in the dashboard run list once `TaskRun` carries it |
 | V1  | Reviews, fixes, commit                                       | opus review + orchestrator | done — see "Resume notes" |
+| T1  | Engine-independent model tiers + per-step engine/model (A19–A22) + budget % gate off Claude | opus | implemented, uncommitted (backend + contracts + docs; UI by another agent). See "Next" for what is not verified |
 | C1  | opencode 2.2.7 `claude-agent` provider: gate proof, Claude limits for `claude-agent/*`, `OPENCODE_CLAUDE_PATH`, `subscription` flag, PWD fix (A18) | opus | implemented, uncommitted (backend + docs; UI in parallel). See "opencode 2.2.7 + Claude Agent" |
+| C2  | Chat: operator MCP servers on claude (A23), chat on opencode (A24), fail-closed tool gating (A25) | opus | implemented, uncommitted (backend + contracts + docs; chat UI not touched). See "Chat on opencode (C2)" |
 
 Installed on the machine (2026-11-12): `brew install whisper.cpp ffmpeg`; model
 `~/Library/Application Support/ZibbyOS/models/ggml-large-v3-turbo.bin` (1.5 GB).
@@ -148,6 +150,35 @@ Each item below was checked with a real run. See `docs/api/ai-engines.md`.
   `OPENCODE_CLAUDE_PATH ?? CLAUDE_BIN` after the strip.
 - `step_finish.cost` is 0 on `claude-agent` (subscription), so run `costUsd` is 0.
 
+### Chat on opencode (C2, 2026-11-12, opencode 2.2.7)
+
+Run live, through the worktree API (port 3344, real `opencode` binary, real zibby MCP with
+its bearer token):
+
+- With a scripted OpenAI-compatible provider (`fake/m`, scratch harness): a turn answers;
+  `zibby_get_status` is called and its result comes back (toolEvent `get_status` ok);
+  `shell` (`touch /tmp/zibby-chat-pwned.txt`), `write` and `execute` are blocked with the
+  gate message, and the file was not created; turns 2–5 run with `--session ses_…` and the
+  model sees the earlier messages. The config file is mode 600 and is deleted after the turn.
+  The toolset opencode offered the model: `skill` + 2 zibby-kb + 11 zibby tools, nothing else.
+- Before the operator's servers were removed from opencode chat, the same toolset also
+  carried 25 Playwright tools (`browser_run_code_unsafe`, `browser_file_upload`, …): the
+  reason for the A24 deviation.
+- `opencode/big-pickle`: a direct `opencode run` answered "pong" once. Every chat turn
+  through the API then hit the **account-wide free limit** (`provider.free-limit`, 429, also on
+  glm-5.3-flash-free, deepseek-v4.1-flash-free, minimax-m3.1-flash-free). The chat surfaced it as
+  the SSE event `{"type":"error","message":"opencode: Free usage limit reached. …"}`.
+  **The four proofs on big-pickle itself are not done**; rerun them when the limit resets.
+- The A23 timing (claude, haiku) is in decision A23.
+
+Not done / limits: operator servers on opencode (needs a per-tool allowlist or a gate path);
+`skill` is still listed in the toolset (the plugin blocks it); an engine switch starts a fresh
+session with no context carry-over; an `@agent`'s read-only tools are not allowed on opencode;
+Claude chat's `mcp-config-*.json` files still stay in the chat dir (unchanged behaviour);
+`disabledMcpServers` is judged for the turn's cwd (the project path, else the API's cwd); only
+`${CLAUDE_PLUGIN_ROOT}` is expanded in plugin configs; OAuth HTTP servers don't authenticate
+through `--mcp-config` (A23). The chat UI does not show `engine` / `engineModel` yet.
+
 ## opencode research (R1, web — unverified items marked)
 
 - Two lines exist: V1 (v1.19.5, latest GitHub release) and V2 (what opencode.ai/docs documents).
@@ -214,11 +245,16 @@ toggle --print`, `hex model list`) and a local HTTP API (port + token in
 - **Try a real agent run on opencode** from the app (set the operator token in Settings →
   General, pick a free model in Settings → AI models). Free models are weak at coding; quality
   on a real delivery task is untested.
-- Chat and the one-shot helpers (router, namer, briefing, triage, distiller, reply draft) still
-  run on Claude (decision A3). A task without a known target is still deferred while Claude is
+- Chat follows the engine now (A24). The one-shot helpers (router, namer, briefing, triage,
+  distiller, reply draft) still run on Claude (decision A3). A task without a known target is still deferred while Claude is
   exhausted, because the Claude classifier routes it.
-- Not carried to opencode: `--agents` delegation catalog, effort/thinking, model escalation,
-  custom hooks / plugin dirs, skills.
+- Not carried to opencode: `--agents` delegation catalog, custom hooks / plugin dirs, skills.
+  Thinking now maps to the model's same-id variant when it has one (A26). Model escalation now works through the tier mapping (A20).
+- T1 not verified: a full spawned workflow stage on a tier-mapped opencode model (only the
+  resolver + the real `opencode models` preflight were run live on `opencode/big-pickle`);
+  the UI for `opencodeTierModels` and phase `engine` / `engineModel`. The goal runner's
+  budget check still applies Claude's % ceiling to an opencode maker (it doesn't resolve
+  the maker's engine).
 - opencode run `costUsd` can miss the last step (standalone mode sometimes omits the final
   `step_finish`); `/ai-providers/usage` reads `opencode stats` and is complete.
 - Engine shown in run detail + Activity runs list; not in the dashboard Runs widget rows. The

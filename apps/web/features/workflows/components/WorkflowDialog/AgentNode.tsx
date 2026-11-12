@@ -13,6 +13,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
+import { useTierLabel } from "../../../ai-providers";
 import { agentSymbol } from "../../../agents/agentSymbol";
 import { toolOpenAiImageModel } from "../../openaiImageModel";
 import { ModelBadge, ThinkBadge } from "../../../../components/RuntimeBadges/RuntimeBadges";
@@ -113,6 +114,11 @@ export function AgentNode({
   onNodeLeave,
 }: AgentNodeProps) {
   const t = useTranslations("forms.workflow");
+  const tierLabel = useTierLabel();
+  // The step's exact opencode model when it has one; otherwise the level on its effective engine.
+  const modelLabel =
+    node.engineModel?.split("/").pop() ??
+    tierLabel(node.model, node.engine ?? agents.find((a) => a.id === node.agent)?.engine, true);
   const imageModel =
     node.type === "tool" ? toolOpenAiImageModel(node.commands.split("\n")) : undefined;
   const label =
@@ -247,7 +253,7 @@ export function AgentNode({
                   <ModelBadge model={node.openaiModel} provider="openai" />
                 </span>
               ) : (
-                <ModelBadge model={node.model} />
+                <ModelBadge label={modelLabel} model={node.model} />
               )}
               <ThinkBadge level={node.thinking} />
             </>
@@ -266,7 +272,7 @@ export function AgentNode({
                   }}
                   onMouseDown={stop}
                 >
-                  <ModelBadge model={node.model} />
+                  <ModelBadge label={modelLabel} model={node.model} />
                 </Pressable>
               )}
               <Pressable

@@ -159,12 +159,6 @@ export function sectionForPath(pathname: string): SectionId {
   return match?.[1] ?? "dashboard";
 }
 
-export const MODEL_OPTIONS: SelectOption[] = [
-  { value: "opus", label: "opus" },
-  { value: "sonnet", label: "sonnet" },
-  { value: "haiku", label: "haiku" },
-];
-
 export const THINKING_OPTIONS: SelectOption[] = [
   { value: "high", label: "high" },
   { value: "medium", label: "medium" },

@@ -362,21 +362,51 @@ no `employeeId` / `employeeName`.
 
 ### Agent phase engine (claude / opencode)
 
-A claude-mode agent phase resolves its engine from the phase's agent: `agent.engine ??
-SystemConfig.aiEngine`, and on opencode `agent.engineModel ?? SystemConfig.opencodeModel`.
-A run's start preflights each engine its agent phases resolve to (claude once, each
-distinct opencode model once). An opencode stage is preflighted again while it is built.
-If opencode is missing, has no model, or the model is unknown, the stage fails as a
-`StageBuildError` and never runs on claude. The stage gets the same system prompt, MCP
-servers and approval gate. The phase's `model`/`thinking`, escalation rungs and the
-`--agents` catalog apply only to claude; an opencode stage logs one
-`ℹ opencode stage on <model>: ignoring the phase/escalation model settings (…)` line
-instead. The boundary pause on an exhausted Claude window is skipped before an opencode
-stage, except on a `claude-agent/*` model, which spends the Claude subscription (A18).
-The resulting
-`StageRun` carries `engine` / `engineModel`. The phase advisor never receives an opencode
-stage's session id. The text-only `openaiModel` stage below is unchanged and takes
-precedence. See [ai-engines.md](./ai-engines.md).
+A phase's `model` (and an escalation rung's) is an engine-independent **model tier**:
+`haiku` < `sonnet` < `opus` < `fable` (A19). An agent phase may also pin its own engine
+and model (A21):
+
+```yaml
+- id: review
+  agent: code-review
+  model: opus # the tier
+  engine: opencode # optional: claude | opencode, over agent.engine and SystemConfig.aiEngine
+  engineModel: opencode/big-pickle # optional, needs engine: opencode
+```
+
+A claude-mode agent phase resolves (`stageEngineTarget` + `resolveAiEngine` in
+`runner/ai-engine.ts`):
+
+- engine = `phase.engine ?? agent.engine ?? SystemConfig.aiEngine`;
+- tier = `escalationRung.model ?? phase.model ?? agent.model`;
+- on claude the tier rides `--model` as before (`phase.engine: claude` forces the native
+  CLI);
+- on opencode the model = `phase.engineModel ?? agent.engineModel ??
+SystemConfig.opencodeTierModels[tier]` → nearest mapped lower tier → nearest mapped
+  higher tier → `SystemConfig.opencodeModel` (A20). So the Kodér ⇄ Review escalation
+  ladder really escalates on opencode when the tiers are mapped.
+
+Only agent phases may set `engine` / `engineModel`; neither combines with `openaiModel`
+(422 at the schema). Creating or updating a workflow whose phases' `engine` /
+`engineModel` differ from the stored ones (per phase id; a new phase counts as unpinned)
+needs the operator token (401 without it); other workflow edits stay open. The chat
+self-API can't write `phases` at all.
+
+A run's start preflights each engine its agent phases resolve to, every escalation rung
+included (claude once, each distinct opencode model once). An opencode stage is
+preflighted again while it is built. If opencode is missing, has no model, or the model
+is unknown, the stage fails as a `StageBuildError` and never runs on claude. The stage
+gets the same system prompt, MCP servers and approval gate. The `--agents` catalog
+applies only to claude. `thinking` runs as the model's variant of the same id when the
+model has one and no explicit `#variant` (A26, see ai-engines.md); an opencode stage logs
+one `ℹ opencode stage: tier <tier> → <model>[#variant]` line, noting when the thinking
+level was not applied. The
+boundary pause on an exhausted Claude window is skipped before a stage none of whose
+attempts (first run and every escalation rung) spends the Claude subscription; a
+`claude-agent/*` model does (A18). The resulting `StageRun` carries `engine` /
+`engineModel`. The phase advisor is not available on an opencode stage (see below). The
+text-only `openaiModel` stage below is unchanged and takes precedence. See
+[ai-engines.md](./ai-engines.md).
 
 ### Agent phase on OpenAI (`openaiModel`)
 
@@ -527,7 +557,9 @@ phases:
   `ESCALATE: <why>` and nothing else when the answer would change scope or acceptance
   criteria.
 - **Falls back to the operator, never around it:** no advisor configured / not a
-  workflow run, `maxCalls` reached, the run's spend (finished stages + this stage's
+  workflow run, the asking stage runs on opencode (the advisor is a Claude session; it is
+  skipped with a log line rather than spend the Claude subscription behind the
+  operator's engine choice, A22), `maxCalls` reached, the run's spend (finished stages + this stage's
   `costs.jsonl`) at or over its `budget` cap (checked before spawning), a failed call and an `ESCALATE:` line anywhere in the reply return text
   that tells the agent to call `ask_operator`.
 - **Audit:** every call writes `<stageDir>/advisor/NN.md` (question, answer or error,

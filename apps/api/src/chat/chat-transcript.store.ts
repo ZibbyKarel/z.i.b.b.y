@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
+  type AiEngine,
   type ChatConversationSummary,
   type ChatMessage,
   ChatMessageSchema,
@@ -26,6 +27,8 @@ const TITLE_MAX = 80;
 interface ConversationMeta {
   conversationId: string;
   sessionId: string | null;
+  /** A24 — the engine `sessionId` belongs to; absent = `claude` (meta from before engines). */
+  sessionEngine?: AiEngine;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,21 +96,36 @@ export class ChatTranscriptStore implements AttachmentSetRefProvider {
     return {
       conversationId,
       sessionId: meta?.sessionId ?? null,
+      ...(meta?.sessionEngine ? { sessionEngine: meta.sessionEngine } : {}),
       messages: await this.readMessages(conversationId),
     };
   }
 
   async getSessionId(conversationId: string): Promise<string | null> {
-    return (await this.readMeta(conversationId))?.sessionId ?? null;
+    return (await this.getSession(conversationId)).sessionId;
+  }
+
+  /** The threaded session id and the engine it belongs to (`claude` when unrecorded). */
+  async getSession(
+    conversationId: string,
+  ): Promise<{ sessionId: string | null; engine: AiEngine }> {
+    const meta = await this.readMeta(conversationId);
+    return { sessionId: meta?.sessionId ?? null, engine: meta?.sessionEngine ?? "claude" };
   }
 
   async setSessionId(
     conversationId: string,
     sessionId: string,
     now: Date = new Date(),
+    engine: AiEngine = "claude",
   ): Promise<void> {
     const meta = (await this.readMeta(conversationId)) ?? this.freshMeta(conversationId, now);
-    await this.writeMeta({ ...meta, sessionId, updatedAt: now.toISOString() });
+    await this.writeMeta({
+      ...meta,
+      sessionId,
+      sessionEngine: engine,
+      updatedAt: now.toISOString(),
+    });
   }
 
   /**

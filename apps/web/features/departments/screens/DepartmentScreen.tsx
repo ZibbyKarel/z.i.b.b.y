@@ -249,6 +249,7 @@ function WorkflowsTab({
         <NewWorkflowDialog
           agents={agents}
           defaultOwnerDepartment={departmentId as DepartmentId}
+          error={createWorkflow.error}
           isPending={createWorkflow.isPending}
           onClose={() => setAdding(false)}
           onCreate={(body) =>

@@ -1,6 +1,6 @@
 "use client";
 
-import { CHAT_MODELS, type ChatModel, type TaskTarget } from "@zibby/contracts";
+import { CHAT_MODELS, type TaskTarget } from "@zibby/contracts";
 import {
   Button,
   ChatBubble,
@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect } from "react";
 import { CommandLine, type ScopeKind } from "../../tasks/components/CommandLine/CommandLine";
 import { useIsPhone } from "../../../hooks/useIsPhone";
+import { useTierLabel } from "../../ai-providers";
 import { useChat } from "../ChatContext";
 import { useChatDock } from "../hooks/useChatDock";
 import { useCreateChatHandoffMutation } from "../mutations";
@@ -32,15 +33,6 @@ export enum ChatDockTestId {
   AboutChip = "app-chat-dock-about-chip",
   ModelPicker = "app-chat-dock-model",
 }
-
-const MODEL_LABEL: Record<ChatModel, string> = {
-  haiku: "Haiku",
-  sonnet: "Sonnet",
-  opus: "Opus",
-  fable: "Fable",
-};
-
-const MODEL_OPTIONS = CHAT_MODELS.map((m) => ({ value: m, label: MODEL_LABEL[m] }));
 
 /** Composer auto-grows up to this many lines, then scrolls. */
 const COMPOSER_MAX_ROWS = 6;
@@ -78,6 +70,8 @@ function targetLabel(target: TaskTarget): string {
  */
 export function ChatDock() {
   const t = useTranslations("chat");
+  const tierLabel = useTierLabel();
+  const modelOptions = CHAT_MODELS.map((m) => ({ value: m, label: tierLabel(m) }));
   const router = useRouter();
   const phone = useIsPhone();
   const {
@@ -208,7 +202,7 @@ export function ChatDock() {
               <Dropdown
                 aria-label={t("composer.model")}
                 onChange={setModel}
-                options={MODEL_OPTIONS}
+                options={modelOptions}
                 size="sm"
                 value={model}
                 variant="inline"

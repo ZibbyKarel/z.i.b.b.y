@@ -129,6 +129,12 @@ export class PhaseAdvisorService {
     const workflow = await this.workflows.get(run.workflowId).catch(() => null);
     const cfg = workflow ? resolvePhaseAdvisor(workflow, phaseId) : null;
     if (!workflow || !cfg) return NO_ADVISOR;
+    // A22: the advisor is a Claude session. An opencode stage must not spend the Claude
+    // subscription behind the operator's engine choice, so it gets no advisor.
+    if (stage.engine === "opencode") {
+      this.logger.log(`advisor skipped for opencode stage ${run.currentStageRunId} (A22)`);
+      return `The advisor is not available on an opencode step. ${ASK_OPERATOR}`;
+    }
     const consumes = workflow.phases.find((p) => p.id === phaseId)?.consumes;
 
     // Never spend past the run's cap: finished stages + this stage's costs so far.

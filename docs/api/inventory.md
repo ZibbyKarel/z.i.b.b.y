@@ -54,4 +54,12 @@ frontmatter. Content: frontmatter `name` (the skill id, a valid Claude Code skil
 `managed-by: zibby`, a blank line, then the skill's `instructions`. Success records a
 `skill-installed` activity entry (`refs.itemId` = skill id; display group `integrations`).
 
+## Operator MCP servers for chat (A23)
+
+`readOperatorMcpServers(loc, cwd)` (`operator-mcp-servers.ts`) returns `{ id, config }[]` for the
+chat's `--mcp-config`: user-scope servers plus the servers of **enabled** plugins (id
+`plugin_<plugin>_<server>`, `${CLAUDE_PLUGIN_ROOT}` expanded), minus those in
+`projects[cwd].disabledMcpServers`. Unlike the inventory it returns the raw config (secrets
+included); the chat only ever writes it to a 0600 file. Not exposed over HTTP.
+
 Out of scope: uninstalling, installing/enabling plugins or MCP servers, other agents' config.

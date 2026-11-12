@@ -19,6 +19,8 @@ import {
   Stack,
   Typography,
 } from "@zibby/design-system";
+import { OperatorTokenNotice } from "../../../ai-providers";
+import { isOperatorTokenError } from "../../../../state/operatorToken";
 import { useProjectsQuery } from "../../../projects/queries";
 import type { Workflow } from "../../../../domain";
 import { slug } from "../../../../utils/slug";
@@ -42,6 +44,8 @@ export interface WorkflowDialogProps {
   initial?: Workflow;
   /** Disables the submit while the request is in flight. */
   isPending?: boolean;
+  /** The failed save's error — a 401 (engine fields need the operator token) gets a notice. */
+  error?: unknown;
   onClose: () => void;
   /** Create mode submit. */
   onCreate?: (input: CreateWorkflowInput) => void;
@@ -68,6 +72,7 @@ export function WorkflowDialog({
   agents,
   initial,
   isPending = false,
+  error,
   onClose,
   onCreate,
   onSave,
@@ -230,6 +235,8 @@ export function WorkflowDialog({
             }
           />
         </Stack>
+
+        {isOperatorTokenError(error) && <OperatorTokenNotice />}
 
         {/* run-level settings: spend cap + default project */}
         <Stack align="start" direction="row" gap="150">

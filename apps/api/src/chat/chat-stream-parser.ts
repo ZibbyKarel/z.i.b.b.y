@@ -17,8 +17,10 @@
 
 export type ChatStreamEvent =
   | { type: "session"; sessionId: string }
-  | { type: "delta"; text: string }
-  | { type: "tool"; name: string; input: unknown; id: string }
+  /** `block`: a whole text part (opencode), joined to earlier text with a blank line. */
+  | { type: "delta"; text: string; block?: boolean }
+  /** `failed`: the call was blocked or errored (opencode reports tool calls finished). */
+  | { type: "tool"; name: string; input: unknown; id: string; failed?: boolean }
   | { type: "done"; text: string }
   | { type: "error"; message: string };
 

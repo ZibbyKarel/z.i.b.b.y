@@ -37,6 +37,8 @@ function selectWorkflows(response: { body: ContractWorkflow[] }): Workflow[] {
       prompt: ph.prompt,
       skill: ph.skill,
       openaiModel: ph.openaiModel,
+      engine: ph.engine,
+      engineModel: ph.engineModel,
       include: ph.include,
     })),
     outputs: p.outputs,

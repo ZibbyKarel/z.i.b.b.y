@@ -23,7 +23,7 @@ const reply = (result: string, cost = 0.42) =>
 describe("PhaseAdvisorService", () => {
   let dir: string;
   let run: WorkflowRun;
-  let sessions: Record<string, { cwd: string; sessionId?: string }>;
+  let sessions: Record<string, { cwd: string; sessionId?: string; engine?: "opencode" }>;
   let advisor: Record<string, unknown> | undefined;
   let spawn: ReturnType<typeof vi.fn>;
   let service: PhaseAdvisorService;
@@ -111,6 +111,14 @@ describe("PhaseAdvisorService", () => {
     expect(note).toContain("0.42");
     const costs = await fs.readFile(path.join(koderCwd(), "costs.jsonl"), "utf8");
     expect(JSON.parse(costs.trim())).toMatchObject({ costUsd: 0.42, source: "advisor" });
+  });
+
+  it("is unavailable on an opencode stage and never spawns claude (A22)", async () => {
+    sessions.s2 = { cwd: koderCwd(), engine: "opencode" };
+    const text = await service.ask("delivery_1", "Skip the generator?");
+    expect(text).toContain("not available on an opencode step");
+    expect(text).toContain("ask_operator");
+    expect(spawn).not.toHaveBeenCalled();
   });
 
   it("on a loop retry resumes the review phase that wrote the failure context", async () => {

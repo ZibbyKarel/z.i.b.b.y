@@ -51,6 +51,8 @@ export function duplicateWorkflowBody(
       ...(ph.commands ? { commands: ph.commands } : {}),
       ...(ph.loop ? { loop: ph.loop } : {}),
       ...(ph.openaiModel ? { openaiModel: ph.openaiModel } : {}),
+      ...(ph.engine ? { engine: ph.engine } : {}),
+      ...(ph.engine === "opencode" && ph.engineModel ? { engineModel: ph.engineModel } : {}),
       ...(ph.openaiModel && ph.include ? { include: ph.include } : {}),
     })),
     // Carry the delivery sinks (PR / file outputs) into the copy unchanged.

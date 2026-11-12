@@ -2,6 +2,7 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  AiEngine,
   DepartmentId,
   OpenAiTextModel,
   SkillSource,
@@ -96,6 +97,10 @@ export interface WorkflowPhase {
   skill?: string;
   /** Agent phase: run on this OpenAI text model instead of local claude (`model` ignored). */
   openaiModel?: OpenAiTextModel;
+  /** Agent phase: force this engine for the step (needs the operator token to change). */
+  engine?: AiEngine;
+  /** Agent phase on `engine: "opencode"`: exact `provider/model` for the step. */
+  engineModel?: string;
   /** `openaiModel` phase only: extra run-relative files fed to the model. */
   include?: string[];
 }

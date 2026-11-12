@@ -15,6 +15,7 @@ import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 import {
   type ResolvedAiEngine,
+  applyThinkingVariant,
   assertOpencodeReady,
   spendsClaudeSubscription,
 } from "../runner/ai-engine";
@@ -342,7 +343,8 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const finalGrants = intersectToolGrants(toolGrants, agent);
     // Refuse up front when the run's engine can't start a session, so no dead run
     // record is ever created (→ 503 / failed task). opencode never falls back (A7).
-    const engine = this.claude.resolveEngine(agent);
+    // A26: on opencode the agent's thinking level picks the model's matching variant.
+    const engine = await applyThinkingVariant(this.claude.resolveEngine(agent), agent.thinking);
     if (engine.engine === "opencode") await assertOpencodeReady(engine.model);
     else await this.preflight.assertAvailable();
     this.log.info("starting agent run", { agentId, project, files: files.length });

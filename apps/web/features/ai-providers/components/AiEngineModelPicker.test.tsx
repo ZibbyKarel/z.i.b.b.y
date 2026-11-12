@@ -5,11 +5,11 @@ import { renderWithProviders as render, screen } from "../../../test/render";
 import { AiEngineModelPicker, AiEngineModelPickerTestId } from "./AiEngineModelPicker";
 
 const MODELS = [
-  { id: "anthropic/claude-x", free: false, subscription: false },
-  { id: "opencode/big-pickle", free: true, subscription: false },
-  { id: "openai/gpt-y", free: false, subscription: false },
-  { id: "opencode/other-free", free: true, subscription: false },
-  { id: "claude-agent/sonnet", free: false, subscription: true },
+  { id: "anthropic/claude-x", free: false, subscription: false, variants: [] },
+  { id: "opencode/big-pickle", free: true, subscription: false, variants: [] },
+  { id: "openai/gpt-y", free: false, subscription: false, variants: [] },
+  { id: "opencode/other-free", free: true, subscription: false, variants: [] },
+  { id: "claude-agent/sonnet", free: false, subscription: true, variants: [] },
 ];
 
 describe("AiEngineModelPicker", () => {
@@ -65,7 +65,7 @@ describe("AiEngineModelPicker", () => {
     expect(screen.getByTestId(AiEngineModelPickerTestId.NoModels)).toBeInTheDocument();
     rerender(
       <AiEngineModelPicker
-        models={[{ id: "openai/gpt-y", free: false, subscription: false }]}
+        models={[{ id: "openai/gpt-y", free: false, subscription: false, variants: [] }]}
         onChange={vi.fn()}
         value=""
       />,

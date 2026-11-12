@@ -8,6 +8,7 @@ import {
   ToggleField,
   Typography,
 } from "@zibby/design-system";
+import { AiEngineModelPicker, useAiEnginesQuery } from "../../../ai-providers";
 import { useSkillsQuery } from "../../../skills";
 import { CommandLine } from "../../../tasks/components/CommandLine/CommandLine";
 import { useWorkflowsQuery } from "../../queries/useWorkflowsQuery";
@@ -28,14 +29,32 @@ export interface StepSettingsProps {
  */
 export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSettingsProps) {
   const t = useTranslations("forms.workflow");
+  const tEngine = useTranslations("aiEngine");
   const { data: workflows = [] } = useWorkflowsQuery();
   const { data: skills = [], isSuccess: skillsReady } = useSkillsQuery();
+  const { data: engines } = useAiEnginesQuery();
+  const opencodeModels = engines?.engines.find((e) => e.id === "opencode")?.models ?? [];
   const skillName = (id: string) => skills.find((s) => s.id === id)?.name ?? id;
   const childOptions = workflows
     .filter((p) => p.id !== excludeWorkflowId)
     .map((p) => ({ value: p.id, label: p.name }));
   const patch = (id: string, change: Partial<GraphNode>) =>
     setGraph((g) => ({ ...g, nodes: g.nodes.map((n) => (n.id === id ? { ...n, ...change } : n)) }));
+  // "Runs on" choices are mutually exclusive: switching clears every other engine field.
+  const setRunsOn = (n: GraphNode, v: string) => {
+    const cleared = {
+      engine: undefined,
+      engineModel: undefined,
+      openaiModel: undefined,
+      include: undefined,
+    } satisfies Partial<GraphNode>;
+    if (v === "claude" || v === "opencode") return patch(n.id, { ...cleared, engine: v });
+    if (v) {
+      const keepInclude = n.openaiModel ? { include: n.include } : {};
+      return patch(n.id, { ...cleared, ...keepInclude, openaiModel: v as OpenAiTextModel });
+    }
+    return patch(n.id, cleared);
+  };
   const nodes = orderNodes(graph);
 
   return (
@@ -106,22 +125,30 @@ export function StepSettings({ graph, setGraph, excludeWorkflowId }: StepSetting
               <Container data-testid={`step-runs-on-${n.id}`}>
                 <SelectField
                   label={t("runsOnLabel")}
-                  onValueChange={(v) =>
-                    patch(
-                      n.id,
-                      v
-                        ? { openaiModel: v as OpenAiTextModel }
-                        : { openaiModel: undefined, include: undefined },
-                    )
-                  }
+                  onValueChange={(v) => setRunsOn(n, v)}
                   options={[
                     { value: "", label: t("runsOnClaude") },
+                    { value: "claude", label: t("runsOnClaudeCode") },
+                    { value: "opencode", label: t("runsOnOpencode") },
                     ...OPENAI_TEXT_MODELS.map((m) => ({
                       value: m.id,
                       label: `OpenAI · ${m.id}`,
                     })),
                   ]}
-                  value={n.openaiModel ?? ""}
+                  value={n.openaiModel ?? n.engine ?? ""}
+                />
+              </Container>
+            )}
+            {n.type === "agent" && n.engine === "opencode" && (
+              <Container data-testid={`step-engine-model-${n.id}`}>
+                <AiEngineModelPicker
+                  clearable
+                  quiet
+                  label={tEngine("exactModel")}
+                  loaded={engines !== undefined}
+                  models={opencodeModels}
+                  onChange={(engineModel) => patch(n.id, { engineModel: engineModel || undefined })}
+                  value={n.engineModel ?? ""}
                 />
               </Container>
             )}

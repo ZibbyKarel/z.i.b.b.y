@@ -11,24 +11,63 @@ Agent runs and workflow agent stages run on one of two engines:
   [Claude usage limits](#claude-usage-limits)). The operator connects it themself with
   `opencode auth login claude-agent` (A10).
 
-Decisions: `docs/plans/ai-providers-dictation-decisions.md` (A1–A18). Verified opencode
+The **chat** follows the engine too (A24): with `aiEngine: "opencode"` (or a mentioned
+`@agent` on opencode) a chat turn runs `opencode run`, and the chat's model picker means
+tiers. Chat on opencode gets only the `zibby` / `zibby-kb` MCP tools — no shell, files,
+operator MCP servers or claude.ai connectors (A25). See [chat.md](./chat.md#chat-on-opencode-a24--a25).
+
+Decisions: `docs/plans/ai-providers-dictation-decisions.md` (A1–A26). Verified opencode
 behaviour: `docs/plans/ai-providers-dictation-handoff.md` → _Verified facts_.
 
 ## Choosing the engine
 
-| Where                                                  | Field                                                | Default                |
-| ------------------------------------------------------ | ---------------------------------------------------- | ---------------------- |
-| Global (`SystemConfig`, [system.md](./system.md))      | `aiEngine: "claude" \| "opencode"`                   | `"claude"`             |
-| Global                                                 | `opencodeModel: string` (`provider/model[#variant]`) | `""` (no paid default) |
-| Agent frontmatter ([agents-runs.md](./agents-runs.md)) | `engine`, `engineModel`                              | absent = global        |
+| Where                                                  | Field                                                                                      | Default                |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------- |
+| Global (`SystemConfig`, [system.md](./system.md))      | `aiEngine: "claude" \| "opencode"`                                                         | `"claude"`             |
+| Global                                                 | `opencodeModel: string` (`provider/model[#variant]`)                                       | `""` (no paid default) |
+| Global                                                 | `opencodeTierModels: { haiku?, sonnet?, opus?, fable? }` (each `provider/model[#variant]`) | `{}`                   |
+| Agent frontmatter ([agents-runs.md](./agents-runs.md)) | `engine`, `engineModel`                                                                    | absent = global        |
+| Workflow agent phase ([workflows.md](./workflows.md))  | `engine`, `engineModel` (A21)                                                              | absent = agent         |
 
-`resolveAiEngine(agent, config)` (`apps/api/src/runner/ai-engine.ts`):
+### Model tiers (A19/A20)
 
-- engine = `agent.engine ?? config.aiEngine ?? "claude"`
-- on opencode, model = `agent.engineModel ?? config.opencodeModel`
+Every stored `model` (agent, phase, escalation rung, advisor) is an engine-independent
+**tier**: `haiku` (1) < `sonnet` (2) < `opus` (3) < `fable` (4) (`ModelTierSchema` /
+`MODEL_TIERS` in `@zibby/contracts`; chat's `ChatModelSchema` is the same enum). The
+values are Claude's CLI aliases, so stored files didn't change and the claude engine
+passes the tier as `--model` unchanged.
 
-Both the agent runner and the workflow runner use it, via
-`ClaudeRunCommandService.resolveEngine`. The run records what it ran on:
+On opencode a tier is mapped through `SystemConfig.opencodeTierModels` by
+`resolveTierModel(tier, tierModels, fallback)` (`@zibby/contracts`, so the web can show
+the resolved model): the tier's own mapping, else the nearest mapped **lower** tier,
+else the nearest mapped **higher** tier, else `opencodeModel`. An engine with fewer
+models than tiers therefore never fails; with nothing mapped and no `opencodeModel` the
+run is refused as before.
+
+`thinking` becomes a model **variant** on opencode (A26): when the resolved model has no
+explicit `#variant` and opencode's catalog (`opencode api GET /api/model`, cached ~1 min)
+lists a variant whose id equals the effective level (`escalation?.thinking ??
+phase.thinking ?? agent.thinking`), the run uses `provider/model#<level>` (passed as
+`opencode run -m provider/model#variant`). An explicit `#variant` in `engineModel`, the
+tier mapping or `opencodeModel` always wins. A model without a matching variant (most
+free `opencode/*` models, any model when the catalog can't be read) runs unchanged; a
+catalog failure never fails the run. The recorded `engineModel` includes the variant
+actually used. `GET /ai-providers/engines` lists each model's `variants`.
+
+### Resolution
+
+`resolveAiEngine(target, config)` (`apps/api/src/runner/ai-engine.ts`), where the target
+is `{ engine?, engineModel?, model? }`:
+
+- engine = `target.engine ?? config.aiEngine ?? "claude"`
+- on opencode, model = `target.engineModel ?? resolveTierModel(target.model,
+config.opencodeTierModels, config.opencodeModel)`
+
+An agent run passes the agent. A workflow stage passes
+`stageEngineTarget(phase, agent, escalationRung)`: `phase.engine ?? agent.engine`,
+`phase.engineModel ?? agent.engineModel`, tier = `rung.model ?? phase.model ??
+agent.model`. `phase.engine: "claude"` forces the native CLI with the tier alias.
+Both runners go through `ClaudeRunCommandService.resolveEngine`. The run records what it ran on:
 `AgentRun.engine` / `engineModel` and `StageRun.engine` / `engineModel`. Claude runs
 leave both fields absent.
 
@@ -171,9 +210,12 @@ always denies. The plugin ignores those ids in `ZIBBY_MCP_SERVERS` too.
   logged, see below),
 - custom hooks,
 - `--plugin-dir`s,
-- effort/thinking,
-- the phase's `model`/`thinking` and the escalation model rung on a workflow stage (one
-  `ℹ opencode stage on <model>: ignoring …` line in the stage log says so).
+- the phase advisor (`ask_advisor`): it is a Claude session, so an opencode stage gets
+  "not available" and is told to ask the operator (A22).
+
+A stage logs `ℹ opencode stage: tier <tier> → <model>[#variant]`, suffixed
+`(thinking "<level>" not supported by this model — no matching variant)` or
+`(explicit variant "<v>" wins over thinking "<level>")` when the level did not apply.
 
 `OPENCODE_BIN` overrides the binary. It is the test seam, like `CLAUDE_BIN`.
 
@@ -268,10 +310,14 @@ Any other opencode model never waits on the window:
 
 - RunnerCore does not scan its output for Claude limit lines;
 - an errored run on it is never relabelled `paused-limit`;
-- a workflow does not pause at a boundary before a stage on it;
+- a workflow does not pause at a boundary before a stage none of whose attempts (first
+  run and every escalation rung, resolved with the phase's own engine) is on Claude;
 - the task scheduler does not defer a task whose known target is an agent on it or a
   workflow whose every agent phase is. A task without a target still defers: routing
-  it needs the (Claude) classifier.
+  it needs the (Claude) classifier;
+- the same targets skip `BudgetService`'s global Claude % ceiling
+  (`pauseAtRollingPct` / `pauseAtWeeklyPct`, [budget.md](./budget.md)); per-project caps
+  still apply.
 
 A `claude-agent/*` run behaves exactly like a claude run in all four places. Not
 verified live: the exact text Claude's limit error has inside opencode's JSONL (the
@@ -281,10 +327,14 @@ run does not depend on it.
 ## Operator token
 
 Setting or changing the engine or model needs the operator token
-(`x-zibby-operator-token`, 401 otherwise): `PUT /api/system/config` when `aiEngine` or
-`opencodeModel` differs from the stored value, and agent create/update when `engine` or
-`engineModel` differs (`null` on an agent without an override is not a change). Every
-other config / agent edit stays open.
+(`x-zibby-operator-token`, 401 otherwise): `PUT /api/system/config` when `aiEngine`,
+`opencodeModel` or any `opencodeTierModels` entry differs from the stored value, agent
+create/update when `engine` or `engineModel` differs (`null` on an agent without an
+override is not a change), and workflow create/update when a phase's `engine` /
+`engineModel` differs from the stored phase with the same id (A21). Every other config /
+agent / workflow edit stays open. An LLM-drafted agent proposal has `engine` /
+`engineModel` stripped; nothing proposes workflows, and the chat self-API can't write a
+workflow's `phases`.
 
 ## Output, cost and session
 

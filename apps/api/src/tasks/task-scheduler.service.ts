@@ -49,7 +49,7 @@ import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
-import { resolveAiEngine, spendsClaudeSubscription } from "../runner/ai-engine";
+import { resolveAiEngine, spendsClaudeSubscription, stageSpendsClaude } from "../runner/ai-engine";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -862,8 +862,11 @@ export class TaskSchedulerService
     project: Project | null,
     projectId: string | undefined,
     now: number,
+    target?: TaskTarget,
   ): Promise<{ ok: true } | { ok: false; result: CreateTaskResult }> {
-    const check = await this.budget.check(projectId, new Date(now));
+    const check = await this.budget.check(projectId, new Date(now), {
+      offClaude: await this.offClaude(target),
+    });
     if (!check.ok) {
       const task = await this.storage.createHeld(taskId, input, projectId, check.detail, now);
       const held = await this.holdForApproval(task, project, check.detail, check.metrics);
@@ -952,7 +955,7 @@ export class TaskSchedulerService
     }
 
     const gate = await this.withCapacityLock(projectId, () =>
-      this.guardCapacity(taskId, input, project, projectId, now),
+      this.guardCapacity(taskId, input, project, projectId, now, explicitTarget),
     );
     if (!gate.ok) {
       if (titleAuto) this.refineTitle(gate.result.task.id, input.text);
@@ -979,7 +982,7 @@ export class TaskSchedulerService
     now: number,
     explicitTarget: TaskTarget | undefined,
   ): Promise<CreateTaskResult> {
-    const gate = await this.guardCapacity(taskId, input, project, projectId, now);
+    const gate = await this.guardCapacity(taskId, input, project, projectId, now, explicitTarget);
     if (!gate.ok) return gate.result;
     const dispatched = await this.dispatch(
       input.text,
@@ -1132,7 +1135,9 @@ export class TaskSchedulerService
     skipBudget: boolean,
   ): Promise<"ok" | "held"> {
     if (!skipBudget) {
-      const check = await this.budget.check(task.projectId, at);
+      const check = await this.budget.check(task.projectId, at, {
+        offClaude: await this.offClaude(task.target),
+      });
       if (!check.ok) {
         await this.storage.markHeld(task.id, check.detail);
         await this.holdForApproval(task, project, check.detail, check.metrics);
@@ -1818,7 +1823,7 @@ export class TaskSchedulerService
     // The window is Claude's: a task whose known target runs wholly off the Claude
     // subscription is not deferred. An unrouted task still needs the (Claude)
     // classifier, so it is.
-    if (target && (await this.targetOffClaude(target).catch(() => false))) return null;
+    if (await this.offClaude(target)) return null;
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,
       resumeAt: null,
@@ -1827,27 +1832,40 @@ export class TaskSchedulerService
     return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) };
   }
 
+  /** {@link targetOffClaude} for an optional target; unknown / unreadable → false (fail-closed). */
+  private async offClaude(target: TaskTarget | undefined): Promise<boolean> {
+    return target ? this.targetOffClaude(target).catch(() => false) : false;
+  }
+
   /**
    * An agent target on an opencode model that isn't `claude-agent/*`, or a workflow
-   * whose every agent phase is (A16/A18).
+   * whose every agent phase is, per-step engine and escalation rungs included
+   * (A16/A18/A21).
    */
   private async targetOffClaude(target: TaskTarget): Promise<boolean> {
     if (target.kind !== "agent" && target.kind !== "workflow") return false;
     const config = this.systemConfig.current();
+    const resolve = (t: Parameters<typeof resolveAiEngine>[0]) => resolveAiEngine(t, config);
     const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
-    const offClaude = (id: string) => {
-      const agent = agents.find((a) => a.id === id);
+    const agentOf = (id: string) => agents.find((a) => a.id === id);
+    if (target.kind === "agent") {
+      const agent = agentOf(target.id);
       if (!agent) return false;
-      const engine = resolveAiEngine(agent, config);
+      const engine = resolve(agent);
       return !spendsClaudeSubscription(engine.engine, engine.model);
-    };
-    if (target.kind === "agent") return offClaude(target.id);
+    }
     const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
     const phases = workflows.find((w) => w.id === target.id)?.phases ?? [];
     // A sub-workflow's engines aren't known here — it may spend the Claude window.
     if (phases.some((p) => p.type === "workflow")) return false;
-    const ids = phases.flatMap((p) => p.agent ?? []);
-    return ids.length > 0 && ids.every(offClaude);
+    const agentPhases = phases.filter((p) => p.agent);
+    return (
+      agentPhases.length > 0 &&
+      agentPhases.every((p) => {
+        const agent = agentOf(p.agent ?? "");
+        return !!agent && !stageSpendsClaude(p, agent, resolve);
+      })
+    );
   }
 
   /** Record a window-deferred task (Tier 1 — silent, recorded; the briefing reads it). */

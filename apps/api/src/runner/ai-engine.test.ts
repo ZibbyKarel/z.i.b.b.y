@@ -4,10 +4,13 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   OpencodeUnavailableError,
+  applyThinkingVariant,
   assertOpencodeReady,
   clearOpencodeCache,
   resolveAiEngine,
   spendsClaudeSubscription,
+  stageEngineTarget,
+  stageSpendsClaude,
 } from "./ai-engine";
 import { ClaudeUnavailableError } from "./claude-preflight.service";
 
@@ -34,6 +37,91 @@ describe("resolveAiEngine", () => {
       engine: "opencode",
       model: "",
     });
+  });
+});
+
+describe("model tiers on opencode (A20) + per-step engine (A21)", () => {
+  const config = {
+    aiEngine: "opencode" as const,
+    opencodeModel: "opencode/global",
+    opencodeTierModels: { haiku: "opencode/small", opus: "opencode/big" },
+  };
+
+  it("maps the agent's tier; an explicit engineModel wins; unmapped tier → nearest lower", () => {
+    expect(resolveAiEngine({ model: "opus" }, config).model).toBe("opencode/big");
+    expect(resolveAiEngine({ model: "sonnet" }, config).model).toBe("opencode/small");
+    expect(resolveAiEngine({ model: "fable" }, config).model).toBe("opencode/big");
+    expect(resolveAiEngine({}, config).model).toBe("opencode/global");
+    expect(resolveAiEngine({ model: "opus", engineModel: "x/pin" }, config).model).toBe("x/pin");
+    expect(
+      resolveAiEngine({ model: "sonnet" }, { ...config, opencodeTierModels: { opus: "o/x" } })
+        .model,
+    ).toBe("o/x"); // no lower mapping → nearest higher
+  });
+
+  it("stage precedence: phase engine/model > agent; tier = rung > phase > agent", () => {
+    const agent = {
+      engine: "opencode" as const,
+      engineModel: "agent/pin",
+      model: "haiku" as const,
+    };
+    // The phase pins claude: native CLI, whatever the agent says.
+    expect(resolveAiEngine(stageEngineTarget({ engine: "claude" }, agent), config)).toEqual({
+      engine: "claude",
+    });
+    // The phase's exact model beats the agent's.
+    expect(
+      resolveAiEngine(
+        stageEngineTarget({ engine: "opencode", engineModel: "phase/pin" }, agent),
+        config,
+      ).model,
+    ).toBe("phase/pin");
+    // The agent's exact model beats the tier mapping.
+    expect(resolveAiEngine(stageEngineTarget({ model: "opus" }, agent), config).model).toBe(
+      "agent/pin",
+    );
+    // Without exact pins the escalation rung's tier really escalates on opencode.
+    const plain = { model: "haiku" as const };
+    expect(resolveAiEngine(stageEngineTarget({ model: "haiku" }, plain), config).model).toBe(
+      "opencode/small",
+    );
+    expect(
+      resolveAiEngine(stageEngineTarget({ model: "haiku" }, plain, { model: "opus" }), config)
+        .model,
+    ).toBe("opencode/big");
+    // The phase's engine also moves a claude agent onto opencode.
+    expect(
+      resolveAiEngine(
+        stageEngineTarget({ engine: "opencode", model: "opus" }, { engine: "claude" }),
+        { ...config, aiEngine: "claude" },
+      ),
+    ).toEqual({ engine: "opencode", model: "opencode/big" });
+  });
+
+  it("stageSpendsClaude counts every escalation rung", () => {
+    const resolve = (t: Parameters<typeof resolveAiEngine>[0]) =>
+      resolveAiEngine(t, {
+        ...config,
+        opencodeTierModels: { haiku: "opencode/small", opus: "claude-agent/opus" },
+      });
+    const phase = { model: "haiku" as const };
+    expect(stageSpendsClaude(phase, {}, resolve)).toBe(false);
+    expect(
+      stageSpendsClaude(
+        {
+          ...phase,
+          loop: {
+            to: "x",
+            maxRetries: 1,
+            escalate: true,
+            then: "fail",
+            escalation: [{ model: "opus" }],
+          },
+        },
+        {},
+        resolve,
+      ),
+    ).toBe(true);
   });
 });
 
@@ -86,5 +174,54 @@ describe("assertOpencodeReady", () => {
     expect(err).toBeInstanceOf(OpencodeUnavailableError);
     expect(err).toBeInstanceOf(ClaudeUnavailableError);
     expect(String((err as Error).message)).toMatch(/^opencode unavailable: /);
+  });
+
+  describe("applyThinkingVariant (A26)", () => {
+    const catalog = JSON.stringify({
+      data: [
+        {
+          providerID: "claude-agent",
+          id: "haiku",
+          variants: [{ id: "low" }, { id: "medium" }, { id: "high" }],
+        },
+        { providerID: "opencode", id: "big-pickle", variants: [] },
+      ],
+    });
+    const oc = (model: string) => ({ engine: "opencode" as const, model });
+
+    it("runs the variant matching the thinking level", async () => {
+      await fakeBin(`echo '${catalog}'`);
+      await expect(applyThinkingVariant(oc("claude-agent/haiku"), "low")).resolves.toEqual(
+        oc("claude-agent/haiku#low"),
+      );
+    });
+
+    it("keeps an explicit #variant, a model without a matching variant, and claude as-is", async () => {
+      await fakeBin(`echo '${catalog}'`);
+      await expect(applyThinkingVariant(oc("claude-agent/haiku#high"), "low")).resolves.toEqual(
+        oc("claude-agent/haiku#high"),
+      );
+      await expect(applyThinkingVariant(oc("opencode/big-pickle"), "high")).resolves.toEqual(
+        oc("opencode/big-pickle"),
+      );
+      await expect(applyThinkingVariant(oc("claude-agent/haiku"), undefined)).resolves.toEqual(
+        oc("claude-agent/haiku"),
+      );
+      await expect(applyThinkingVariant({ engine: "claude" }, "high")).resolves.toEqual({
+        engine: "claude",
+      });
+    });
+
+    it("an unreadable catalog never fails the run — no variant", async () => {
+      await fakeBin("echo not-json");
+      await expect(applyThinkingVariant(oc("claude-agent/haiku"), "low")).resolves.toEqual(
+        oc("claude-agent/haiku"),
+      );
+      process.env.OPENCODE_BIN = path.join(dir, "missing");
+      clearOpencodeCache();
+      await expect(applyThinkingVariant(oc("claude-agent/haiku"), "low")).resolves.toEqual(
+        oc("claude-agent/haiku"),
+      );
+    });
   });
 });

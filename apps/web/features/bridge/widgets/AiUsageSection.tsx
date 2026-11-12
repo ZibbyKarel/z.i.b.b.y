@@ -1,6 +1,6 @@
 "use client";
 
-import { BoardLine, BoardRow, BoardTag, BoardText, Stack } from "@zibby/design-system";
+import { BoardLine, BoardRow, BoardTag, BoardText, Stack, Typography } from "@zibby/design-system";
 import type { AiEngine } from "@zibby/contracts";
 import { useLocale, useTranslations } from "next-intl";
 import { PopoverRow } from "../../../components/layout/LimitsRings/PopoverRow";
@@ -12,6 +12,7 @@ import { formatCostUsd } from "../../../utils/cost";
 
 export enum AiUsageSectionTestId {
   Claude = "ai-usage-claude",
+  ClaudeNote = "ai-usage-claude-note",
   Opencode = "ai-usage-opencode",
   Global = "ai-usage-global",
   ActiveModel = "ai-usage-active-model",
@@ -49,41 +50,51 @@ export function AiUsageSection() {
       </span>
     ) : null;
 
-  return (
-    <>
-      <BoardRow tone="neutral">
-        <span data-testid={AiUsageSectionTestId.Claude}>
-          <Stack gap="100">
-            <BoardLine between gap="6" indent={false}>
-              <BoardText kind="title">{t("claude")}</BoardText>
-              {globalTag("claude")}
-            </BoardLine>
-            {limits ? (
-              <>
-                <PopoverRow label="limits.rollingLabel" now={now} window={limits.rolling} />
-                <PopoverRow label="limits.weeklyLabel" now={now} window={limits.weekly} />
-              </>
-            ) : (
-              <BoardText kind="meta" tone="ink3">
-                {t("limitsUnknown")}
-              </BoardText>
-            )}
-          </Stack>
-        </span>
-      </BoardRow>
-      <BoardRow tone="neutral">
-        <span data-testid={AiUsageSectionTestId.Opencode}>
-          <Stack gap="100">
-            <BoardLine between gap="6" indent={false}>
-              <BoardText kind="title">{t("opencode")}</BoardText>
-              {globalTag("opencode")}
-            </BoardLine>
-            <OpencodeBody available={opencodeAvailable} model={config?.opencodeModel ?? ""} />
-          </Stack>
-        </span>
-      </BoardRow>
-    </>
+  const claudeRow = (
+    <BoardRow key="claude" tone="neutral">
+      <span data-testid={AiUsageSectionTestId.Claude}>
+        <Stack gap="100">
+          <BoardLine between gap="6" indent={false}>
+            <BoardText kind="title">{t("claude")}</BoardText>
+            {globalTag("claude")}
+          </BoardLine>
+          {limits ? (
+            <>
+              <PopoverRow label="limits.rollingLabel" now={now} window={limits.rolling} />
+              <PopoverRow label="limits.weeklyLabel" now={now} window={limits.weekly} />
+            </>
+          ) : (
+            <BoardText kind="meta" tone="ink3">
+              {t("limitsUnknown")}
+            </BoardText>
+          )}
+          {active === "opencode" && (
+            <span data-testid={AiUsageSectionTestId.ClaudeNote}>
+              <Typography leading="snug" size="2xs" type="note" variant="tertiary">
+                {t("claudeStillApplies")}
+              </Typography>
+            </span>
+          )}
+        </Stack>
+      </span>
+    </BoardRow>
   );
+  const opencodeRow = (
+    <BoardRow key="opencode" tone="neutral">
+      <span data-testid={AiUsageSectionTestId.Opencode}>
+        <Stack gap="100">
+          <BoardLine between gap="6" indent={false}>
+            <BoardText kind="title">{t("opencode")}</BoardText>
+            {globalTag("opencode")}
+          </BoardLine>
+          <OpencodeBody available={opencodeAvailable} model={config?.opencodeModel ?? ""} />
+        </Stack>
+      </span>
+    </BoardRow>
+  );
+
+  // The globally selected engine's block comes first.
+  return <>{active === "opencode" ? [opencodeRow, claudeRow] : [claudeRow, opencodeRow]}</>;
 }
 
 interface OpencodeBodyProps {

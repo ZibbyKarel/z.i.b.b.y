@@ -40,6 +40,25 @@ describe("HeaderLimits", () => {
     expect(popover()).not.toBeInTheDocument();
   });
 
+  it("portals the popover to body so the header's overflow wrapper cannot clip it", () => {
+    const { root, popover } = setup();
+    fireEvent.mouseEnter(root);
+    const el = popover();
+    expect(el).toBeInTheDocument();
+    expect(root).not.toContainElement(el);
+    expect(el?.parentElement).toBe(document.body);
+    expect(el).toHaveClass("fixed");
+  });
+
+  it("keeps the popover open when focus moves into it", () => {
+    const { trigger, popover } = setup();
+    fireEvent.focus(trigger);
+    const el = popover();
+    if (!el) throw new Error("popover missing");
+    fireEvent.blur(trigger, { relatedTarget: el });
+    expect(popover()).toBeInTheDocument();
+  });
+
   it("opens on keyboard focus, closes on Escape and on blur out", () => {
     const { trigger, popover } = setup();
     fireEvent.focus(trigger);

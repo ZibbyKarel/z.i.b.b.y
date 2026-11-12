@@ -54,8 +54,12 @@ system-config section — link there rather than duplicating the table here.
      `opencodeModel` (default `""`) is the opencode `provider/model` used when the agent
      has no `engineModel`. An empty model makes opencode runs fail fast; there is no
      paid default. Both are read per run, so a change takes effect on the next run.
-     Changing either needs the operator token (401 without it); the rest of the config
-     stays open. See [ai-engines.md](./ai-engines.md).
+   - `opencodeTierModels` (default `{}`) maps each model tier (`haiku` / `sonnet` /
+     `opus` / `fable`) to an opencode `provider/model[#variant]`. An opencode run without
+     an explicit `engineModel` takes its tier's model, else the nearest mapped lower
+     tier, else the nearest mapped higher one, else `opencodeModel` (A20). Changing
+     `aiEngine`, `opencodeModel` or any tier mapping needs the operator token (401
+     without it); the rest of the config stays open. See [ai-engines.md](./ai-engines.md).
    - `dockDoneTasksLimit` (1–100, default `20`) is UI-only: how many of the
      newest archived runs the web shell's activity dock lists under "Hotové"
      (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing

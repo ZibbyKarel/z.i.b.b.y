@@ -24,7 +24,9 @@ import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { useAgentsQuery } from "../agents";
 import { useDepartmentLookup } from "../departments/useDepartmentLookup";
+import { OperatorTokenNotice } from "../ai-providers";
 import { PinButton } from "../pins";
+import { isOperatorTokenError } from "../../state/operatorToken";
 import { useNewTask } from "../tasks";
 import { OutputsEditor, outputsValid } from "./components/OutputsEditor/OutputsEditor";
 import { StepSettings } from "./components/WorkflowDialog/StepSettings";
@@ -186,6 +188,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
   const addModal = adding && (
     <NewWorkflowDialog
       agents={agents}
+      error={createWorkflow.error}
       isPending={createWorkflow.isPending}
       onClose={() => setAdding(false)}
       onCreate={(body) =>
@@ -271,6 +274,7 @@ export function Screen({ selectedId: routeId, basePath = "/work/workflows" }: Sc
               </Container>
             </Stack>
           )}
+          {editing && isOperatorTokenError(updateWorkflow.error) && <OperatorTokenNotice />}
           <Stack wrap align="start" direction="row" gap="200" justify="between">
             <Container minW0>
               <Stack gap="100">

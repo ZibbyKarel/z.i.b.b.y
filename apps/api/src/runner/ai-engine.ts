@@ -1,5 +1,12 @@
 import { execFile } from "node:child_process";
-import type { Agent, AiEngine, SystemConfig } from "@zibby/contracts";
+import {
+  type Agent,
+  type AiEngine,
+  type PhaseEscalation,
+  type SystemConfig,
+  type WorkflowPhase,
+  resolveTierModel,
+} from "@zibby/contracts";
 import { agentBaseEnv } from "../shared/agent-env";
 import { ClaudeUnavailableError } from "./claude-preflight.service";
 
@@ -10,18 +17,61 @@ export interface ResolvedAiEngine {
   model?: string;
 }
 
+/** What a run asks to execute on: engine / exact-model overrides + the model tier. */
+export type EngineTarget = Pick<Agent, "engine" | "engineModel" | "model">;
+
 /**
- * Effective engine for a run: the agent's own override ?? the global setting. On
- * opencode the model is the agent's `engineModel` ?? `SystemConfig.opencodeModel`;
- * the claude engine ignores `engineModel` (it keeps using `agent.model`).
+ * Effective engine for a run: the target's own override ?? the global setting. On
+ * opencode the model is the explicit `engineModel` ?? the tier mapped through
+ * `opencodeTierModels` (A20, nearest lower, then higher tier) ?? `opencodeModel`. The
+ * claude engine ignores `engineModel`; it passes the tier as `--model`.
  */
 export function resolveAiEngine(
-  agent: Pick<Agent, "engine" | "engineModel">,
-  config: Pick<SystemConfig, "aiEngine" | "opencodeModel"> | undefined,
+  target: EngineTarget,
+  config:
+    | (Pick<SystemConfig, "aiEngine" | "opencodeModel"> &
+        Partial<Pick<SystemConfig, "opencodeTierModels">>)
+    | undefined,
 ): ResolvedAiEngine {
-  const engine = agent.engine ?? config?.aiEngine ?? "claude";
+  const engine = target.engine ?? config?.aiEngine ?? "claude";
   if (engine === "claude") return { engine };
-  return { engine, model: agent.engineModel ?? config?.opencodeModel ?? "" };
+  return {
+    engine,
+    model:
+      target.engineModel ??
+      resolveTierModel(target.model, config?.opencodeTierModels, config?.opencodeModel ?? ""),
+  };
+}
+
+/**
+ * A21 — a workflow stage's target: the phase's `engine` / `engineModel` over the
+ * agent's; the tier is the escalation rung's ?? the phase's ?? the agent's.
+ */
+export function stageEngineTarget(
+  phase: Pick<WorkflowPhase, "engine" | "engineModel" | "model">,
+  agent: EngineTarget,
+  escalation?: PhaseEscalation | null,
+): EngineTarget {
+  return {
+    engine: phase.engine ?? agent.engine,
+    engineModel: phase.engineModel ?? agent.engineModel,
+    model: escalation?.model ?? phase.model ?? agent.model,
+  };
+}
+
+/**
+ * Whether any attempt of the stage (the first run and every escalation rung) spends
+ * the Claude subscription. A rung can map to another model, so each one counts.
+ */
+export function stageSpendsClaude(
+  phase: Pick<WorkflowPhase, "engine" | "engineModel" | "model" | "loop">,
+  agent: EngineTarget,
+  resolve: (target: EngineTarget) => ResolvedAiEngine,
+): boolean {
+  return [null, ...(phase.loop?.escalation ?? [])].some((rung) => {
+    const e = resolve(stageEngineTarget(phase, agent, rung));
+    return spendsClaudeSubscription(e.engine, e.model);
+  });
 }
 
 /**
@@ -87,6 +137,56 @@ export async function opencodeModels(): Promise<string[] | null> {
 }
 
 /**
+ * The priced model catalog (`opencode api GET /api/model`), cached like every probe.
+ * Only the background service answers it (`--standalone` returns `data: []`).
+ */
+export function opencodeCatalog(): Promise<string | null> {
+  return opencodeCached(["api", "GET", "/api/model"], 10_000);
+}
+
+/** A catalog entry's `variants: [{ id, settings }]` → the variant ids. */
+export function variantIds(variants: unknown): string[] {
+  if (!Array.isArray(variants)) return [];
+  return variants.flatMap((v: unknown) =>
+    typeof v === "object" && v !== null && typeof (v as { id?: unknown }).id === "string"
+      ? [(v as { id: string }).id]
+      : [],
+  );
+}
+
+/**
+ * A26 — an opencode run's thinking level as a model variant: when the model has no
+ * explicit `#variant` and the catalog lists a variant whose id equals `thinking`, the
+ * run uses `model#thinking` (`opencode run -m provider/model#variant`). An explicit
+ * variant always wins; a model without a matching variant (or an unreadable catalog)
+ * runs unchanged. The claude engine is returned as-is (it maps thinking to `--effort`).
+ */
+export async function applyThinkingVariant(
+  engine: ResolvedAiEngine,
+  thinking: Agent["thinking"],
+): Promise<ResolvedAiEngine> {
+  const model = engine.model;
+  if (engine.engine !== "opencode" || !model || !thinking || model.includes("#")) return engine;
+  let raw: unknown;
+  try {
+    raw = JSON.parse((await opencodeCatalog()) ?? "");
+  } catch {
+    return engine;
+  }
+  const data =
+    typeof raw === "object" && raw !== null && Array.isArray((raw as { data?: unknown }).data)
+      ? ((raw as { data: unknown[] }).data as Record<string, unknown>[])
+      : [];
+  const entry = data.find(
+    (m) =>
+      typeof m === "object" && m !== null && `${String(m.providerID)}/${String(m.id)}` === model,
+  );
+  return entry && variantIds(entry.variants).includes(thinking)
+    ? { ...engine, model: `${model}#${thinking}` }
+    : engine;
+}
+
+/**
  * Thrown when an opencode run is refused up front (A7: binary missing, no model,
  * model unknown). Subclasses {@link ClaudeUnavailableError} only so the existing
  * 503 / failed-task mapping applies; the message names opencode.
@@ -103,7 +203,7 @@ export class OpencodeUnavailableError extends ClaudeUnavailableError {
 export async function assertOpencodeReady(model: string | undefined): Promise<void> {
   if (!model) {
     throw new OpencodeUnavailableError(
-      "no model chosen — set Settings → AI models (opencodeModel) or the agent's engineModel",
+      "no model chosen — set Settings → AI models (opencodeModel / opencodeTierModels) or the agent's / step's engineModel",
     );
   }
   const models = await opencodeModels();

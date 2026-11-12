@@ -135,36 +135,47 @@ export class BudgetService {
    * project, including unattributed), then the project's daily/weekly run caps. Any
    * read error → over("global") (fail-closed).
    */
-  async check(projectId: string | undefined, now: Date = new Date()): Promise<BudgetCheck> {
-    // Global account ceiling — applies to every dispatch.
-    try {
-      const [config, limits] = await Promise.all([this.config.read(), this.limits.snapshot()]);
-      if (!limits.stale) {
-        this.noteWarnCrossings(config, limits);
-        if (
-          config.pauseAtRollingPct != null &&
-          limits.rolling.usedPct >= config.pauseAtRollingPct
-        ) {
-          return over(
-            "global",
-            `account at ${limits.rolling.usedPct}% of the 5h window (pause ≥ ${config.pauseAtRollingPct}%)`,
-          );
+  async check(
+    projectId: string | undefined,
+    now: Date = new Date(),
+    /**
+     * The dispatch's known target runs wholly off the Claude subscription (A16/A18):
+     * the global ceiling is Claude's 5h / weekly %, so it doesn't apply. The
+     * per-project run / cost caps still do.
+     */
+    opts: { offClaude?: boolean } = {},
+  ): Promise<BudgetCheck> {
+    // Global account ceiling (Claude's windows) — applies to every Claude dispatch.
+    if (!opts.offClaude) {
+      try {
+        const [config, limits] = await Promise.all([this.config.read(), this.limits.snapshot()]);
+        if (!limits.stale) {
+          this.noteWarnCrossings(config, limits);
+          if (
+            config.pauseAtRollingPct != null &&
+            limits.rolling.usedPct >= config.pauseAtRollingPct
+          ) {
+            return over(
+              "global",
+              `account at ${limits.rolling.usedPct}% of the 5h window (pause ≥ ${config.pauseAtRollingPct}%)`,
+            );
+          }
+          if (config.pauseAtWeeklyPct != null && limits.weekly.usedPct >= config.pauseAtWeeklyPct) {
+            return over(
+              "global",
+              `account at ${limits.weekly.usedPct}% of the weekly window (pause ≥ ${config.pauseAtWeeklyPct}%)`,
+            );
+          }
         }
-        if (config.pauseAtWeeklyPct != null && limits.weekly.usedPct >= config.pauseAtWeeklyPct) {
-          return over(
-            "global",
-            `account at ${limits.weekly.usedPct}% of the weekly window (pause ≥ ${config.pauseAtWeeklyPct}%)`,
-          );
-        }
+      } catch (error) {
+        this.log.warn("budget global check failed — holding (fail-closed)", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return over(
+          "global",
+          "spend position unknown (limits/config unreadable) — holding for approval",
+        );
       }
-    } catch (error) {
-      this.log.warn("budget global check failed — holding (fail-closed)", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      return over(
-        "global",
-        "spend position unknown (limits/config unreadable) — holding for approval",
-      );
     }
 
     // Per-project run-count caps. Phase 70: EFFECTIVE budget (the project's own

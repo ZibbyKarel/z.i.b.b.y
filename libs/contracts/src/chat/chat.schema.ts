@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiEngineSchema, MODEL_TIERS, ModelTierSchema } from "../ai-providers/ai-providers.schema";
 import { BriefingSchema } from "../briefing/briefing.schema";
 import {
   AgentTaskTargetSchema,
@@ -88,8 +89,8 @@ const SINGLE_LINE = /^[^\r\n]*$/;
  * todo-30 — the model a chat turn runs on: the Claude CLI aliases, operator-selectable
  * per turn.
  */
-export const CHAT_MODELS = ["haiku", "sonnet", "opus", "fable"] as const;
-export const ChatModelSchema = z.enum(CHAT_MODELS);
+export const CHAT_MODELS = MODEL_TIERS;
+export const ChatModelSchema = ModelTierSchema;
 export type ChatModel = z.infer<typeof ChatModelSchema>;
 export const DEFAULT_CHAT_MODEL: ChatModel = "sonnet";
 
@@ -150,13 +151,19 @@ export const ChatMessageSchema = z.object({
   about: ChatAboutRefSchema.optional(),
   /** todo-30 — the model that produced this assistant turn. Optional/additive. */
   model: ChatModelSchema.optional(),
+  /** A24 — the engine of this assistant turn; absent = `claude` (every turn before engines). */
+  engine: AiEngineSchema.optional(),
+  /** A24 — opencode only: the `provider/model` the tier resolved to. */
+  engineModel: z.string().optional(),
 });
 export type ChatMessage = z.infer<typeof ChatMessageSchema>;
 
 export const ChatTranscriptSchema = z.object({
   conversationId: z.string(),
-  /** Underlying `claude` CLI session id, threaded across turns via `--resume`. */
+  /** Underlying CLI session id, threaded across turns (`claude --resume` / `opencode --session`). */
   sessionId: z.string().nullable(),
+  /** A24 — the engine `sessionId` belongs to; absent = `claude`. Another engine starts fresh. */
+  sessionEngine: AiEngineSchema.optional(),
   messages: z.array(ChatMessageSchema),
 });
 export type ChatTranscript = z.infer<typeof ChatTranscriptSchema>;

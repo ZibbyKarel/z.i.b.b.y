@@ -39,9 +39,16 @@ engagement's `dailyRuns`/`weeklyRuns`/`monthlyRuns`/
 ### The dispatch-time check
 
 Every dispatch path (agent run, workflow run, one goal iteration) calls
-`BudgetService.check(projectId, now)` before starting:
+`BudgetService.check(projectId, now, { offClaude })` before starting:
 
-1. **Global account ceiling first**, regardless of project — read `budget.json`
+1. **Global account ceiling first**, regardless of project — skipped when `offClaude`
+   is true: the task scheduler sets it when the task's known target runs wholly off the
+   Claude subscription (the same `targetOffClaude` that skips the limit deferral: an
+   agent on a non-`claude-agent/*` opencode model, or a workflow none of whose agent
+   phases' attempts spends Claude). The ceiling is Claude's 5h / weekly %, so it must
+   not hold an opencode run (A16/A18). The per-project caps below still apply. A goal
+   iteration always gets the ceiling (known gap: the goal runner doesn't resolve its
+   maker's engine, so an opencode goal maker is still held by Claude's %). Otherwise read `budget.json`
    (`pauseAtRollingPct`/`pauseAtWeeklyPct`) and the current usage snapshot from
    `LimitsService` (see `docs/api/limits.md`). If the account's 5h rolling or weekly
    usage is at or above the configured pause percentage, the dispatch is refused

@@ -19,6 +19,7 @@ const DEFAULTS: SystemConfig = {
   chatPersona: "jarvis",
   aiEngine: "claude",
   opencodeModel: "",
+  opencodeTierModels: {},
   powerSaver: false,
   ttsVoice: null,
   ui: UiSettingsSchema.parse({}),

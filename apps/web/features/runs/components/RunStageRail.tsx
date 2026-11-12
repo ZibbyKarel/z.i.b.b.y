@@ -9,10 +9,12 @@ import {
   StatusDot,
   Typography,
 } from "@zibby/design-system";
+import { ModelTierSchema } from "@zibby/contracts";
 import { useTranslations } from "next-intl";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { useAgentSymbol } from "../../agents";
 import { useAgentsQuery } from "../../agents/queries";
+import { useTierLabel } from "../../ai-providers";
 import { ModelBadge } from "../../../components/RuntimeBadges/RuntimeBadges";
 import { toClientTarget } from "../../tasks";
 import { useWorkflowsQuery } from "../../workflows/queries";
@@ -62,6 +64,19 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
   const phases = run.kind === "workflow" ? workflows?.find((w) => w.id === run.owner)?.phases : [];
   const agentOf = (phaseId: string) => phases?.find((p) => p.id === phaseId)?.agent ?? phaseId;
   const { data: agents } = useAgentsQuery();
+  const tierLabel = useTierLabel();
+  /** Concrete engine model when the phase/agent pins one, else the tier as a level label. */
+  const labelOf = (row: StageRailRow, model: string | undefined) => {
+    const phase = phases?.find((p) => p.id === row.phaseId);
+    const agent = agents?.find(
+      (a) => a.id === (run.kind === "agent" ? run.owner : agentOf(row.phaseId)),
+    );
+    if (!model || phase?.openaiModel || toolOpenAiImageModel(phase?.commands)) return undefined;
+    const engine = phase?.engine ?? agent?.engine;
+    const exact = engine === "opencode" ? (phase?.engineModel ?? agent?.engineModel) : undefined;
+    const tier = ModelTierSchema.safeParse(model).data;
+    return exact ?? (tier ? tierLabel(tier, engine) : undefined);
+  };
   const modelOf = (row: StageRailRow) => {
     const phase = phases?.find((p) => p.id === row.phaseId);
     const agentId = run.kind === "agent" ? run.owner : agentOf(row.phaseId);
@@ -93,6 +108,7 @@ export function RunStageRail({ run, rows, selectedPhaseId, onSelect }: RunStageR
             <>
               <span data-testid={`${RunStageRailTestId.Model}-${row.phaseId}`}>
                 <ModelBadge
+                  label={labelOf(row, modelOf(row))}
                   model={modelOf(row) ?? t("rail.defaultModel")}
                   provider={
                     phases?.find((p) => p.id === row.phaseId)?.openaiModel ||

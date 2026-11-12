@@ -5,6 +5,8 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
+  type Agent,
+  type AiEngine,
   type Attachment,
   type ChatAbout,
   ChatAboutRefSchema,
@@ -20,6 +22,9 @@ import {
   repoFromGitRemote,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { readOperatorMcpServers } from "../inventory/operator-mcp-servers";
+import { resolveClaudeLocations } from "../inventory/claude-locations";
+import { assertOpencodeReady, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { ProjectLocalService } from "../projects/project-local.service";
@@ -35,10 +40,23 @@ import { ChatEventsService } from "./chat-events.service";
 import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { buildAgentChatPrompt, chatAgentReadTools } from "./chat-agent-prompt";
 import { buildChatPrompt } from "./chat-persona";
+import {
+  OPENCODE_CHAT_NOTE,
+  buildOpencodeChatConfig,
+  opencodeChatArgs,
+  opencodeChatEnv,
+  parseOpencodeChatLine,
+} from "./chat-opencode";
 import { type ChatStreamEvent, parseChatStreamLine } from "./chat-stream-parser";
 import { type ChatCreateTaskMeta, ChatToolResultRegistry } from "./chat-tool-result.registry";
 import { describeTarget } from "./chat-tools.service";
 import { CHAT_DIR, ChatTranscriptStore } from "./chat-transcript.store";
+
+/** How to spawn a non-default (opencode) turn; absent = `claude` with the API's env. */
+export interface ChatSpawnOptions {
+  command: string;
+  env: NodeJS.ProcessEnv;
+}
 
 /** Minimal shape of the spawned `claude` process — the test seam overrides this. */
 export interface ClaudeProcess {
@@ -322,15 +340,68 @@ export class ChatSessionService {
     teamId?: string,
     tags?: ChatTurnTags,
   ): Promise<string[]> {
+    const agent = await this.turnAgent(conversationId);
+    const prompt = await this.buildPrompt(conversationId, agent, tags);
+    const args = [
+      "-p",
+      text,
+      "--setting-sources",
+      "",
+      // Hide the built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
+      // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
+      // (create_task delegates real work to the workflow). Without this the model
+      // tries to build things itself with Bash/Write instead of dispatching a task.
+      // A denylist, not `--tools ""`: with `--setting-sources ""`, ANY `--tools` value
+      // also drops the operator's claude.ai connectors (verified CLI behaviour), which
+      // the Slack allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
+      // without a permission prompt, so they MUST stay on this list; everything else
+      // is left to the `auto` permission classifier.
+      "--disallowedTools",
+      // Inline delegation, not a run: an `@agent` turn may read, but never spawn a task.
+      agent
+        ? `${hiddenBuiltinTools(chatAgentReadTools(agent))},mcp__zibby__create_task`
+        : CHAT_HIDDEN_BUILTIN_TOOLS,
+      // Persona (tone) is operator-selectable and read live from SystemConfig; the
+      // answer/ask/act governor inside is constant across personas.
+      "--append-system-prompt",
+      prompt,
+      "--output-format",
+      "stream-json",
+      "--include-partial-messages",
+      "--verbose",
+      "--model",
+      this.effectiveModel(tags, agent?.model),
+      // Operator's call (2026-11-05): `auto`, not `dontAsk` — the chat is a window onto
+      // the operator's terminal and may use every claude.ai connector (Jira, …). The CLI's
+      // classifier decides off-list calls, so connector WRITES (Slack send, Jira
+      // create/transition) are no longer hard-denied; `--disallowedTools` still is.
+      "--permission-mode",
+      "auto",
+    ];
+    if (sessionId) args.push("--resume", sessionId);
+    args.push(...(await this.toolArgs(conversationId, teamId, tags?.project?.path)));
+    return args;
+  }
+
+  /**
+   * A single `@agent` mention hands the turn to that agent: its own instructions
+   * replace the persona/governor, it answers in the chat, and `create_task` is off.
+   * A vanished agent falls back to the normal ZIBBY turn.
+   */
+  private async turnAgent(conversationId: string): Promise<Agent | undefined> {
     const mentions = this.toolResults.getMentions(conversationId);
-    // A single `@agent` mention hands the turn to that agent: its own instructions
-    // replace the persona/governor, it answers in the chat, and `create_task` is off.
-    // A vanished agent falls back to the normal ZIBBY turn.
     const mentioned =
       mentions.length === 1 && mentions[0]?.kind === "agent" ? mentions[0] : undefined;
-    const agent = mentioned
-      ? await this.agents.get(mentioned.id).catch(() => undefined)
-      : undefined;
+    return mentioned ? await this.agents.get(mentioned.id).catch(() => undefined) : undefined;
+  }
+
+  /** The turn's system prompt (persona or `@agent`, mentions, tags, about, attachments, skill). */
+  private async buildPrompt(
+    conversationId: string,
+    agent: Agent | undefined,
+    tags?: ChatTurnTags,
+  ): Promise<string> {
+    const mentions = this.toolResults.getMentions(conversationId);
     const persona = agent
       ? buildAgentChatPrompt(agent)
       : buildChatPrompt(this.systemConfig.current().chatPersona);
@@ -380,7 +451,7 @@ export class ChatSessionService {
       ? `Operátor pro tuto zprávu vybral skill "${tags.skill.name}" (/skill). Řiď se jeho instrukcemi — ` +
         `doplňují pravidla výše, nikdy je nenahrazují:\n\n${tags.skill.instructions}`
       : undefined;
-    const prompt = [
+    return [
       persona,
       mentionLine,
       scopeLine,
@@ -390,45 +461,6 @@ export class ChatSessionService {
     ]
       .filter(Boolean)
       .join("\n\n");
-    const args = [
-      "-p",
-      text,
-      "--setting-sources",
-      "",
-      // Hide the built-in tools (Bash/Write/Edit/…). ZIBBY chat is a conversational
-      // butler, not a coding agent: its only way to ACT is the `zibby` MCP tools
-      // (create_task delegates real work to the workflow). Without this the model
-      // tries to build things itself with Bash/Write instead of dispatching a task.
-      // A denylist, not `--tools ""`: with `--setting-sources ""`, ANY `--tools` value
-      // also drops the operator's claude.ai connectors (verified CLI behaviour), which
-      // the Slack allowlist below needs. Read-only built-ins (Read/Glob/Grep) run
-      // without a permission prompt, so they MUST stay on this list; everything else
-      // is left to the `auto` permission classifier.
-      "--disallowedTools",
-      // Inline delegation, not a run: an `@agent` turn may read, but never spawn a task.
-      agent
-        ? `${hiddenBuiltinTools(chatAgentReadTools(agent))},mcp__zibby__create_task`
-        : CHAT_HIDDEN_BUILTIN_TOOLS,
-      // Persona (tone) is operator-selectable and read live from SystemConfig; the
-      // answer/ask/act governor inside is constant across personas.
-      "--append-system-prompt",
-      prompt,
-      "--output-format",
-      "stream-json",
-      "--include-partial-messages",
-      "--verbose",
-      "--model",
-      this.effectiveModel(tags, agent?.model),
-      // Operator's call (2026-11-05): `auto`, not `dontAsk` — the chat is a window onto
-      // the operator's terminal and may use every claude.ai connector (Jira, …). The CLI's
-      // classifier decides off-list calls, so connector WRITES (Slack send, Jira
-      // create/transition) are no longer hard-denied; `--disallowedTools` still is.
-      "--permission-mode",
-      "auto",
-    ];
-    if (sessionId) args.push("--resume", sessionId);
-    args.push(...(await this.toolArgs(conversationId, teamId)));
-    return args;
   }
 
   /** The base URL the spawned `claude` reaches the in-process MCP server at, scoped to
@@ -491,24 +523,13 @@ export class ChatSessionService {
    * {@link CHAT_SLACK_TOOLS} adds the operator's claude.ai Slack connector, which the
    * CLI loads from the operator's login (not from `mcpServers`), read + draft only.
    */
-  protected async toolArgs(conversationId: string, teamId?: string): Promise<string[]> {
-    const config = {
-      mcpServers: {
-        zibby: {
-          type: "http",
-          url: this.mcpBaseUrl(conversationId),
-          headers: { Authorization: `Bearer ${this.mcpAuth.bearerToken}` },
-        },
-        "zibby-kb": {
-          type: "http",
-          url: this.kbMcpUrl(teamId),
-          headers: { Authorization: `Bearer ${this.kbMcpAuth.chatBearerToken}` },
-        },
-      },
-    };
-    await ensureDir(this.chatDir);
-    const file = path.join(this.chatDir, `${collisionResistantId("mcp-config")}.json`);
-    await fs.writeFile(file, JSON.stringify(config), { mode: 0o600 });
+  protected async toolArgs(
+    conversationId: string,
+    teamId?: string,
+    cwd?: string,
+  ): Promise<string[]> {
+    const config = { mcpServers: await this.mcpServers(conversationId, teamId, cwd) };
+    const file = await this.writeSecretFile("mcp-config", config);
     return [
       "--mcp-config",
       file,
@@ -518,12 +539,92 @@ export class ChatSessionService {
     ];
   }
 
+  /**
+   * The turn's MCP servers: A23's operator servers (user scope + enabled plugins, read
+   * from Claude Code's config) under ZibbyOS's own `zibby` / `zibby-kb`, which always win
+   * a name clash. Both bearer tokens ride in here, so it only ever goes to a 0600 file.
+   */
+  private async mcpServers(
+    conversationId: string,
+    teamId?: string,
+    /** Where the turn runs (decides the operator's per-project disabled servers); `null`
+     *  = mount ZibbyOS's own servers only. */
+    cwd?: string | null,
+  ): Promise<Record<string, Record<string, unknown>>> {
+    const operator =
+      cwd === null ? [] : await this.operatorMcpServers(cwd ?? process.cwd()).catch(() => []);
+    return {
+      ...Object.fromEntries(operator.map((s) => [s.id, s.config])),
+      zibby: {
+        type: "http",
+        url: this.mcpBaseUrl(conversationId),
+        headers: { Authorization: `Bearer ${this.mcpAuth.bearerToken}` },
+      },
+      "zibby-kb": {
+        type: "http",
+        url: this.kbMcpUrl(teamId),
+        headers: { Authorization: `Bearer ${this.kbMcpAuth.chatBearerToken}` },
+      },
+    };
+  }
+
+  /** A23 — the operator's own MCP servers; the test seam (tests mount none). */
+  protected operatorMcpServers(
+    cwd: string,
+  ): Promise<{ id: string; config: Record<string, unknown> }[]> {
+    return readOperatorMcpServers(resolveClaudeLocations(), cwd);
+  }
+
+  /** Spill a secret-bearing JSON config to a fresh 0600 file under the chat dir. */
+  private async writeSecretFile(prefix: string, content: unknown): Promise<string> {
+    await ensureDir(this.chatDir);
+    const file = path.join(this.chatDir, `${collisionResistantId(prefix)}.json`);
+    await fs.writeFile(file, JSON.stringify(content), { mode: 0o600 });
+    return file;
+  }
+
+  /**
+   * A24 — one opencode chat turn: the chat prompt (plus {@link OPENCODE_CHAT_NOTE}) as the
+   * config's `zibby` agent, ZibbyOS's own `zibby` / `zibby-kb` servers, A25's fail-closed
+   * permissions + chat gate plugin, `--session` resume. The config holds both bearer
+   * tokens, so it is a 0600 file the caller deletes when the turn ends.
+   */
+  async buildOpencodeTurn(
+    text: string,
+    sessionId: string | null,
+    conversationId: string,
+    model: string,
+    teamId?: string,
+    tags?: ChatTurnTags,
+  ): Promise<{ args: string[]; env: NodeJS.ProcessEnv; configFile: string; serverIds: string[] }> {
+    const agent = await this.turnAgent(conversationId);
+    const prompt = await this.buildPrompt(conversationId, agent, tags);
+    // A25: only ZibbyOS's own servers. The operator's servers stay on the Claude engine,
+    // where the CLI's auto classifier judges their calls; opencode has no classifier and
+    // would run e.g. Playwright's `browser_run_code_unsafe` unasked (seen live).
+    const servers = await this.mcpServers(conversationId, teamId, null);
+    const { config, serverIds } = buildOpencodeChatConfig(
+      `${prompt}\n\n${OPENCODE_CHAT_NOTE}`,
+      servers,
+      // Inline delegation, not a run: an `@agent` turn never spawns a task (as on Claude).
+      agent ? ["zibby_create_task"] : [],
+    );
+    const configFile = await this.writeSecretFile("opencode-chat", config);
+    return {
+      args: opencodeChatArgs(model, sessionId, text),
+      env: opencodeChatEnv(configFile, tags?.project?.path ?? process.cwd(), serverIds),
+      configFile,
+      serverIds,
+    };
+  }
+
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. */
-  protected createProcess(args: string[], cwd?: string): ClaudeProcess {
-    return spawn(process.env.CLAUDE_BIN ?? "claude", args, {
+  protected createProcess(args: string[], cwd?: string, opts?: ChatSpawnOptions): ClaudeProcess {
+    return spawn(opts?.command ?? process.env.CLAUDE_BIN ?? "claude", args, {
       ...(cwd ? { cwd } : {}),
-      stdio: ["ignore", "pipe", "pipe"],
-      env: agentBaseEnv(),
+      // opencode's stderr is never read; an unread pipe could stall it.
+      stdio: ["ignore", "pipe", opts ? "ignore" : "pipe"],
+      env: opts?.env ?? agentBaseEnv(),
     }) as ChildProcess;
   }
 
@@ -554,11 +655,65 @@ export class ChatSessionService {
     teamId?: string,
     tags?: ChatTurnTags,
   ): Promise<void> {
-    const sessionId = await this.store.getSessionId(conversationId);
-    const proc = this.createProcess(
-      await this.buildArgs(text, sessionId, conversationId, teamId, tags),
-      tags?.project?.path,
+    const clearTurnState = (): void => {
+      // The @mention target(s) and any attachment set (if any) are one-shot per turn —
+      // discard them now so nothing stale leaks into the conversation's next turn.
+      this.toolResults.clearExplicitTarget(conversationId);
+      this.toolResults.clearMentions(conversationId);
+      this.toolResults.clearAttachmentSetId(conversationId);
+    };
+    // A24: the turn's engine = the `@agent`'s override ?? the global `aiEngine`; on
+    // opencode the picked tier maps through `opencodeTierModels` (the agent's exact
+    // `engineModel` wins).
+    const agent = await this.turnAgent(conversationId);
+    const defaultTier = ChatModelSchema.safeParse(this.model);
+    const tier =
+      tags?.model ?? agent?.model ?? (defaultTier.success ? defaultTier.data : undefined);
+    const engine = resolveAiEngine(
+      { engine: agent?.engine, engineModel: agent?.engineModel, model: tier },
+      this.systemConfig.current(),
     );
+    const stored = await this.store.getSession(conversationId);
+    // A session id only resumes on the engine that minted it; switching engines starts a
+    // fresh session (the transcript on disk is unchanged).
+    const sessionId = stored.engine === engine.engine ? stored.sessionId : null;
+    if (stored.sessionId && !sessionId) {
+      this.logger.log(
+        `chat ${conversationId}: engine ${stored.engine} → ${engine.engine}, fresh session`,
+      );
+    }
+    let opencodeTurn: Awaited<ReturnType<ChatSessionService["buildOpencodeTurn"]>> | undefined;
+    if (engine.engine === "opencode") {
+      try {
+        // A7: an unusable opencode fails the turn with the reason, never falls back to Claude.
+        await assertOpencodeReady(engine.model);
+      } catch (error) {
+        clearTurnState();
+        const message = error instanceof Error ? error.message : String(error);
+        this.events.emit({ conversationId, turnId, type: "error", message });
+        return;
+      }
+      opencodeTurn = await this.buildOpencodeTurn(
+        text,
+        sessionId,
+        conversationId,
+        engine.model ?? "",
+        teamId,
+        tags,
+      );
+    }
+    const proc = opencodeTurn
+      ? this.createProcess(opencodeTurn.args, tags?.project?.path, {
+          command: opencodeBin(),
+          env: opencodeTurn.env,
+        })
+      : this.createProcess(
+          await this.buildArgs(text, sessionId, conversationId, teamId, tags),
+          tags?.project?.path,
+        );
+    const parseLine = opencodeTurn
+      ? (line: string) => parseOpencodeChatLine(line, opencodeTurn.serverIds)
+      : parseChatStreamLine;
 
     let accumulated = "";
     let capturedSession: string | null = null;
@@ -602,11 +757,23 @@ export class ChatSessionService {
         case "session":
           capturedSession = event.sessionId;
           break;
-        case "delta":
-          accumulated += event.text;
-          this.events.emit({ conversationId, turnId, type: "delta", text: event.text });
+        case "delta": {
+          const text = event.block && accumulated ? `\n\n${event.text}` : event.text;
+          accumulated += text;
+          this.events.emit({ conversationId, turnId, type: "delta", text });
           break;
+        }
         case "tool": {
+          const name = event.name.split("__").pop() ?? event.name;
+          if (event.failed) {
+            const tool: ChatToolEvent = { name, status: "error", callId: event.id };
+            toolEvents = mergeToolEvent(toolEvents, tool);
+            this.events.emit({ conversationId, turnId, type: "tool", tool });
+            break;
+          }
+          // opencode reports a tool call only once it has finished, after the registry
+          // already delivered create_task's result — that result is the event.
+          if (opencodeTurn && name === "create_task") break;
           const tool = this.describeToolStarted(event.name, event.id);
           if (tool.status === "started") pendingCreateTaskCallIds.push(event.id);
           toolEvents = mergeToolEvent(toolEvents, tool);
@@ -639,7 +806,7 @@ export class ChatSessionService {
       timer.unref?.();
 
       const consumeLine = (line: string): void => {
-        for (const event of parseChatStreamLine(line)) apply(event);
+        for (const event of parseLine(line)) apply(event);
       };
 
       proc.stdout?.on("data", (chunk: Buffer | string) => {
@@ -655,11 +822,15 @@ export class ChatSessionService {
         errored = errored ?? String(err);
         finish();
       });
-      proc.on("close", () => {
+      proc.on("close", (code) => {
         if (buffer.trim()) consumeLine(buffer);
+        if (code && !errored && !accumulated) {
+          errored = `${opencodeTurn ? "opencode" : "claude"} skončil s kódem ${code}.`;
+        }
         finish();
       });
     });
+    if (opencodeTurn) await fs.rm(opencodeTurn.configFile, { force: true }).catch(() => undefined);
 
     // The turn is over: stop reacting to live pushes, then sweep anything that was
     // queued because it arrived with no subscriber listening (e.g. it landed in the
@@ -673,14 +844,10 @@ export class ChatSessionService {
     }
 
     if (capturedSession) {
-      await this.store.setSessionId(conversationId, capturedSession, now);
+      await this.store.setSessionId(conversationId, capturedSession, now, engine.engine);
     }
 
-    // The @mention target(s) and any attachment set (if any) are one-shot per turn —
-    // discard them now so nothing stale leaks into the conversation's next turn.
-    this.toolResults.clearExplicitTarget(conversationId);
-    this.toolResults.clearMentions(conversationId);
-    this.toolResults.clearAttachmentSetId(conversationId);
+    clearTurnState();
 
     if (errored && !accumulated) {
       this.events.emit({ conversationId, turnId, type: "error", message: errored });
@@ -688,13 +855,14 @@ export class ChatSessionService {
     }
 
     // A non-enum ZIBBY_CHAT_MODEL env value still runs, but is not recorded.
-    const model = ChatModelSchema.safeParse(this.effectiveModel(tags));
+    const model = ChatModelSchema.safeParse(opencodeTurn ? tier : this.effectiveModel(tags));
     const assistant: ChatMessage = {
       id: collisionResistantId("msg"),
       role: "assistant",
       text: accumulated,
       at: now.toISOString(),
       ...(model.success ? { model: model.data } : {}),
+      ...(opencodeTurn ? { engine: "opencode" as AiEngine, engineModel: engine.model } : {}),
       ...(toolEvents.length > 0 ? { toolEvents } : {}),
     };
     await this.store.appendMessage(conversationId, assistant);

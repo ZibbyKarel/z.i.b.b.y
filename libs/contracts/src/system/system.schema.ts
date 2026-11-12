@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
+import { AiEngineSchema, OpencodeTierModelsSchema } from "../ai-providers/ai-providers.schema";
 import { ChatPersonaSchema } from "../chat/chat.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 import { TeamIdSchema } from "../teams/team.schema";
@@ -240,6 +240,12 @@ export const SystemConfigSchema = z
     aiEngine: AiEngineSchema.default("claude"),
     /** The opencode `provider/model` used when the engine is `opencode` ("" = not chosen). */
     opencodeModel: z.string().default(""),
+    /**
+     * A20 — the opencode model each model tier runs on (`haiku`/`sonnet`/`opus`/`fable`
+     * → `provider/model[#variant]`). An unmapped tier takes the nearest mapped lower,
+     * then higher tier, then `opencodeModel`. See docs/api/ai-engines.md.
+     */
+    opencodeTierModels: OpencodeTierModelsSchema.default({}),
     /**
      * O-21: the ZibbyOS header's "CEO" identity and brand name. Both additive and
      * optional (no default here — an absent value reads as `undefined`, not a

@@ -473,3 +473,46 @@ describe("openaiModel + include round-trip", () => {
     expect(out).not.toHaveProperty("include");
   });
 });
+
+describe("engine + engineModel round-trip", () => {
+  const wf: Workflow = {
+    ...existing,
+    phases: [
+      {
+        id: "a",
+        type: "agent",
+        agent: "writer",
+        consumes: "task.md",
+        produces: "a.md",
+        model: "fable",
+        engine: "opencode",
+        engineModel: "opencode/big-pickle",
+      },
+      {
+        id: "b",
+        type: "agent",
+        agent: "writer",
+        consumes: "a.md",
+        produces: "b.md",
+        engine: "claude",
+      },
+    ],
+  };
+
+  it("carries engine and the opencode exact model both ways; engineModel needs opencode", () => {
+    const g = phasesToGraph(wf, agents);
+    const phases = graphToPhases(g, INITIAL_ASSIGNMENT);
+    expect(phases[0]).toMatchObject({
+      model: "fable",
+      engine: "opencode",
+      engineModel: "opencode/big-pickle",
+    });
+    expect(phases[1]).toMatchObject({ engine: "claude" });
+    expect(phases[1]).not.toHaveProperty("engineModel");
+    const switched = {
+      ...g,
+      nodes: g.nodes.map((n, i) => (i === 0 ? { ...n, engine: "claude" as const } : n)),
+    };
+    expect(graphToPhases(switched, INITIAL_ASSIGNMENT)[0]).not.toHaveProperty("engineModel");
+  });
+});

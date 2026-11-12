@@ -62,6 +62,21 @@ describe("AiUsageSection", () => {
     expect(screen.getByTestId(AiUsageSectionTestId.Totals)).toHaveTextContent("7 kroků");
   });
 
+  it("puts the global engine's block first; opencode first adds the Claude note", () => {
+    const order = () =>
+      screen
+        .getAllByTestId(/^ai-usage-(claude|opencode)$/)
+        .map((e) => e.getAttribute("data-testid"));
+    const { unmount } = renderWithProviders(<AiUsageSection />);
+    expect(order()).toEqual([AiUsageSectionTestId.Claude, AiUsageSectionTestId.Opencode]);
+    expect(screen.queryByTestId(AiUsageSectionTestId.ClaudeNote)).not.toBeInTheDocument();
+    unmount();
+    d.config = { aiEngine: "opencode", opencodeModel: "" };
+    renderWithProviders(<AiUsageSection />);
+    expect(order()).toEqual([AiUsageSectionTestId.Opencode, AiUsageSectionTestId.Claude]);
+    expect(screen.getByTestId(AiUsageSectionTestId.ClaudeNote)).toHaveTextContent("claude-agent");
+  });
+
   it("marks only the globally selected engine", () => {
     const { unmount } = renderWithProviders(<AiUsageSection />);
     expect(screen.getByTestId(`${AiUsageSectionTestId.Global}-claude`)).toBeInTheDocument();

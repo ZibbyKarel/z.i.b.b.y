@@ -11,7 +11,7 @@ import {
   Tag,
   Typography,
 } from "@zibby/design-system";
-import { type Category } from "@zibby/contracts";
+import { type Category, MODEL_TIERS } from "@zibby/contracts";
 import {
   type Control,
   Controller,
@@ -21,9 +21,10 @@ import {
   FormTextInput,
   useWatch,
 } from "@zibby/forms";
-import { AiEngineModelPicker, useAiEnginesQuery } from "../../ai-providers";
+import { AiEngineModelPicker, useAiEnginesQuery, useTierLabel } from "../../ai-providers";
+import { useSystemConfigQuery } from "../../system";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
-import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
+import { AGENT_GLYPHS, AGENT_TOOLS, THINKING_OPTIONS } from "../../../state/config";
 import type { AgentEditValues } from "./agentEditValues";
 
 function ChipToggle({
@@ -58,6 +59,13 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
   const departments = useDepartmentLookup();
   const engine = useWatch({ control, name: "engine" });
   const tEngine = useTranslations("aiEngine");
+  const tierLabel = useTierLabel();
+  const globalEngine = useSystemConfigQuery().data?.aiEngine ?? "claude";
+  // Levels read as the concrete model of the agent's effective engine (override ?? global).
+  const modelOptions = MODEL_TIERS.map((tier) => ({
+    value: tier,
+    label: tierLabel(tier, engine || globalEngine),
+  }));
   const { data: engines } = useAiEnginesQuery();
   const opencodeModels = engines?.engines.find((e) => e.id === "opencode")?.models ?? [];
 
@@ -106,10 +114,10 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
 
             <Stack direction="row" gap="150">
               <Container grow minW0>
-                <FormSegmentPicker<AgentEditValues>
+                <FormSelect<string, AgentEditValues>
                   label={t("fields.model")}
                   name="model"
-                  options={MODEL_OPTIONS}
+                  options={modelOptions}
                 />
               </Container>
               <Container grow minW0>
@@ -148,6 +156,8 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
                 name="engineModel"
                 render={({ field }) => (
                   <AiEngineModelPicker
+                    clearable
+                    label={tEngine("exactModel")}
                     loaded={engines !== undefined}
                     models={opencodeModels}
                     onChange={field.onChange}

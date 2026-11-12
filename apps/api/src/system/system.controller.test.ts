@@ -27,6 +27,19 @@ describe("SystemController.putConfig (operator-only engine switch)", () => {
     expect(store.current().aiEngine).toBe(cur.aiEngine);
   });
 
+  it("401s a tier-mapping change without the token (A20), not a no-op resave", async () => {
+    const { store, c } = make();
+    const cur = store.current();
+    const tiers = { opus: "opencode/big-pickle" };
+    await expect(c.putConfig({ ...cur, opencodeTierModels: tiers }, {})).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await c.putConfig({ ...cur, opencodeTierModels: tiers }, op);
+    await expect(
+      c.putConfig({ ...store.current(), maxConcurrentRuns: 2 }, {}),
+    ).resolves.toMatchObject({ opencodeTierModels: tiers });
+  });
+
   it("saves an engine change with the token and any other change without it", async () => {
     const { store, c } = make();
     const cur = store.current();
