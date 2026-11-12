@@ -12,10 +12,10 @@ import {
   RowGroupHeader,
   type StateTone,
 } from "@zibby/design-system";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useNow } from "../../../hooks/useNow";
-import { compactAgo, formatDuration } from "../../../utils/time";
+import { clockTime, compactAgo, formatDuration } from "../../../utils/time";
 import {
   useInvalidateOnTerminalRun,
   useLiveRunsSnapshot,
@@ -49,6 +49,8 @@ export enum RunsWidgetTestId {
   StateIcon = "runs-widget-state-icon",
   Progress = "runs-widget-progress",
   Meta = "runs-widget-meta",
+  /** A still-waiting (queued / scheduled / held) row's state cell. */
+  Queued = "runs-widget-queued",
 }
 
 const FINISHED_LIMIT = 10;
@@ -73,9 +75,10 @@ export function dedupeRuns(
 }
 
 /**
- * Runs (running & finished): the active live runs (everything not waiting - those are the queue
- * widget's) as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list, with the percent done and the elapsed time under it; a state icon otherwise), then the last 10 finished runs with a
- * state icon in their outcome colour and their age. A group header is omitted when empty. Every row
+ * Runs (active & finished): the Active group lists the started live runs as TASK · STEP / PROGRESS / ISSUE rows (a bar only while running: fill = completed phases, indeterminate without a phase list, with the percent done and the elapsed time under it; a state icon otherwise), then the last 10 finished runs with a
+ * state icon in their outcome colour and their age. Below the started runs the Active group lists
+ * the runs still waiting to start (queued / scheduled / held - todo-16, formerly the task queue
+ * widget) with their state and their fire time (scheduled) or age; those open the task sheet. A group header is omitted when empty. Every row
  * opens the run sheet (approval, phase output, artifacts).
  */
 export function RunsWidget({
@@ -87,6 +90,8 @@ export function RunsWidget({
   sheetSide,
 }: BridgeWidgetProps) {
   const t = useTranslations("bridge.widgets.runs");
+  const tRuns = useTranslations("runs");
+  const locale = useLocale();
   const now = useNow(60_000);
   const liveSnapshot = useLiveRunsSnapshot();
   useInvalidateOnTerminalRun(FINISHED_LIMIT);
@@ -124,6 +129,19 @@ export function RunsWidget({
       ),
     [widget.id, live, phasesByWorkflow],
   );
+  const queued = useMemo(() => {
+    const waiting = live.filter((r) => WAITING_STATES.has(r.status));
+    return runRows(widget.id, waiting).map((r, i) => {
+      const run = waiting[i];
+      return {
+        ...r,
+        // Scheduled runs open by their own id (the task), the rest by task id.
+        taskId: (run?.kind === "scheduled" ? r.runId : r.id) ?? null,
+        when:
+          r.status === "scheduled" ? clockTime(r.startedAt, locale) : compactAgo(r.startedAt, now),
+      };
+    });
+  }, [widget.id, live, locale, now]);
   const finished = useMemo(() => {
     const runs = archived.slice(0, FINISHED_LIMIT);
     const rows = runRows(widget.id, runs);
@@ -140,13 +158,13 @@ export function RunsWidget({
   useWidgetReport(
     {
       loading: isPending,
-      count: isPending ? undefined : active.length + finished.length,
+      count: isPending ? undefined : active.length + queued.length + finished.length,
       you: 0,
     },
     { onEmptyChange, onCountChange },
   );
 
-  if (active.length + finished.length === 0) return null;
+  if (active.length + queued.length + finished.length === 0) return null;
 
   const open = (r: (typeof active)[number]) => () =>
     onOpen({
@@ -171,7 +189,7 @@ export function RunsWidget({
 
   return (
     <>
-      {header("active", active.length)}
+      {header("active", active.length + queued.length)}
       {!closed["active"] &&
         active.map((r) => (
           <BoardRow
@@ -214,6 +232,42 @@ export function RunsWidget({
                 </BoardText>
               </BoardLine>
             )}
+            <RunIssue issue={r.issue} project={r.project} />
+          </BoardRow>
+        ))}
+      {!closed["active"] &&
+        queued.map((r) => (
+          <BoardRow
+            columns="run"
+            key={r.key}
+            onClick={
+              r.taskId === null
+                ? undefined
+                : () =>
+                    onOpen({
+                      kind: "task",
+                      id: r.taskId as string,
+                      widgetId: widget.id,
+                      key: r.key,
+                      href: `/work/tasks/${r.taskId}`,
+                    })
+            }
+            rowKey={r.taskId === null ? undefined : r.key}
+            selected={selection?.key === r.key}
+            sheetSide={sheetSide}
+            tone={r.tone}
+          >
+            <RunTitle step={r.step} title={r.title} />
+            <span data-testid={`${RunsWidgetTestId.Queued}-${r.key}`}>
+              <BoardLine between gap="5">
+                <BoardText tabular kind="meta">
+                  {tRuns(`state.${r.status}`)}
+                </BoardText>
+                <BoardText kind="meta" tone="ink3">
+                  {r.when}
+                </BoardText>
+              </BoardLine>
+            </span>
             <RunIssue issue={r.issue} project={r.project} />
           </BoardRow>
         ))}

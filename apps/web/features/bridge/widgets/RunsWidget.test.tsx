@@ -1,4 +1,10 @@
-import { IconTestId, ProgressTestId } from "@zibby/design-system";
+import {
+  BoardRowTestId,
+  IconTestId,
+  ProgressTestId,
+  RowGroupHeaderTestId,
+} from "@zibby/design-system";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
@@ -55,6 +61,57 @@ beforeEach(() => {
 });
 
 describe("RunsWidget", () => {
+  // todo-16: the old task queue widget's runs sit in the Active group, below the running ones.
+  describe("queued runs in the Active group (todo-16)", () => {
+    beforeEach(() => {
+      d.live = [
+        { ...run("q", "queued"), taskId: "t-q" },
+        run("a", "running"),
+        { ...run("s", "scheduled"), kind: "scheduled" },
+        { ...run("h", "held"), taskId: "t-h" },
+        run("b", "awaiting-approval"),
+      ];
+      d.archived = [];
+    });
+    const rowKeys = () =>
+      screen.getAllByTestId(BoardRowTestId.Root).map((r) => r.getAttribute("data-rk"));
+
+    it("titles the group Active and lists running runs before queued ones", () => {
+      renderWithProviders(<RunsWidget {...props} />);
+      expect(screen.getAllByTestId(RowGroupHeaderTestId.Title).map((h) => h.textContent)).toEqual([
+        "Aktivní",
+      ]);
+      expect(rowKeys()).toEqual(["a", "b", "q", "s", "h"].map(key));
+    });
+
+    it("marks queued rows with their waiting state and counts them", () => {
+      renderWithProviders(<RunsWidget {...props} />);
+      for (const id of ["q", "s", "h"])
+        expect(screen.getByTestId(`${RunsWidgetTestId.Queued}-${key(id)}`)).toBeInTheDocument();
+      for (const id of ["a", "b"])
+        expect(screen.queryByTestId(`${RunsWidgetTestId.Queued}-${key(id)}`)).toBeNull();
+      expect(screen.getByTestId(`${RunsWidgetTestId.Queued}-${key("q")}`)).toHaveTextContent(
+        "ve frontě",
+      );
+      expect(props.onCountChange).toHaveBeenLastCalledWith(expect.objectContaining({ count: 5 }));
+    });
+
+    it("a queued row opens its task (scheduled: its own id)", async () => {
+      renderWithProviders(<RunsWidget {...props} />);
+      const row = screen
+        .getAllByTestId(BoardRowTestId.Root)
+        .find((r) => r.getAttribute("data-rk") === key("s"));
+      await userEvent.click(row as HTMLElement);
+      expect(props.onOpen).toHaveBeenLastCalledWith({
+        kind: "task",
+        id: "s",
+        widgetId: widget.id,
+        key: key("s"),
+        href: "/work/tasks/s",
+      });
+    });
+  });
+
   it("shows a progress bar only for the running run and state icons for the rest", () => {
     renderWithProviders(<RunsWidget {...props} />);
     expect(screen.getAllByTestId(new RegExp(`^${RunsWidgetTestId.Progress}-`))).toHaveLength(1);

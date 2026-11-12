@@ -54,7 +54,6 @@ export const BridgeWidgetSchema = z.preprocess(
       "briefing",
       "issues",
       "prs",
-      "tasks",
       "runs",
       "pins",
       "todo",
@@ -81,6 +80,28 @@ export const BridgeWidgetSchema = z.preprocess(
 );
 export type BridgeWidget = z.infer<typeof BridgeWidgetSchema>;
 
+/** Widget types that no longer exist (todo-16: `tasks` folded into `runs`). */
+const REMOVED_WIDGET_TYPES: readonly unknown[] = ["tasks"];
+
+/**
+ * A stored board layout. Widgets of a removed type are dropped before validation — one stale
+ * widget must not fail the whole config (the store would then reset every knob to its default).
+ */
+const BridgeLayoutSchema = z.preprocess(
+  (value) =>
+    Array.isArray(value)
+      ? value.filter(
+          (w: unknown) =>
+            !(
+              typeof w === "object" &&
+              w !== null &&
+              REMOVED_WIDGET_TYPES.includes((w as { type?: unknown }).type)
+            ),
+        )
+      : value,
+  z.array(BridgeWidgetSchema),
+);
+
 /**
  * Operator UI preferences persisted server-side (so they follow the operator across
  * browsers). `prefault` — not `default` — so the nested field defaults are applied to
@@ -92,11 +113,11 @@ export const UiSettingsSchema = z.object({
   bridge: z
     .object({
       /** Current board layout; `null` = the built-in DEFAULT preset. */
-      layout: z.array(BridgeWidgetSchema).nullable().default(null),
+      layout: BridgeLayoutSchema.nullable().default(null),
       /** Name of the active preset (`DEFAULT`, `REVIEW`, a saved name, or `CUSTOM`). */
       preset: z.string().min(1).default("DEFAULT"),
       /** Operator-saved named layouts. */
-      saved: z.record(z.string(), z.array(BridgeWidgetSchema)).default({}),
+      saved: z.record(z.string(), BridgeLayoutSchema).default({}),
       /** Legacy: saved layouts shown in the header, read only while `arranged` is null. */
       favorites: z.array(z.string()).default([]),
       /**

@@ -3338,7 +3338,7 @@
         "colProgress": "Postup",
         "colIssue": "Issue",
         "group": {
-          "active": "Běží",
+          "active": "Aktivní",
           "finished": "Ukončené"
         },
         "state": {
@@ -3487,17 +3487,13 @@
         "label": "Issues",
         "desc": "Položky z Jiry a GitHubu seskupené pod epiky"
       },
-      "tasks": {
-        "label": "Fronta úkolů",
-        "desc": "Běhy čekající na start: ve frontě, naplánované, pozdržené"
-      },
       "prs": {
         "label": "Pull requesty",
         "desc": "PR od agentů i vaše, včetně stacků"
       },
       "runs": {
         "label": "Běhy",
-        "desc": "Aktivní běhy a posledních 10 ukončených"
+        "desc": "Aktivní a čekající běhy a posledních 10 ukončených"
       },
       "pins": {
         "label": "Připnuté",

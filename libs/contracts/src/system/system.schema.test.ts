@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BridgeWidgetSchema } from "./system.schema";
+import { BridgeWidgetSchema, SystemConfigSchema, UiSettingsSchema } from "./system.schema";
 
 const base = { id: "w1", x: 0, y: 0, w: 4, h: 6 };
 
@@ -85,5 +85,27 @@ describe("BridgeWidgetSchema title and filters", () => {
     expect(
       BridgeWidgetSchema.safeParse({ ...base, type: "prs", prFilters: { extra: 1 } }).success,
     ).toBe(false);
+  });
+});
+
+describe("removed widget types in saved layouts (todo-16)", () => {
+  const tasks = { ...base, id: "tasks", type: "tasks" };
+  const runs = { ...base, id: "runs", type: "runs" };
+
+  it("drops a removed `tasks` widget from the layout and saved layouts, keeping the rest", () => {
+    const ui = UiSettingsSchema.parse({
+      bridge: { layout: [tasks, runs], saved: { Reviews: [runs, tasks] } },
+    });
+    expect(ui.bridge.layout?.map((w) => w.type)).toEqual(["runs"]);
+    expect(ui.bridge.saved["Reviews"]?.map((w) => w.type)).toEqual(["runs"]);
+  });
+
+  it("a whole system config with a stale `tasks` widget still parses", () => {
+    const parsed = SystemConfigSchema.safeParse({ ui: { bridge: { layout: [tasks] } } });
+    expect(parsed.success).toBe(true);
+  });
+
+  it("still rejects a single `tasks` widget", () => {
+    expect(BridgeWidgetSchema.safeParse(tasks).success).toBe(false);
   });
 });

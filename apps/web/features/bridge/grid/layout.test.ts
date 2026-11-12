@@ -34,7 +34,7 @@ describe("compact", () => {
     expect(get(l, "prs").y).toBe(5);
   });
   it("pulls floating widgets up to y=0", () => {
-    expect(get(compact(fromArr([["tasks", 0, 9, 4, 3]])), "tasks").y).toBe(0);
+    expect(get(compact(fromArr([["runs", 0, 9, 4, 3]])), "runs").y).toBe(0);
   });
   it("priority keeps its y, others yield", () => {
     const l = compact(
@@ -140,10 +140,10 @@ describe("add/remove/view", () => {
     expect(get(l, "prs").y).toBe(0);
   });
   it("viewLayout shrinks widgets and moves neighbours up", () => {
-    const l = viewLayout(DEFAULT_LAYOUT, new Set(["tasks"]));
-    expect(get(l, "tasks").h).toBe(1);
-    expect(get(l, "runs").y).toBe(4);
-    expect(get(DEFAULT_LAYOUT, "tasks").h).toBe(10);
+    const l = viewLayout(DEFAULT_LAYOUT, new Set(["briefing"]));
+    expect(get(l, "briefing").h).toBe(1);
+    expect(get(l, "runs").y).toBe(1);
+    expect(get(DEFAULT_LAYOUT, "briefing").h).toBe(3);
   });
 });
 
