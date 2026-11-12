@@ -101,6 +101,21 @@ describe("AutomationRunsWidget", () => {
     expect(screen.getAllByText("Auto nightly")).toHaveLength(1);
   });
 
+  it("marks system automations with a warn shield and user ones with an accent user icon (todo-7)", () => {
+    d.automations = d.automations.map((a) => (a.id === "nightly" ? { ...a, system: true } : a));
+    renderWithProviders(<AutomationRunsWidget {...props} />);
+    const running = screen.getByTestId(`${AutomationRunsWidgetTestId.Kind}-${key("r1")}`);
+    expect(running).toHaveAccessibleName("Systémová automatizace");
+    expect(running.querySelector("[data-icon]")).toHaveAttribute("data-icon", "shield");
+    expect(running.querySelector("[data-icon]")).toHaveClass("text-warn");
+    const upcoming = screen.getByTestId(
+      `${AutomationRunsWidgetTestId.Kind}-${key("next:evening")}`,
+    );
+    expect(upcoming).toHaveAccessibleName("Uživatelská automatizace");
+    expect(upcoming.querySelector("[data-icon]")).toHaveAttribute("data-icon", "user");
+    expect(upcoming.querySelector("[data-icon]")).toHaveClass("text-accent");
+  });
+
   it("opens the automation sheet from a running and an upcoming row", async () => {
     renderWithProviders(<AutomationRunsWidget {...props} />);
     await userEvent.click(screen.getByTestId(`${AutomationRunsWidgetTestId.Time}-${key("r1")}`));

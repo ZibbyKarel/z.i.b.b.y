@@ -3488,7 +3488,11 @@
         "lastFired": "Poslední běh",
         "never": "Nikdy",
         "disabled": "Vypnuto",
-        "failed": "Selhalo {ago}"
+        "failed": "Selhalo {ago}",
+        "kind": {
+          "system": "Systémová automatizace",
+          "user": "Uživatelská automatizace"
+        }
       },
       "projectStatus": {
         "projects": "Projekty",

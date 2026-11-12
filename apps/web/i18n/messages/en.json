@@ -3488,7 +3488,11 @@
         "lastFired": "Last run",
         "never": "Never",
         "disabled": "Disabled",
-        "failed": "Failed {ago}"
+        "failed": "Failed {ago}",
+        "kind": {
+          "system": "System automation",
+          "user": "User automation"
+        }
       },
       "projectStatus": {
         "projects": "Projects",
