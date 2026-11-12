@@ -7,7 +7,11 @@ import { installEventSourceMock } from "../../test/eventSourceMock";
 // a real stream URL instead of short-circuiting as inert.
 vi.mock("../../state/api", () => ({ API_URL: "http://localhost:3333" }));
 
-import { useRunLogStream, useStageRunLogStream } from "./useRunLogStream";
+import {
+  useAutomationFireLogStream,
+  useRunLogStream,
+  useStageRunLogStream,
+} from "./useRunLogStream";
 
 describe("useStageRunLogStream (N1 — a live stage log is a stream, not a poll)", () => {
   let mock: ReturnType<typeof installEventSourceMock>;
@@ -86,5 +90,33 @@ describe("useRunLogStream (unchanged unified-run surface over the shared tail)",
   it("is inert with a null run id", () => {
     renderHook(() => useRunLogStream(null));
     expect(mock.instances()).toHaveLength(0);
+  });
+});
+
+describe("useAutomationFireLogStream (todo-5 — a fire log is a live stream)", () => {
+  let mock: ReturnType<typeof installEventSourceMock>;
+
+  beforeEach(() => {
+    mock = installEventSourceMock();
+  });
+  afterEach(() => {
+    mock.restore();
+  });
+
+  it("is inert with a null fire", () => {
+    renderHook(() => useAutomationFireLogStream("nightly", null));
+    expect(mock.instances()).toHaveLength(0);
+  });
+
+  it("tails the fire's log stream URL", () => {
+    const { result } = renderHook(() => useAutomationFireLogStream("nightly", "fire_1_abcdef"));
+    expect(mock.last().url).toBe(
+      "http://localhost:3333/api/automations/nightly/fires/fire_1_abcdef/logs/stream",
+    );
+    act(() => {
+      mock.last().emitOpen();
+      mock.last().emit({ content: "start\n", nextOffset: 6, done: true });
+    });
+    expect(result.current).toEqual({ text: "start\n", done: true });
   });
 });
