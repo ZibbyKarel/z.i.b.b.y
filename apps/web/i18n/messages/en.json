@@ -2115,7 +2115,8 @@
     "fireStatus": {
       "running": "Running",
       "done": "Done",
-      "error": "Failed"
+      "error": "Failed",
+      "dispatched": "Dispatched"
     },
     "fireSource": {
       "cron": "Schedule",

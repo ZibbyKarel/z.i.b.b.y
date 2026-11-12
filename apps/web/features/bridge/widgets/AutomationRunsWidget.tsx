@@ -19,7 +19,7 @@ import { useWidgetReport } from "./useWidgetReport";
 export enum AutomationRunsWidgetTestId {
   /** The row's 24h time cell — suffixed `-<row key>`. */
   Time = "automation-runs-widget-time",
-  /** The failed marker on an upcoming row (todo-5) — suffixed `-<row key>`. */
+  /** The failed marker on an upcoming or failed row (todo-5) — suffixed `-<row key>`. */
   Failed = "automation-runs-widget-failed",
 }
 
@@ -130,35 +130,49 @@ export function AutomationRunsWidget({
     return latest;
   }, [allRuns]);
 
-  const upcoming = useMemo(() => {
+  // One pass: an enabled cron automation with a slot in the next 24 h is upcoming (marked when
+  // it failed); any other automation that failed in the last 24 h (event/signal trigger,
+  // disabled, no slot soon) gets a failed row in the running group (todo-5).
+  const { upcoming, failed } = useMemo(() => {
     const busy = new Set([
       ...running.map((r) => r.automationId),
       ...firing.map((f) => f.automation.id),
     ]);
-    return (automations ?? [])
-      .flatMap((a) => {
-        if (!a.enabled || a.trigger.type !== "cron" || busy.has(a.id)) return [];
-        const at = nextCronRun(a.trigger.expr, new Date(now), HORIZON_MINUTES)?.getTime();
-        if (at === undefined) return [];
-        const state = automationRowState(a, undefined, latestRunOf.get(a.id), now);
-        const failedAt = state.kind === "failed" ? Date.parse(state.at) : undefined;
-        return [
-          { key: `${widget.id}:next:${a.id}`, automation: a, expr: a.trigger.expr, at, failedAt },
-        ];
-      })
-      .sort((x, y) => x.at - y.at);
+    const upcoming: {
+      key: string;
+      automation: AutomationView;
+      expr: string;
+      at: number;
+      failedAt?: number;
+    }[] = [];
+    const failed: { key: string; automation: AutomationView; at: number }[] = [];
+    for (const a of automations ?? []) {
+      if (busy.has(a.id)) continue;
+      const state = automationRowState(a, undefined, latestRunOf.get(a.id), now);
+      const failedAt = state.kind === "failed" ? Date.parse(state.at) : undefined;
+      const expr = a.enabled && a.trigger.type === "cron" ? a.trigger.expr : undefined;
+      const at = expr ? nextCronRun(expr, new Date(now), HORIZON_MINUTES)?.getTime() : undefined;
+      if (expr && at !== undefined) {
+        upcoming.push({ key: `${widget.id}:next:${a.id}`, automation: a, expr, at, failedAt });
+      } else if (failedAt !== undefined) {
+        failed.push({ key: `${widget.id}:failed:${a.id}`, automation: a, at: failedAt });
+      }
+    }
+    return { upcoming: upcoming.sort((x, y) => x.at - y.at), failed };
   }, [widget.id, automations, now, running, firing, latestRunOf]);
 
   useWidgetReport(
     {
       loading: isPending,
-      count: isPending ? undefined : running.length + firing.length + upcoming.length,
+      count: isPending
+        ? undefined
+        : running.length + firing.length + failed.length + upcoming.length,
       you: 0,
     },
     { onEmptyChange, onCountChange },
   );
 
-  if (running.length + firing.length + upcoming.length === 0) return null;
+  if (running.length + firing.length + failed.length + upcoming.length === 0) return null;
 
   const open = (id: string, key: string) => () =>
     onOpen({ kind: "automation", id, widgetId: widget.id, key, href: `/work/automations/${id}` });
@@ -184,7 +198,7 @@ export function AutomationRunsWidget({
 
   return (
     <>
-      {header("running", running.length + firing.length)}
+      {header("running", running.length + firing.length + failed.length)}
       {!closed["running"] &&
         running.map((r) => (
           <BoardRow
@@ -226,6 +240,31 @@ export function AutomationRunsWidget({
               </BoardText>
             </BoardLine>
             {time(f.key, Date.parse(f.startedAt))}
+          </BoardRow>
+        ))}
+      {!closed["running"] &&
+        failed.map((f) => (
+          <BoardRow
+            columns="run"
+            key={f.key}
+            onClick={open(f.automation.id, f.key)}
+            rowKey={f.key}
+            selected={selection?.key === f.key}
+            sheetSide={sheetSide}
+            tone="error"
+          >
+            <RunTitle
+              step={f.automation.target.type}
+              title={f.automation.name ?? f.automation.id}
+            />
+            <BoardLine gap="5">
+              <span data-testid={`${AutomationRunsWidgetTestId.Failed}-${f.key}`}>
+                <BoardText tabular kind="meta">
+                  {t("failed", { ago: relativeLabel(f.at, now, locale) })}
+                </BoardText>
+              </span>
+            </BoardLine>
+            {time(f.key, f.at)}
           </BoardRow>
         ))}
       {header("upcoming", upcoming.length)}

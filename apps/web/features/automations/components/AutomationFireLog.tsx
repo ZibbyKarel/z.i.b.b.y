@@ -5,14 +5,7 @@ import { CodeBlock, type SubNavLinkComponent, TextLink, Typography } from "@zibb
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useAutomationFireLogStream } from "../../runs/useRunLogStream";
-
-export enum AutomationFiresTestId {
-  List = "automation-fires-list",
-  Row = "automation-fires-row",
-  Status = "automation-fires-status",
-  Log = "automation-fire-log",
-  OpenRun = "automation-fire-open-run",
-}
+import { AutomationFiresTestId } from "./AutomationFires";
 
 export interface AutomationFireLogProps {
   fire: AutomationFire;

@@ -192,8 +192,11 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
       return ref;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      // `stack` starts with "Error: <message>" — keep only the frames below it.
-      const frames = error instanceof Error ? (error.stack ?? "").split("\n").slice(1) : [];
+      // Only the stack's frame lines — its header (and a multi-line message) is logged above.
+      const frames =
+        error instanceof Error
+          ? (error.stack ?? "").split("\n").filter((line) => /^\s+at /.test(line))
+          : [];
       await note([`error: ${message}`, ...frames].join("\n"));
       await note(`failed in ${Date.now() - startedAt} ms`);
       await end({ status: "error", error: message });

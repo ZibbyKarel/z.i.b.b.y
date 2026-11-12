@@ -6,7 +6,7 @@ import { getRunningAgentsQueryKey } from "../agents/queries/keys";
 import { type ActivityEntry, INBOX_REFRESH_ACTIVITY_KINDS } from "@zibby/contracts";
 import { getProposalsQueryKey } from "../proposals/queries/useProposalsQuery";
 import { getApprovalsQueryKey } from "../approvals/queries/keys";
-import { getAutomationFiresQueryKey, getAutomationsQueryKey } from "../automations/queries";
+import { getAutomationsQueryKey } from "../automations/queries";
 import { getBudgetQueryKey, getCiStatusQueryKey } from "../projects/queries/keys";
 import { getProjectHealthQueryKey } from "../project-health/queries/useProjectHealthQuery";
 import { getActivityQueryKey } from "../activity/queries/useActivityQuery";
@@ -199,10 +199,9 @@ export function RunEventsProvider({ children }: { children: ReactNode }) {
           void qc.invalidateQueries({ queryKey: getInboxRootKey() });
         }
       } else if (parsed.scope === "automation-fires" && parsed.automationId) {
-        // todo-4/5: a fire started or finished — the list's `lastFire` (widget, sheet)
-        // and that automation's history (detail page) refetch.
+        // todo-4/5: a fire started or finished — the `["automations"]` prefix refetches the
+        // list's `lastFire` (widget, sheet) and every automation's fire history (detail page).
         void qc.invalidateQueries({ queryKey: getAutomationsQueryKey() });
-        void qc.invalidateQueries({ queryKey: getAutomationFiresQueryKey(parsed.automationId) });
       } else if (parsed.scope === "channel-items") {
         // Triage filed/transitioned an inbound item — refresh the inbox and the
         // approvals queue (a Tier-3 reply lands as a pending channel approval).

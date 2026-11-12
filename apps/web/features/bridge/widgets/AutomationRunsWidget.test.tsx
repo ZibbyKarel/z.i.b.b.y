@@ -159,6 +159,31 @@ describe("AutomationRunsWidget — running and failed fires (todo-5)", () => {
     ).toHaveTextContent("18:30");
   });
 
+  it("surfaces a recent failure of an automation with no upcoming slot in the running group", () => {
+    d.live = [];
+    d.automations = [
+      {
+        ...cron("manual", "0 3 * * *"),
+        trigger: { type: "event", events: ["git.push"] },
+        lastFire: fire({ automationId: "manual", status: "error", finishedAt: hoursAgo(2) }),
+      },
+      {
+        ...cron("old", "0 3 * * *", false),
+        lastFire: fire({ status: "error", finishedAt: hoursAgo(30) }),
+      },
+    ];
+    renderWithProviders(<AutomationRunsWidget {...props} />);
+    expect(
+      screen.getByTestId(`${AutomationRunsWidgetTestId.Failed}-${key("failed:manual")}`),
+    ).toHaveTextContent("Selhalo");
+    expect(
+      screen.getByTestId(`${AutomationRunsWidgetTestId.Time}-${key("failed:manual")}`),
+    ).toHaveTextContent("10:00");
+    expect(
+      screen.queryByTestId(`${AutomationRunsWidgetTestId.Failed}-${key("failed:old")}`),
+    ).toBeNull();
+  });
+
   it("shows a plain upcoming row once the failure is older than 24 h", () => {
     d.automations = [
       {

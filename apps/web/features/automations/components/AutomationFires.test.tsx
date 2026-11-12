@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderWithProviders, screen } from "../../../test/render";
 import { AutomationFires, AutomationFiresTestId } from "./AutomationFires";
 
-const d = vi.hoisted(() => ({ fires: [] as AutomationFire[] }));
+const d = vi.hoisted(() => ({
+  fires: [] as AutomationFire[],
+  runs: [] as { runId: string; status: string }[],
+}));
+vi.mock("../../runs/queries/useRunsQuery", () => ({ useRunsQuery: () => ({ runs: d.runs }) }));
 vi.mock("../queries", () => ({
   useAutomationFiresQuery: () => ({ data: d.fires, isPending: false }),
 }));
@@ -28,6 +32,7 @@ const fire = (over: Partial<AutomationFire>): AutomationFire => ({
 });
 
 beforeEach(() => {
+  d.runs = [];
   d.fires = [
     fire({
       id: "fire_3_cccccc",
@@ -62,6 +67,18 @@ describe("AutomationFires", () => {
       "href",
       "/activity/runs/run_7",
     );
+  });
+
+  it("a run-backed fire whose run isn't cached shows Spuštěno", () => {
+    renderWithProviders(<AutomationFires automationId="nightly" />);
+    expect(screen.getAllByTestId(AutomationFiresTestId.Status)[1]).toHaveTextContent("Spuštěno");
+  });
+
+  it("a run-backed fire whose run is cached shows the run's state", () => {
+    d.runs = [{ runId: "run_7", status: "error" }];
+    renderWithProviders(<AutomationFires automationId="nightly" />);
+    const pill = screen.getAllByTestId(AutomationFiresTestId.Status)[1];
+    expect(pill).toHaveTextContent("chyba");
   });
 
   it("renders an empty state with no fires", () => {

@@ -48,7 +48,8 @@ describe("RunEventsProvider — SSE-driven invalidation (N1)", () => {
         .emit({ scope: "automation-fires", automationId: "a", fireId: "f", status: "done" });
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: getAutomationsQueryKey() });
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: getAutomationFiresQueryKey("a") });
+    // The fires key sits under the `["automations"]` prefix, so the one call covers it.
+    expect(getAutomationFiresQueryKey("a").slice(0, 1)).toEqual(getAutomationsQueryKey());
   });
 
   it("an approval-* activity event refreshes the pending approvals queue", () => {

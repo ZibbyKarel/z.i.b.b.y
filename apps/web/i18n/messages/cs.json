@@ -2115,7 +2115,8 @@
     "fireStatus": {
       "running": "Běží",
       "done": "Hotovo",
-      "error": "Selhalo"
+      "error": "Selhalo",
+      "dispatched": "Spuštěno"
     },
     "fireSource": {
       "cron": "Plán",
