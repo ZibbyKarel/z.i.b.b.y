@@ -59,6 +59,10 @@ export class AutomationsController {
 
       triggerAutomation: ({ params: { id } }) =>
         errors.or404(id, async () => ({ runRef: await this.scheduler.trigger(id) })),
+
+      // Placeholder until the fire store lands (todo-4, Task 3).
+      listAutomationFires: async () => ({ status: 404, body: { message: "Not implemented" } }),
+      getAutomationFireLog: async () => ({ status: 404, body: { message: "Not implemented" } }),
     });
   }
 }
