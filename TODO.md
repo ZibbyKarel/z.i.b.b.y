@@ -3,8 +3,8 @@
 1. [x] Widgetu návrhy - V dialogu schvalování automatizace musím mít předvyplněný prompt podle návrhu. (main@004c748a7)
 2. [x] Widget Běhy automatizací - v detailu automatizace název bude link na detail automatizace (main@34517c3ae)
 3. [x] Widget Běhy automatizací - místo textu "tuto minutu" budeme ukazovat "< 1 min" (main@533911e10)
-4. [ ] Widget Běhy automatizací - v detailu automatizace musím mít seznam běhů automatizace s možností zobrazit si log z jednotlivých běhů tzn všechny automatizace musí někam logovat.
-5. [ ] Widget Běhy automatizací - Pokud se automatizace spustila, místo odpočtu do dalšího spuštění zobrazujeme kartu automatizace ve stavu "running". stejně tak i stavy kdy automatizace selže. Stejně jako u Widgetu Běhy. V detailu automatizace pak vidím živý steam logu jako v detailu Behu
+4. [x] Widget Běhy automatizací - v detailu automatizace musím mít seznam běhů automatizace s možností zobrazit si log z jednotlivých běhů tzn všechny automatizace musí někam logovat. (main@6ac71d856)
+5. [x] Widget Běhy automatizací - Pokud se automatizace spustila, místo odpočtu do dalšího spuštění zobrazujeme kartu automatizace ve stavu "running". stejně tak i stavy kdy automatizace selže. Stejně jako u Widgetu Běhy. V detailu automatizace pak vidím živý steam logu jako v detailu Behu (main@6ac71d856)
 6. [x] ve zbuildované desktop aplikaci nefunguje swipování left/right jako gesta na zpět/vpřed jako v browseru (main@6d6e12cea)
 7. [ ] Widget Běhy automatizací - na levé straně karty automatizace zobrazíme ikonku "štítu" nebo "usera" ro vizualizaci systémové a uživatelské automatizace (použij "žlutou" barvu pro štít a jinou pro uživatelskou)
 8. [x] Na kartě i detailu integrace (github) musíme zobrazovat kdy vyprší přístupový token ve formátu "NO EXPIRATION DATE" nebo "vyprží za ... dní" (main@362b428e8)
