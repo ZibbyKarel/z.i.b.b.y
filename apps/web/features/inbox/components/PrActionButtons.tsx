@@ -79,7 +79,8 @@ export function PrFixCiButton({ pr }: PrFixCiButtonProps) {
   const t = useTranslations("inboxPage.prs.actions");
   const fixCi = useFixInboxPrCiMutation();
   const [message, setMessage] = useState<string | null>(null);
-  if (!isFixCi(pr) || runsOf(pr).some(inFlight)) return null;
+  // `isSuccess`: the task exists, so the button stays gone until the refetch shows its run.
+  if (!isFixCi(pr) || runsOf(pr).some(inFlight) || fixCi.isSuccess) return null;
   const onFixCi = () =>
     fixCi.mutate(
       { body: { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title } },

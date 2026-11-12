@@ -122,8 +122,10 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
   if (!project) return null;
 
   const state = ci?.state ?? "none";
-  // An open fix task for this red commit (server-side `baseFixCi`) — no second click.
-  const fixRunning = Boolean(ci?.fixTaskId);
+  // An open fix task for this red commit (server-side `baseFixCi`), or one this click just
+  // created (before the CI refetch carries it) — the button is gone, the note says it runs.
+  const fixTaskId = ci?.fixTaskId ?? (fix.isSuccess ? fix.data.body.taskId : undefined);
+  const note = message ?? (fixTaskId ? { text: ts("fixRunning"), taskId: fixTaskId } : null);
   const stateLabel = (s: ProjectCi["state"]) => tw(`state.${s}`);
   const onFix = () =>
     fix.mutate(
@@ -146,16 +148,17 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
       actions={
         <>
           {ci ? <ChatAboutButton about={ciAbout(project.name, ci)} /> : null}
-          {state === "failing" ? (
+          {state === "failing" && !fixTaskId ? (
             <Button
               data-testid={ProjectSheetTestId.FixCi}
-              disabled={fix.isPending || fixRunning}
+              disabled={fix.isPending}
               icon="bolt"
               intent="primary"
+              loading={fix.isPending}
               onClick={onFix}
               size="sm"
             >
-              {fixRunning ? ts("fixRunning") : ts("fixCi")}
+              {ts("fixCi")}
             </Button>
           ) : null}
         </>
@@ -176,13 +179,13 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
       titleHref={ci?.repoUrl}
       tone={TONE[state]}
     >
-      {message ? (
+      {note ? (
         <Stack data-testid={ProjectSheetTestId.Message} direction="row" gap="75">
           <Typography as="span" size="sm" type="body">
-            {message.text}
+            {note.text}
           </Typography>
-          {message.taskId ? (
-            <TextLink href={`/work/tasks/${encodeURIComponent(message.taskId)}`}>
+          {note.taskId ? (
+            <TextLink href={`/work/tasks/${encodeURIComponent(note.taskId)}`}>
               {ts("openTask")}
             </TextLink>
           ) : null}

@@ -7,7 +7,11 @@ import { ChatProvider } from "../../../chat/ChatContext";
 import { renderWithProviders, screen } from "../../../../test/render";
 import { ProjectSheet, ProjectSheetTestId } from "./ProjectSheet";
 
-const h = vi.hoisted(() => ({ ci: undefined as unknown, mutate: vi.fn() }));
+const h = vi.hoisted(() => ({
+  ci: undefined as unknown,
+  mutate: vi.fn(),
+  fix: {} as Record<string, unknown>,
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/dashboard",
@@ -18,7 +22,7 @@ vi.mock("../../../projects/queries", () => ({
   useProjectCiQuery: () => ({ data: h.ci }),
 }));
 vi.mock("../../../projects/mutations", () => ({
-  useFixProjectCiMutation: () => ({ mutate: h.mutate, isPending: false }),
+  useFixProjectCiMutation: () => ({ mutate: h.mutate, isPending: false, ...h.fix }),
 }));
 
 const anchor = {
@@ -70,6 +74,7 @@ const render = () =>
 
 beforeEach(() => {
   h.mutate.mockReset();
+  h.fix = {};
 });
 
 describe("ProjectSheet", () => {
@@ -100,12 +105,27 @@ describe("ProjectSheet", () => {
     );
   });
 
-  it("an open fix task for the commit disables the button as Oprava běží", () => {
+  it("an open fix task for the commit hides the button and notes Oprava běží", () => {
     h.ci = { ...ci("failing"), fixTaskId: "task_9" };
     render();
-    const fix = screen.getByTestId(ProjectSheetTestId.FixCi);
-    expect(fix).toBeDisabled();
-    expect(fix).toHaveTextContent("Oprava běží");
+    expect(screen.queryByTestId(ProjectSheetTestId.FixCi)).not.toBeInTheDocument();
+    expect(screen.getByTestId(ProjectSheetTestId.Message)).toHaveTextContent("Oprava běží");
+  });
+
+  it("the fix click shows the button loading until the task exists", () => {
+    h.ci = ci("failing");
+    h.fix = { isPending: true };
+    render();
+    expect(screen.getByTestId(ProjectSheetTestId.FixCi)).toBeDisabled();
+    expect(screen.getByTestId(ProjectSheetTestId.FixCi)).toHaveAttribute("aria-busy", "true");
+  });
+
+  it("a created fix task hides the button before the CI refetch", () => {
+    h.ci = ci("failing");
+    h.fix = { isSuccess: true, data: { body: { taskId: "task_7" } } };
+    render();
+    expect(screen.queryByTestId(ProjectSheetTestId.FixCi)).not.toBeInTheDocument();
+    expect(screen.getByTestId(ProjectSheetTestId.Message)).toHaveTextContent("Oprava běží");
   });
 
   it("green CI: discuss in chat but no Opravit CI", () => {
