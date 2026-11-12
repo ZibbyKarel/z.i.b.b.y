@@ -25,6 +25,8 @@ export const WorkflowStageRecordSchema = z.object({
   limitResumeCycles: z.number().int().nonnegative().optional(),
   /** Souhrnná cena téhle fáze (odhad USD, viz runner-core.types.ts `BaseRun.costUsd`). */
   costUsd: z.number().optional(),
+  /** The captured claude session id — kept across a restart so the phase advisor can fork it. */
+  sessionId: z.string().optional(),
   workflowRunId: z.string(),
   phaseId: z.string(),
   attempt: z.number().int().min(1),

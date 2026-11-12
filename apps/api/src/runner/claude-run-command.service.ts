@@ -277,6 +277,18 @@ function approvalGroup(): HookMatcherGroup {
 }
 
 /**
+ * TODO 9: `--settings` for the read-only phase advisor — the approval hook on
+ * `Read|Grep|Glob` only, so the advisor can't read the operator token dir either.
+ * Nothing else is matched: the advisor gets no Bash/Write/Edit to gate.
+ */
+export function readGuardSettings(): string {
+  const command = `${JSON.stringify(process.execPath)} ${JSON.stringify(APPROVAL_HOOK)} ${GATE_DEADLINE_S}`;
+  return JSON.stringify({
+    hooks: { PreToolUse: [{ matcher: "Read|Grep|Glob", hooks: [{ type: "command", command }] }] },
+  });
+}
+
+/**
  * Would a custom hook collide with the locked approval gate's responsibility? A
  * `PreToolUse` hook whose matcher catches `Bash` or `Task` (explicitly, or by being
  * empty / `*` = "match every tool") could `allow` a destructive Bash command or an
