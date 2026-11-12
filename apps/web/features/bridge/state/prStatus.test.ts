@@ -79,6 +79,11 @@ describe("card slots", () => {
     expect(prReviewState(pr())).toBe("review");
   });
 
+  it("own draft: a colleague's approval doesn't read as approved (it still can't merge)", () => {
+    expect(prReviewState(pr({ draft: true, review: "approved" }))).toBe("review");
+    expect(prReviewState(pr({ draft: true, review: "changes-requested" }))).toBe("changes");
+  });
+
   it("others' PR: my current approval wins, even over changes from someone else", () => {
     const approved = { myReview: "approved" as const, myReviewSha: head, headSha: head };
     expect(
