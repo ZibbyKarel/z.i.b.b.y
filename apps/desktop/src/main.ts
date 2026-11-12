@@ -52,6 +52,7 @@ async function bootstrap(): Promise<void> {
       buildMenuTemplate({
         onCheckForUpdates: () => void checkForUpdates({ manual: true }),
         onFind: (command) => findInWindow?.(command),
+        onNavigate: navigate,
       }),
     ),
   );
@@ -134,6 +135,14 @@ function pipeChildLogs(child: ChildProcess, label: "api" | "web"): void {
   child.once("exit", () => log.end());
 }
 
+/** History navigation for the swipe gesture and Cmd+[ / Cmd+]; a no-op at either end. */
+function navigate(direction: "back" | "forward"): void {
+  const history = mainWindow?.webContents.navigationHistory;
+  if (!history) return;
+  if (direction === "back" && history.canGoBack()) history.goBack();
+  else if (direction === "forward" && history.canGoForward()) history.goForward();
+}
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1440,
@@ -149,6 +158,11 @@ function createWindow(): void {
   mainWindow.on("closed", () => {
     mainWindow = undefined;
     findInWindow = undefined;
+  });
+  // macOS three-finger swipe (the two-finger one is handled in the web app).
+  mainWindow.on("swipe", (_event, direction) => {
+    if (direction === "left") navigate("back");
+    else if (direction === "right") navigate("forward");
   });
   findInWindow = attachFindBar(mainWindow);
   routeExternalLinks(mainWindow, WEB_ORIGIN);

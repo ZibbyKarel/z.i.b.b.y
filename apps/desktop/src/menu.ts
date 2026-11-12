@@ -5,6 +5,7 @@ export type FindCommand = "open" | "next" | "previous";
 export interface MenuActions {
   onCheckForUpdates(): void;
   onFind(command: FindCommand): void;
+  onNavigate(direction: "back" | "forward"): void;
 }
 
 /**
@@ -47,6 +48,17 @@ export function buildMenuTemplate(actions: MenuActions): Electron.MenuItemConstr
           label: "Find Previous",
           accelerator: "Shift+CmdOrCtrl+G",
           click: () => actions.onFind("previous"),
+        },
+      ],
+    },
+    {
+      label: "History",
+      submenu: [
+        { label: "Back", accelerator: "CmdOrCtrl+[", click: () => actions.onNavigate("back") },
+        {
+          label: "Forward",
+          accelerator: "CmdOrCtrl+]",
+          click: () => actions.onNavigate("forward"),
         },
       ],
     },
