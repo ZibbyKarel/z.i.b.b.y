@@ -171,6 +171,9 @@ export type { CardProps } from "./components/Card/Card";
 export { LivingGlow, LivingGlowTestId } from "./components/LivingGlow/LivingGlow";
 export type { LivingGlowIntensity, LivingGlowProps } from "./components/LivingGlow/LivingGlow";
 
+export { ScreenGlow, ScreenGlowTestId } from "./components/ScreenGlow/ScreenGlow";
+export type { ScreenGlowProps } from "./components/ScreenGlow/ScreenGlow";
+
 export { FloatingPanel, FloatingPanelTestId } from "./components/FloatingPanel/FloatingPanel";
 export type { FloatingPanelProps } from "./components/FloatingPanel/FloatingPanel";
 
