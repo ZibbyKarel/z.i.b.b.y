@@ -50,6 +50,15 @@ export enum ProposalsWidgetTestId {
 const DAY_MS = 86_400_000;
 
 /** Whole days until `expiresAt` (rounded up, never negative). */
+/**
+ * What the approve dialog prefills when no sample task is available: the stored sample, else the
+ * first `("…")` quoted group of the proposal text (older proposals), `task created:` stripped.
+ */
+export const proposalPrompt = (p: Pick<Proposal, "text" | "provenance">): string | undefined =>
+  p.provenance.sample ||
+  /\("([^"]+)"\)/.exec(p.text)?.[1]?.replace(/^task created:\s*/i, "") ||
+  undefined;
+
 export const proposalExpiryDays = (expiresAt: string, now: number): number =>
   Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / DAY_MS));
 
@@ -282,6 +291,7 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
       </BoardRow>
       {approving ? (
         <ApproveProposalDialog
+          fallbackText={proposalPrompt(proposal)}
           onClose={() => setApproving(false)}
           onCreate={(body) =>
             createAutomation.mutate(
@@ -302,12 +312,19 @@ function ProposalRow({ proposal, now }: ProposalRowProps) {
 interface ApproveProposalDialogProps {
   /** The proposal's sample task — prefills what to run; absent → an empty dialog. */
   taskId?: string;
+  /** Prompt to prefill when the sample task is absent or can't be loaded. */
+  fallbackText?: string;
   onClose: () => void;
   onCreate: AutomationFormDialogProps["onCreate"];
 }
 
 /** The create-automation dialog, prefilled from the recurring task once it has loaded. */
-function ApproveProposalDialog({ taskId, onClose, onCreate }: ApproveProposalDialogProps) {
+function ApproveProposalDialog({
+  taskId,
+  fallbackText,
+  onClose,
+  onCreate,
+}: ApproveProposalDialogProps) {
   const task = useTaskQuery(taskId);
   // Wait for the sample task so CommandLine mounts with its text (it only reads it once);
   // a missing/failed task still opens the dialog, just empty.
@@ -316,7 +333,7 @@ function ApproveProposalDialog({ taskId, onClose, onCreate }: ApproveProposalDia
   return (
     <AutomationFormDialog
       initialTarget={sample?.target ? toClientTarget(sample.target) : undefined}
-      initialText={sample?.text}
+      initialText={sample?.text ?? fallbackText}
       onClose={onClose}
       onCreate={onCreate}
     />

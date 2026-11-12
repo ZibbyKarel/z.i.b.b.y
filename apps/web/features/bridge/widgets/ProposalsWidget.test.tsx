@@ -3,7 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, renderWithProviders, screen, within } from "../../../test/render";
 import type { BridgeWidget } from "../grid/layout";
-import { ProposalsWidget, ProposalsWidgetTestId, proposalExpiryDays } from "./ProposalsWidget";
+import {
+  ProposalsWidget,
+  ProposalsWidgetTestId,
+  proposalExpiryDays,
+  proposalPrompt,
+} from "./ProposalsWidget";
 import type { BridgeWidgetProps } from "./registry";
 
 const d = vi.hoisted(() => ({
@@ -37,11 +42,17 @@ const a = vi.hoisted(() => ({ create: vi.fn() }));
 vi.mock("../../automations/mutations", () => ({
   useCreateAutomationMutation: () => ({ mutate: a.create, isError: false }),
 }));
+const sampleTask = {
+  text: "/zibby:standup-post",
+  target: { kind: "workflow", id: "wf", name: "Wf" },
+};
+const tq = vi.hoisted(() => ({
+  data: undefined as unknown,
+  isPending: false,
+  isError: false,
+}));
 vi.mock("../../tasks/queries", () => ({
-  useTaskQuery: () => ({
-    isPending: false,
-    data: { text: "/zibby:standup-post", target: { kind: "workflow", id: "wf", name: "Wf" } },
-  }),
+  useTaskQuery: () => ({ isPending: tq.isPending, isError: tq.isError, data: tq.data }),
 }));
 vi.mock("../../automations/components/AutomationFormDialog", () => ({
   AutomationFormDialog: (p: {
@@ -92,6 +103,9 @@ beforeEach(() => {
   d.variables = undefined;
   d.mutate.mockReset();
   d.reset.mockReset();
+  tq.data = sampleTask;
+  tq.isPending = false;
+  tq.isError = false;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -257,7 +271,43 @@ describe("ProposalsWidget", () => {
   });
 });
 
+describe("proposalPrompt", () => {
+  it("prefers the stored sample", () => {
+    expect(proposalPrompt({ provenance: { sample: "Standup" }, text: "x" })).toBe("Standup");
+  });
+  it("falls back to the first quoted group of the text, minus the activity prefix", () => {
+    const text =
+      'You created 13 similar tasks ("task created: Standup") in the past 30 days — automate it?';
+    expect(proposalPrompt({ provenance: {}, text })).toBe("Standup");
+  });
+  it("is undefined when there is nothing to prefill from", () => {
+    expect(proposalPrompt({ provenance: {}, text: "no quote" })).toBeUndefined();
+  });
+});
+
 describe("ProposalsWidget approve", () => {
+  it("prefills from the sample when the proposal has no task", () => {
+    tq.data = undefined;
+    d.proposals = [proposal("g", { source: "gap-detect", provenance: { sample: "Standup" } })];
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    fireEvent.click(screen.getByTestId(ProposalsWidgetTestId.Approve));
+    expect(screen.getByText("dialog:Standup:undefined")).toBeTruthy();
+  });
+
+  it("prefills from the sample when the task is gone", () => {
+    tq.data = undefined;
+    tq.isError = true;
+    d.proposals = [
+      proposal("g", {
+        source: "gap-detect",
+        provenance: { taskId: "gone", sample: "Standup" },
+      }),
+    ];
+    renderWithProviders(<ProposalsWidget {...setup()} />);
+    fireEvent.click(screen.getByTestId(ProposalsWidgetTestId.Approve));
+    expect(screen.getByText("dialog:Standup:undefined")).toBeTruthy();
+  });
+
   it("a gap-detect row approves via a prefilled automation dialog, then marks it approved", () => {
     d.proposals = [proposal("g", { source: "gap-detect", provenance: { taskId: "t1" } })];
     renderWithProviders(<ProposalsWidget {...setup()} />);
