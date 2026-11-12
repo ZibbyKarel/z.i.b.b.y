@@ -1,4 +1,4 @@
-import type { Integration, MergeWatch, Project } from "@zibby/contracts";
+import type { Integration, Project } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
 import { NoGithubLinkError, PrNotMergeableError, ProjectNotFoundError } from "./projects.errors";
 import { ProjectPrService } from "./project-pr.service";
@@ -44,7 +44,6 @@ function build(opts: {
   integrations?: Integration[];
   token?: string | null;
   fetchImpl?: typeof fetch;
-  mergeWatch?: { putNew: (watch: MergeWatch) => Promise<MergeWatch | null> };
   activity?: { record: (input: unknown) => Promise<void> };
   roadmapGate?: { onMerge: (projectId: string, prNumber: number) => Promise<void> };
 }) {
@@ -62,14 +61,12 @@ function build(opts: {
     read: async () =>
       opts.token === undefined ? { token: "ghp_x" } : opts.token ? { token: opts.token } : null,
   };
-  const mergeWatch = opts.mergeWatch ?? { putNew: async () => null };
   const activity = opts.activity ?? { record: async () => {} };
   const roadmapGate = opts.roadmapGate ?? { onMerge: async () => {} };
   return new ProjectPrService(
     projectsStore as never,
     resolvedProjects as never,
     credentials as never,
-    mergeWatch as never,
     activity as never,
     roadmapGate as never,
     opts.fetchImpl,
@@ -186,13 +183,12 @@ describe("ProjectPrService", () => {
       );
     });
 
-    it("records merge-completed and writes a watching MergeWatch on success (NS2 F7b-2)", async () => {
+    it("records merge-completed on success", async () => {
       const fetchImpl = vi.fn(async () =>
         jsonResponse(200, { merged: true, sha: "abc123" }),
       ) as unknown as typeof fetch;
-      const putNew = vi.fn(async (watch: MergeWatch) => watch);
       const record = vi.fn(async () => {});
-      const service = build({ fetchImpl, mergeWatch: { putNew }, activity: { record } });
+      const service = build({ fetchImpl, activity: { record } });
 
       await service.merge("acme", 42);
 
@@ -202,62 +198,30 @@ describe("ProjectPrService", () => {
           refs: { projectId: "acme", itemId: "pr-42" },
         }),
       );
-      expect(putNew).toHaveBeenCalledWith(
-        expect.objectContaining({
-          id: "merge-acme-app-abc123",
-          projectId: "acme",
-          repo: "acme/app",
-          sha: "abc123",
-          prNumber: 42,
-          attempts: 0,
-          state: "watching",
-        }),
-      );
     });
 
-    it("a merge succeeding with no sha in the response records the merge but writes no watch", async () => {
+    it("a merge succeeding with no sha in the response still records the merge", async () => {
       const fetchImpl = vi.fn(async () =>
         jsonResponse(200, { merged: true }),
       ) as unknown as typeof fetch;
-      const putNew = vi.fn(async (watch: MergeWatch) => watch);
       const record = vi.fn(async () => {});
-      const service = build({ fetchImpl, mergeWatch: { putNew }, activity: { record } });
+      const service = build({ fetchImpl, activity: { record } });
 
       const result = await service.merge("acme", 42);
 
       expect(result).toEqual({ merged: true, url: "https://github.com/acme/app/pull/42" });
       expect(record).toHaveBeenCalledOnce();
-      expect(putNew).not.toHaveBeenCalled();
-    });
-
-    it("a recording failure (mergeWatch.putNew throws) never fails the merge (NS2 F7b-2 invariant e)", async () => {
-      const fetchImpl = vi.fn(async () =>
-        jsonResponse(200, { merged: true, sha: "abc123" }),
-      ) as unknown as typeof fetch;
-      const putNew = vi.fn(async () => {
-        throw new Error("disk full");
-      });
-      const service = build({ fetchImpl, mergeWatch: { putNew } });
-
-      const result = await service.merge("acme", 42);
-      expect(result).toEqual({
-        merged: true,
-        url: "https://github.com/acme/app/pull/42",
-        sha: "abc123",
-      });
     });
 
     it("a 409/422 (not mergeable) records nothing", async () => {
-      const putNew = vi.fn(async (watch: MergeWatch) => watch);
       const record = vi.fn(async () => {});
       const fetchImpl = vi.fn(async () =>
         jsonResponse(409, { message: "Merge conflict" }),
       ) as unknown as typeof fetch;
-      const service = build({ fetchImpl, mergeWatch: { putNew }, activity: { record } });
+      const service = build({ fetchImpl, activity: { record } });
 
       await expect(service.merge("acme", 42)).rejects.toThrow(PrNotMergeableError);
       expect(record).not.toHaveBeenCalled();
-      expect(putNew).not.toHaveBeenCalled();
     });
 
     it("a 409 from GitHub (not mergeable) → PrNotMergeableError", async () => {

@@ -9,7 +9,6 @@ import {
 } from "@zibby/contracts";
 import { ActivityLogService } from "../activity/activity-log.service";
 import { CredentialsStore } from "../integrations/credentials.store";
-import { MergeWatchStore } from "../release/merge-watch.store";
 // 125e — the roadmap gate's eager merge signal (see `recordMerge` below). This
 // closes a genuine circular provider dependency with `RoadmapGateService`
 // (RoadmapModule already depends on ProjectsModule for `ProjectsStorageService`
@@ -27,14 +26,6 @@ const GITHUB_API = "https://api.github.com";
 /** Bounds the open-PRs listing call — this feeds the Release merge queue and
  *  the briefing/`get_status` chat tool, so a stalled request must not hang it. */
 const LIST_OPEN_TIMEOUT_MS = 8_000;
-
-/** NS2 F7b-2 — how long a merge is watched for its target-branch CI outcome. */
-const POST_MERGE_WINDOW_MIN = 120;
-
-/** Satisfy `MERGE_WATCH_ID_REGEX` (`merge-watch.store.ts`) — mirrors `sentry.monitor.ts`'s helper. */
-function slug(value: string): string {
-  return value.replace(/[^a-zA-Z0-9._-]/g, "-");
-}
 
 interface GitHubPull {
   number?: number;
@@ -115,8 +106,6 @@ export class ProjectPrService {
     private readonly projects: ProjectsStorageService,
     private readonly resolvedProjects: ResolvedProjectService,
     private readonly credentials: CredentialsStore,
-    // NS2 F7b-2 — the merge-record → post-merge-poll loop's write side.
-    private readonly mergeWatch: MergeWatchStore,
     private readonly activity: ActivityLogService,
     // 125e — see the import comment above for why this needs `forwardRef`.
     @Inject(forwardRef(() => RoadmapGateService)) private readonly roadmapGate: RoadmapGateService,
@@ -207,8 +196,8 @@ export class ProjectPrService {
   /**
    * Fail-CLOSED: unknown/gone/no-link/rate-limited → `false`. A dependency GATE must
    * never release a downstream roadmap item on an unreadable PR state — the opposite
-   * of `PostMergeWatchService.rollup`'s fail-open `"pending"`, which is watching an
-   * ALREADY-merged sha's CI outcome, not gating a fresh dispatch.
+   * of a fail-open posture, which is fine for a status read but not for gating a
+   * fresh dispatch.
    */
   async isMerged(projectId: string, number: number): Promise<boolean> {
     try {
@@ -261,7 +250,7 @@ export class ProjectPrService {
     const merged = body.merged === true;
 
     if (merged) {
-      // NS2 F7b-2 — record the merge + start the post-merge CI watch. Merging
+      // Record the merge (activity + roadmap gate). Merging
       // itself is unconditional and un-gated by this: a recording failure must
       // NEVER surface as a merge failure (the merge already happened on GitHub).
       await this.recordMerge(projectId, link.repo, number, body.sha).catch(() => {});
@@ -329,10 +318,8 @@ export class ProjectPrService {
   }
 
   /**
-   * NS2 F7b-2 — the merge loop's head: an activity entry (always) and, when the
-   * response carried a sha, a `watching` {@link MergeWatch} for
-   * `PostMergeWatchService` to poll. `prTitle` falls back to the PR number — the
-   * title isn't known at this call site (only `listOpen` reads it).
+   * Record a completed merge: the `merge-completed` activity entry plus the
+   * roadmap gate's eager release signal.
    */
   private async recordMerge(
     projectId: string,
@@ -357,21 +344,5 @@ export class ProjectPrService {
     // rejection. Either way, a roadmap bookkeeping failure must NEVER surface as a
     // merge failure — the merge already happened on GitHub.
     void this.roadmapGate.onMerge(projectId, number).catch(() => {});
-    if (!sha) return; // no sha in the response — nothing to watch
-
-    const mergedAt = new Date();
-    const deadline = new Date(mergedAt.getTime() + POST_MERGE_WINDOW_MIN * 60_000);
-    await this.mergeWatch.putNew({
-      id: `merge-${slug(repo)}-${sha}`,
-      projectId,
-      repo,
-      sha,
-      prNumber: number,
-      prTitle: `PR #${number}`,
-      mergedAt: mergedAt.toISOString(),
-      deadline: deadline.toISOString(),
-      attempts: 0,
-      state: "watching",
-    });
   }
 }

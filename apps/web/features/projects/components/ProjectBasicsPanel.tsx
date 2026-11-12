@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button, IconTile, Panel, SelectField, Stack, Typography } from "@zibby/design-system";
 import type { Category, PrOpenMode, Project } from "@zibby/contracts";
-import { Controller, FormTextInput, useFormControls } from "@zibby/forms";
+import { Controller, FormTextArea, FormTextInput, useFormControls } from "@zibby/forms";
 import { toastBus } from "../../../components/Toaster/toastBus";
 import { KeyValueEditor, type KeyValueRow } from "./KeyValueEditor";
 
@@ -41,6 +41,8 @@ export interface ProjectBasicsBody {
   env?: Record<string, string>;
   /** NS2 F0b — draft-PR mode; omitted when `"ready"` (today's default behavior). */
   prOpenMode?: PrOpenMode;
+  /** Check-run names the PR inbox ignores for CI state; `[]` clears, absent leaves unchanged. */
+  ciIgnoredChecks?: string[];
   /**
    * TODO 11 — health monitoring. A `{ url, intervalSec }` sets it; `null` clears an
    * existing one (`UpdateProjectSchema` accepts null); absent when none was ever set.
@@ -93,6 +95,8 @@ type ProjectEditValues = {
   gitRemote: string;
   /** NS2 F0b — draft-PR mode; `"ready"` (default) or `"draft"`. */
   prOpenMode: PrOpenMode;
+  /** One ignored CI check per line. */
+  ciIgnoredChecks: string;
   healthUrl: string;
   healthIntervalSec: string;
   budgetDailyRuns: string;
@@ -165,6 +169,7 @@ export function ProjectBasicsPanel({
       category: project?.category ?? categories[0]?.name ?? "",
       gitRemote: project?.gitRemote ?? "",
       prOpenMode: project?.prOpenMode ?? "ready",
+      ciIgnoredChecks: (project?.ciIgnoredChecks ?? []).join("\n"),
       healthUrl: project?.healthCheck?.url ?? "",
       healthIntervalSec: String(project?.healthCheck?.intervalSec ?? HEALTH_INTERVAL_DEFAULT_SEC),
       budgetDailyRuns: project?.budget?.dailyRuns != null ? String(project.budget.dailyRuns) : "",
@@ -218,6 +223,10 @@ export function ProjectBasicsPanel({
         : project?.healthCheck
           ? null
           : undefined;
+      const ciIgnoredChecks = values.ciIgnoredChecks
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean);
       onSave({
         name: values.name.trim(),
         desc: values.desc.trim() || undefined,
@@ -227,6 +236,13 @@ export function ProjectBasicsPanel({
         budget,
         env: fromRows(envRows),
         prOpenMode: values.prOpenMode === "draft" ? "draft" : undefined,
+        // `[]` only when clearing a stored list — absent keys are dropped on the wire
+        ciIgnoredChecks:
+          ciIgnoredChecks.length > 0
+            ? ciIgnoredChecks
+            : project?.ciIgnoredChecks?.length
+              ? []
+              : undefined,
         ...(healthCheck !== undefined ? { healthCheck } : {}),
       });
     },
@@ -288,6 +304,13 @@ export function ProjectBasicsPanel({
               value={field.value}
             />
           )}
+        />
+
+        <FormTextArea<ProjectEditValues>
+          hint={t("fields.ciIgnoredChecksHint")}
+          label={t("fields.ciIgnoredChecks")}
+          name="ciIgnoredChecks"
+          rows={3}
         />
 
         <Stack direction="row" gap="150">

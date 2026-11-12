@@ -56,7 +56,6 @@ describe("BriefingService", () => {
   let release: { summaryLines: ReturnType<typeof vi.fn> };
   let arch: { readFindings: ReturnType<typeof vi.fn> };
   let watchers: { all: ReturnType<typeof vi.fn> };
-  let mergeWatch: { list: ReturnType<typeof vi.fn> };
   let channels: { list: ReturnType<typeof vi.fn> };
   let service: BriefingService;
 
@@ -96,9 +95,6 @@ describe("BriefingService", () => {
     // NS2 F6c — default fixture: every watcher healthy (each test overrides
     // what it exercises).
     watchers = { all: vi.fn().mockReturnValue([]) };
-    // NS2 F7b-2 — default fixture: no merge watches (each test overrides what
-    // it exercises).
-    mergeWatch = { list: vi.fn().mockResolvedValue([]) };
 
     service = new BriefingService(
       approvals as never,
@@ -118,7 +114,6 @@ describe("BriefingService", () => {
       release as never,
       arch as never,
       watchers as never,
-      mergeWatch as never,
       dir,
       { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
     );
@@ -356,49 +351,6 @@ describe("BriefingService", () => {
     });
   });
 
-  describe("merged recently (NS2 F7b-2)", () => {
-    const watch = (over: Record<string, unknown> = {}) => ({
-      id: "merge-acme-app-abc123",
-      projectId: "acme",
-      repo: "acme/app",
-      sha: "abc123",
-      prNumber: 42,
-      prTitle: "Fix flaky test",
-      mergedAt: "2026-06-12T06:00:00.000Z",
-      deadline: "2026-06-12T08:00:00.000Z",
-      attempts: 0,
-      state: "green",
-      ...over,
-    });
-
-    it("surfaces green and red watches as formatted lines, excludes still-watching", async () => {
-      mergeWatch.list.mockResolvedValue([
-        watch({ state: "green" }),
-        watch({ id: "merge-b", prNumber: 7, state: "red" }),
-        watch({ id: "merge-c", prNumber: 8, state: "watching" }),
-      ]);
-      const briefing = await service.assemble(now);
-      expect(briefing.mergedRecently).toHaveLength(2);
-      expect(briefing.mergedRecently?.[0]).toContain("PR #42");
-      expect(briefing.mergedRecently?.[0]).toContain("CI green");
-      expect(briefing.mergedRecently?.[1]).toContain("PR #7");
-      expect(briefing.mergedRecently?.[1]).toContain("fix task dispatched");
-    });
-
-    it("omits mergedRecently when there is nothing to report", async () => {
-      mergeWatch.list.mockResolvedValue([]);
-      const briefing = await service.assemble(now);
-      expect(briefing.mergedRecently).toBeUndefined();
-    });
-
-    it("a failed read fails open — omits the field, the briefing still assembles", async () => {
-      mergeWatch.list.mockRejectedValue(new Error("disk hiccup"));
-      const briefing = await service.assemble(now);
-      expect(briefing.mergedRecently).toBeUndefined();
-      expect(briefing.headline).toBe("Nothing needs you.");
-    });
-  });
-
   describe("personal reminders + agenda (NS2 F8c)", () => {
     it("readReminders parses bullets from the personal-reminders fixture note, unchecked first", async () => {
       vault.note.mockImplementation(async (id: string) => {
@@ -472,7 +424,6 @@ describe("BriefingService", () => {
         { summaryLines: vi.fn().mockResolvedValue([]) } as never,
         { readFindings: vi.fn().mockResolvedValue([]) } as never,
         { all: vi.fn().mockReturnValue([]) } as never,
-        { list: vi.fn().mockResolvedValue([]) } as never,
         dir,
         { child: () => ({ info: vi.fn(), warn: vi.fn(), debug: vi.fn() }) } as never,
         sinks as never,

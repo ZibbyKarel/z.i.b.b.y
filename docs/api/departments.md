@@ -4,6 +4,10 @@
 session were test-fixture-only (the now-required `GitHubConfig.username`); no
 department behaviour changed. This doc remains accurate. -->
 
+<!-- Reviewed 2026-11-12 (post-merge watch removed): apps/api/src/release/ lost the
+merge-watch store and `PostMergeWatchService`, and the `post-merge-red` signal from `rel`
+is gone. The Release department entry itself is unchanged. This doc remains accurate. -->
+
 <!-- Reviewed 2026-08-08 (get_status hang fix): apps/api/src/release/ changed
 this session — `ReleaseService`'s GitHub PR enrichment was parallelized and
 bounded with per-request timeouts (a fully sequential, untimed loop was

@@ -562,6 +562,23 @@ export type PrAddressCommentsState = PrRebaseState;
 export const PrFixCiStateSchema = PrRebaseStateSchema;
 export type PrFixCiState = PrRebaseState;
 
+/** `ScheduledTask.prCiTriage` lifecycle (see the field). */
+export const PrCiTriageStateSchema = z.enum([
+  "running",
+  "triaged",
+  "awaiting-approval",
+  "rerun",
+  "fix-started",
+  "parked",
+  "discarded",
+  "failed",
+]);
+export type PrCiTriageState = z.infer<typeof PrCiTriageStateSchema>;
+
+/** The triage agent's overall classification of a PR's failing CI. */
+export const PrCiTriageVerdictSchema = z.enum(["flaky", "infra", "code", "unclear"]);
+export type PrCiTriageVerdict = z.infer<typeof PrCiTriageVerdictSchema>;
+
 /** One reply ZIBBY posts on a review thread after the fixes are pushed (GraphQL thread node id + body). */
 export const PrThreadReplySchema = z
   .object({
@@ -916,6 +933,47 @@ export const ScheduledTaskSchema = z.object({
       approvalId: z.string().optional(),
       note: z.string().optional(),
       finishedAt: IsoDateTimeSchema.optional(),
+      /**
+       * Started by the PR automation heartbeat (`autoFixCi`), not an operator click. Server-written
+       * only. Such a run is never auto-pushed by the "click" rule: even `Fixed: all` parks the push
+       * approval, unless Autopilot is on (the `byAutopilot` path) and it is the operator's own PR.
+       */
+      auto: z.literal(true).optional(),
+      /** The `pr-ci-triage` task that led to this fix, when the heartbeat started it. */
+      triageTaskId: z.string().optional(),
+    })
+    .optional(),
+  /**
+   * Set on a `pr-ci-triage` task (the cheap read-only first step of the CI auto-fix). Server-written.
+   * - `running` — the triage agent is working;
+   * - `triaged` — the verdict was parsed, the heartbeat decides what follows;
+   * - `awaiting-approval` — a CI rerun waits for the operator (Autopilot off);
+   * - `rerun` — the failed GitHub Actions jobs were re-run;
+   * - `fix-started` — handed to `pr-fix-ci` (`fixTaskId`);
+   * - `parked` — the automation gave up and told the operator;
+   * - `discarded` — the rerun approval was rejected;
+   * - `failed` — no / invalid report, or the rerun errored.
+   */
+  prCiTriage: z
+    .object({
+      repo: z.string().min(1),
+      number: z.number().int().positive(),
+      url: z.string().min(1),
+      head: z.string().min(1),
+      headSha: z.string().min(1),
+      /** Non-ignored failing check names the heartbeat saw. */
+      failingChecks: z.array(z.string()).max(100),
+      /** The CI result being triaged. */
+      ciCompletedAt: IsoDateTimeSchema.optional(),
+      state: PrCiTriageStateSchema,
+      verdict: PrCiTriageVerdictSchema.optional(),
+      report: z.string().optional(),
+      approvalId: z.string().optional(),
+      rerunAt: IsoDateTimeSchema.optional(),
+      fixTaskId: z.string().optional(),
+      note: z.string().optional(),
+      /** Where the PR sits in the autopilot tree: the rerun's Autopilot check resolves here. */
+      autopilotAt: z.array(AutopilotLocationSchema).max(50).optional(),
     })
     .optional(),
   /** Set once dispatched: the started agent-run / workflow-run id. */

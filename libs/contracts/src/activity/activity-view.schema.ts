@@ -82,9 +82,8 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // the other operator decisions.
   "proposal-decided": "approvals",
   "briefing-generated": "briefing",
-  // NS2 F7b-2: the merge loop's head + its post-merge CI outcome — read with the
-  // other watcher discoveries (monitor-alert/department-scan) rather than a new
-  // group for two kinds.
+  // NS2 F7b-2: a merged PR — reads with the other watcher discoveries
+  // (monitor-alert/department-scan). `post-merge-outcome` is legacy (historic entries only).
   "merge-completed": "integrations",
   "post-merge-outcome": "integrations",
   // A signal-triggered automation's dispatch report (and the legacy handoff kind) —
@@ -103,6 +102,7 @@ export const ACTIVITY_GROUP_OF: Record<ActivityKind, ActivityGroup> = {
   // watcher-initiated dispatches and PR events (automation-dispatched/merge-completed).
   "pr-automation-started": "integrations",
   "pr-review-skipped": "integrations",
+  "pr-ci-autofix-parked": "integrations",
   // Phase 4: autopilot's let-through decisions and its on/off switch read with the
   // other gate decisions.
   "autopilot-action": "approvals",

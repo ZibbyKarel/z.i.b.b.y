@@ -9,6 +9,7 @@ import { TeamsModule } from "../teams/teams.module";
 import { WorkspaceModule } from "../workspace/workspace.module";
 import { INBOX_STATE_FILE, InboxStateStore } from "./inbox-state.store";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
+import { InboxCiTriageService } from "./inbox-ci-triage.service";
 import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { InboxIssuesService } from "./inbox-issues.service";
 import { InboxPrDiffService } from "./inbox-pr-diff.service";
@@ -46,6 +47,7 @@ export function resolveInboxStateFile(): string {
     InboxRebaseService,
     InboxAddressCommentsService,
     InboxFixCiService,
+    InboxCiTriageService,
     InboxPrDiffService,
     InboxPrThreadsService,
     // todo-16 — the PR automation heartbeat. AutopilotService (automation tree), SystemConfigStore,

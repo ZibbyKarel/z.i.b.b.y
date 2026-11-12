@@ -1,3 +1,5 @@
+import { promises as fs } from "node:fs";
+
 import { Inject, Injectable } from "@nestjs/common";
 import {
   AGENT_ID_REGEX,
@@ -50,8 +52,11 @@ export const VAULT_LINT_AUTOMATION_ID = "vault-lint";
 export const SECURITY_SCAN_AUTOMATION_ID = "security-scan";
 /** Stable id of the nightly Arch quality-audit system automation (F5c). */
 export const ARCH_AUDIT_AUTOMATION_ID = "arch-audit";
-/** Stable id of the post-merge CI-watch system automation (NS2 F7b-2). */
-export const POST_MERGE_WATCH_AUTOMATION_ID = "post-merge-watch";
+/**
+ * Seeded system automations that were removed (the post-merge watch feature).
+ * Their files are deleted on boot so a stale target/trigger never fails to parse.
+ */
+export const RETIRED_SYSTEM_AUTOMATION_IDS = ["post-merge-watch", "signal-post-merge-red"] as const;
 /** Stable id of the nightly PR-review-learning system automation (v1). */
 export const REVIEW_LEARN_AUTOMATION_ID = "review-learn";
 /** Stable id of the weekly external-skills update system automation. */
@@ -176,19 +181,6 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     system: true,
   },
   {
-    // NS2 F7b-2 — the post-merge CI watch. Seeded `enabled: true` (orchestrator
-    // addendum ruling #2): frequent (every 10 min) but bounded by each watch's own
-    // deadline and per-watch try/catch, so a huge backlog degrades gracefully.
-    id: POST_MERGE_WATCH_AUTOMATION_ID,
-    name: "Sledování po sloučení",
-    description:
-      "Každých 10 minut zkontroluje CI na cílové větvi po merge, který ZIBBY provedl; při červené připraví opravu.",
-    trigger: { type: "cron", expr: "*/10 * * * *" },
-    target: { type: "post-merge-watch" },
-    enabled: true,
-    system: true,
-  },
-  {
     // Weekly pull of installed external (GitHub) skills. Network-only, read-only
     // upstream; an unreachable repo just records `lastError`.
     id: EXTERNAL_DEPS_UPDATE_AUTOMATION_ID,
@@ -212,19 +204,6 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     target: {
       type: "task",
       text: "Prepare a fix for this critical vulnerability on its own branch. Do not push or merge — the PR is the gate.",
-      target: { kind: "department", id: "dev", name: "dev" },
-    },
-    enabled: true,
-    system: true,
-  },
-  {
-    id: "signal-post-merge-red",
-    name: "Červené CI po sloučení → Dev",
-    description: "Když CI po sloučení zčervená, předá to Devu jako task na prošetření a opravu.",
-    trigger: { type: "signal", kind: "post-merge-red", from: "rel" },
-    target: {
-      type: "task",
-      text: "Investigate the failing CI run and prepare a fix on its own branch. Do not push or merge — the PR is the gate.",
       target: { kind: "department", id: "dev", name: "dev" },
     },
     enabled: true,
@@ -288,7 +267,15 @@ export class AutomationsStorageService extends EntityFileStore<Automation> {
 
   async onModuleInit(): Promise<void> {
     await super.onModuleInit();
+    await this.retireSystem();
     await this.seedSystem();
+  }
+
+  /** Remove the seeded files of retired system automations (idempotent). */
+  private async retireSystem(): Promise<void> {
+    for (const id of RETIRED_SYSTEM_AUTOMATION_IDS) {
+      await fs.rm(this.resolveFile(id), { force: true });
+    }
   }
 
   /**

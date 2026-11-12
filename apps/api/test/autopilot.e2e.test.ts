@@ -77,6 +77,7 @@ describe("Autopilot API (e2e)", () => {
         autoReview: false,
         autoAddressComments: false,
         autoCommunicate: false,
+        autoFixCi: false,
       },
       companies: { acme: { autoReview: true } },
       teams: {},

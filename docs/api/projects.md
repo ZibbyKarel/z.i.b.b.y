@@ -63,6 +63,7 @@ company-merged "effective" context.
   gitRemote?: string;           // Phase 76 clone source, validated (see below)
   web?: { url: string };        // TODO 13 web-project marker; http(s) only — gates `requires: ["web"]` workflows
   healthCheck?: { url: string; intervalSec: number }; // TODO 11 — polled health URL, http(s) only, 30–3600 s (default 300); see project-health.md
+  ciIgnoredChecks?: string[];    // check-run names the PR inbox ignores for CI state (max 50 × 1–200 chars); exact case-insensitive match, `/regex/` = case-insensitive regex (invalid → matches nothing)
 }
 ```
 
@@ -171,9 +172,7 @@ rate-limit error, injectable `fetchImpl` for tests).
   live state, for the roadmap gate's merge poll. `getPr` mirrors `listOpen`'s error
   posture exactly (404 → `null`, 429/403 → rate-limit error, other non-2xx → throws).
   `isMerged` wraps it **fail-closed**: unknown, gone, unlinked or rate-limited all
-  read as `false`. That is the opposite of `PostMergeWatchService.rollup`'s fail-open
-  `"pending"`, and deliberately so — the watcher is reporting CI on an _already
-  merged_ sha, whereas this answers "may a dependent roadmap item dispatch now?"
+  read as `false`. That is deliberate — this answers "may a dependent roadmap item dispatch now?"
   A gate that guessed "merged" on an unreadable response would release work onto a
   base that does not yet contain its dependency, which is the exact failure phase 125
   exists to prevent.

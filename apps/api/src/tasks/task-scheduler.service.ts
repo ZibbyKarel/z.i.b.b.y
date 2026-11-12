@@ -55,6 +55,7 @@ import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service"
 import { TaskClassifierService } from "./task-classifier.service";
 import {
   PR_ADDRESS_COMMENTS_ARTIFACT,
+  PR_CI_TRIAGE_ARTIFACT,
   PR_DESCRIPTION_ARTIFACT,
   PR_FIX_CI_ARTIFACT,
   PR_REBASE_ARTIFACT,
@@ -1932,9 +1933,17 @@ export class TaskSchedulerService
         stopped?.prReview?.state !== "running" &&
         stopped?.prRebase?.state !== "running" &&
         stopped?.prAddressComments?.state !== "running" &&
-        stopped?.prFixCi?.state !== "running"
+        stopped?.prFixCi?.state !== "running" &&
+        stopped?.prCiTriage?.state !== "running"
       ) {
         return;
+      }
+      if (stopped.prCiTriage?.state === "running") {
+        await this.storage
+          .setPrCiTriage(taskId, (c) =>
+            c?.state === "running" ? { ...c, state: "failed", note: "interrupted" } : c,
+          )
+          .catch(() => undefined);
       }
     }
     const outcome: TaskOutcome = {
@@ -2067,6 +2076,36 @@ export class TaskSchedulerService
               });
             if (delivery?.summary) outcome.summary = delivery.summary;
           }
+          // CI auto-fix: record the triage verdict; the heartbeat decides what follows.
+          if (existing.prCiTriage?.state === "running") {
+            const artifact = await this.workflowRunner
+              .readArtifact(run.workflowRunId, PR_CI_TRIAGE_ARTIFACT)
+              .catch(() => null);
+            const delivery = await this.taskOutput
+              .parkPrCiTriage(existing, artifact?.content ?? "")
+              .catch(async (error: unknown) => {
+                this.log.warn("pr ci-triage park failed (soft)", {
+                  taskId,
+                  err: error instanceof Error ? error.message : String(error),
+                });
+                await this.storage
+                  .setPrCiTriage(taskId, (c) =>
+                    c ? { ...c, state: "failed", note: "park failed" } : c,
+                  )
+                  .catch(() => undefined);
+                return null;
+              });
+            if (delivery?.summary) outcome.summary = delivery.summary;
+          }
+        } else if (run.status === "failed") {
+          // A failed triage run must not stay `running`: the heartbeat would wait on it forever.
+          await this.storage
+            .setPrCiTriage(taskId, (c) =>
+              c?.state === "running"
+                ? { ...c, state: "failed", note: (run.failedReason ?? "run failed").slice(0, 300) }
+                : c,
+            )
+            .catch(() => undefined);
         }
         const task = await this.storage.writeOutcome(taskId, outcome);
         this.log.info("task outcome written", {

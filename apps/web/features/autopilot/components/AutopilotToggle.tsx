@@ -43,6 +43,7 @@ const HELP_KEYS = [
   "autoAddressComments",
   "autoImplement",
   "autoCommunicate",
+  "autoFixCi",
 ] as const;
 
 /**

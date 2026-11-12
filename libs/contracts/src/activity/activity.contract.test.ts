@@ -81,7 +81,7 @@ describe("ActivityEntrySchema", () => {
     expect(ActivityKindSchema.options).toContain("merge-completed");
   });
 
-  it("accepts an NS2 F7b-2 post-merge-outcome entry", () => {
+  it("still parses a legacy post-merge-outcome entry (historic logs)", () => {
     expect(
       ActivityEntrySchema.safeParse({
         ...base,

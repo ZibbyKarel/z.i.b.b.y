@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   InboxService,
   blockerOf,
+  ciDetails,
   ciState,
   myReviewState,
   reviewState,
@@ -103,6 +104,45 @@ describe("PR classification", () => {
       ]),
     ).toBe("failing");
     expect(ciState([{ status: "completed", conclusion: "action_required" }])).toBe("unknown");
+  });
+
+  it("ciState / ciDetails leave ignored checks out", () => {
+    const runs = [
+      {
+        name: "build",
+        status: "completed",
+        conclusion: "success",
+        completed_at: "2026-01-01T10:00:00Z",
+      },
+      {
+        name: "Review approved by everyone",
+        status: "completed",
+        conclusion: "failure",
+        completed_at: "2026-01-01T11:00:00Z",
+      },
+    ];
+    const ignored = ["review approved by everyone"];
+    expect(ciState(runs)).toBe("failing");
+    expect(ciState(runs, ignored)).toBe("passing");
+    expect(ciState([runs[1]!], ignored)).toBe("unknown");
+    expect(ciDetails(runs)).toMatchObject({
+      ciSettled: true,
+      ciFailingChecks: ["Review approved by everyone"],
+      ciCompletedAt: "2026-01-01T11:00:00.000Z",
+    });
+    expect(ciDetails(runs, ignored)).toEqual({
+      ciSettled: true,
+      ciFailingChecks: [],
+      ciCompletedAt: "2026-01-01T10:00:00.000Z",
+    });
+    expect(ciDetails([runs[1]!], ignored)).toEqual({ ciSettled: false, ciFailingChecks: [] });
+    expect(
+      ciDetails([
+        { name: "b", status: "completed", conclusion: "failure" },
+        { name: "a", status: "completed", conclusion: "timed_out" },
+        { name: "a", status: "in_progress", conclusion: null },
+      ]),
+    ).toMatchObject({ ciSettled: false, ciFailingChecks: ["a", "b"] });
   });
 
   it("blockerOf: ci > changes requested > conflict > ready > awaiting", () => {

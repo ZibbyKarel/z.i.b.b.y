@@ -109,7 +109,11 @@ non-COMMENTED review per reviewer: any CHANGES_REQUESTED → `changes-requested`
 any APPROVED → `approved`, else `none`) and `/commits/<sha>/check-runs` (any
 failure/cancelled/timed_out → `failing`, any not completed → `pending`, ≥1 and all
 success/neutral/skipped → `passing`, else `unknown`; combined commit status is not
-read). `blocker`: ci failing → changes requested → `mergeable === false` → approved
+read). Check-runs matched by the project's `ciIgnoredChecks` (e.g. a review-approval check that
+fails until approved) are left out; all ignored → `unknown`. With readable checks the PR also carries
+`ciSettled` (≥1 non-ignored check and all `completed`), `ciFailingChecks` (sorted, deduped names of
+failed non-ignored checks) and `ciCompletedAt` (latest `completed_at` among them, omitted if none).
+`blocker`: ci failing → changes requested → `mergeable === false` → approved
 and passing = `ready-to-merge` → `awaiting-review`.
 
 `section` (Phase 129 P1, `INBOX_PR_SECTIONS` order = display order): to-review →
@@ -480,6 +484,39 @@ The server does not verify CI is failing: the agent aborts with `Fixed: aborted 
 
 `GET /api/inbox/prs` rows carry `fixCi { taskId, state, finishedAt? }` (latest such task per PR;
 a `running` one whose task/run died reads `failed`).
+
+## Automatic CI fix on my PRs (`autoFixCi`)
+
+The Autopilot toggle `autoFixCi` (`docs/api/autopilot.md`) makes the PR automation heartbeat
+(`PrAutomationService`) handle the operator's OWN PRs whose CI settled red. It lifts no gate scope.
+The flow is triage -> rerun or fix -> park:
+
+1. **Triage.** `InboxCiTriageService.start` (`apps/api/src/inbox/inbox-ci-triage.service.ts`; no HTTP
+   endpoint) creates a task with the explicit read-only `pr-ci-triage` workflow target and stamps
+   `prCiTriage { repo, number, url, head, headSha, failingChecks, ciCompletedAt?, state: "running",
+autopilotAt? }`. It refuses (`PrRefusedError`) when the head moved off the `headSha` the heartbeat
+   saw, or when a triage of the PR is `running` / `triaged` / `awaiting-approval` and not dead. The agent
+   (`devops-incident-responder`) classifies each failing check and writes `zibby-pr-ci-triage.md`,
+   whose first non-empty line is `Triage: flaky|infra|code|unclear` (`parseCiTriageVerdict`).
+   `TaskOutputService.parkPrCiTriage` parses it: `triaged` + `verdict` + `report`, or `failed` ("no
+   verdict"). A stopped or failed run also ends `failed`, never stuck `running`.
+2. **flaky / infra -> rerun.** `rerun(taskId)` (from `triaged` only) re-runs the failed jobs now when
+   Autopilot is on, otherwise raises a `pr-ci-rerun` approval (`github.actions.rerun`, risk low,
+   `docs/api/approvals.md`) and the state is `awaiting-approval`. A rerun lists
+   `GET /repos/{repo}/actions/runs?head_sha=<headSha>` and POSTs `.../rerun-failed-jobs` for every
+   completed run that failed, timed out, was cancelled or failed to start -> `rerun` (+ `rerunAt`,
+   activity `pr-automation-started` "auto CI rerun", PR cache dropped). No failed run, or every POST
+   rejected -> `failed` with the HTTP status (a 403 means the token lacks Actions write). A rerun is not a
+   fix attempt. Approve claims `awaiting-approval` atomically; reject -> `discarded`.
+3. **code / unclear -> fix.** The heartbeat starts `pr-fix-ci` through `InboxFixCiService.start(input,
+{ auto: true, triageTaskId })` and calls `markFixStarted` (`fix-started`, `fixTaskId`). `prFixCi.auto`
+   means nobody clicked: `Fixed: all` is never pushed by the click rule. Under Autopilot the usual
+   push path still pushes onto the operator's own PR; otherwise the push waits as a `pr-fix-ci` approval.
+4. **Park.** `park(taskId, note)` -> `parked`, activity `pr-ci-autofix-parked` ("CI auto-fix gave up
+   on <repo>#<n>: <note>"), forwarded to the operator channel as a `run-parked` event.
+
+Caps (decided by the heartbeat): 2 reruns per head, 2 fix attempts per PR chain, and the same failure
+after a fix parks. `GET /api/inbox/prs` rows list the triage in `runs[]` with kind `ci-triage`.
 
 ## Rebase (`POST /api/inbox/prs/rebase`)
 

@@ -5,7 +5,7 @@ import type { Integration, Project } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
-import { InboxFixCiService } from "./inbox-fix-ci.service";
+import { InboxFixCiService, fixCiTaskText } from "./inbox-fix-ci.service";
 import { PrRefusedError } from "./inbox-rebase.service";
 import { ReviewRepoMismatchError } from "./inbox-review.service";
 
@@ -99,6 +99,26 @@ describe("InboxFixCiService", () => {
     });
   });
 
+  it("start opts stamp `auto` and `triageTaskId`; without opts neither is set", async () => {
+    await service.start(
+      { projectId: "acme", repo: "acme/app", number: 7 },
+      { auto: true, triageTaskId: "task_tri" },
+    );
+    expect((await storage.get("task_c1")).prFixCi).toMatchObject({
+      auto: true,
+      triageTaskId: "task_tri",
+    });
+    await storage.writeOutcome("task_c1", {
+      status: "error",
+      summary: "boom",
+      finishedAt: new Date().toISOString(),
+    });
+    await start();
+    const plain = (await storage.get("task_c2")).prFixCi;
+    expect(plain).not.toHaveProperty("auto");
+    expect(plain).not.toHaveProperty("triageTaskId");
+  });
+
   it("a colleague's PR is stamped ownPr false", async () => {
     pull.user = { login: "alice" };
     await start();
@@ -153,6 +173,27 @@ describe("InboxFixCiService", () => {
     expect(text).toContain("gh workflow run");
     expect(text).toContain("gh run rerun");
     expect(text).toContain(JSON.stringify("Fix it"));
+  });
+
+  it("the brief lists ignored checks only when there are some", async () => {
+    await start();
+    expect(createTask.mock.calls[0]?.[0].text).not.toContain("Ignore these checks");
+    const brief = {
+      repo: "acme/app",
+      number: 7,
+      url: "u",
+      title: "t",
+      head: "feat",
+      base: "main",
+      headSha: "sha1",
+    };
+    expect(fixCiTaskText(brief, [])).not.toContain("Ignore these checks");
+    const text = fixCiTaskText(brief, ["Review approved by everyone", "/lint/"]);
+    expect(text).toContain(
+      "Ignore these checks entirely — they are not CI of the code (e.g. review approvals) and never count as failing: `Review approved by everyone`, `/lint/`.",
+    );
+    const lines = text.split("\n");
+    expect(lines[lines.findIndex((l) => l.startsWith("2. "))! + 1]).toMatch(/^Ignore these/);
   });
 
   describe("approval runner", () => {

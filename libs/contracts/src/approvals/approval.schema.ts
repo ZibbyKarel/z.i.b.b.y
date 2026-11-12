@@ -106,6 +106,11 @@ export const ApprovalRunKindSchema = z.enum([
   // (Tier-3, covers push and replies). Never a force-push, never resolves a thread.
   "pr-address-comments",
   "pr-fix-ci",
+  // CI auto-fix — re-run the failed GitHub Actions jobs of the operator's own PR after the
+  // `pr-ci-triage` workflow called the failure flaky/infra (runId = the triage taskId; action
+  // `github.actions.rerun`; `detail` = verdict + report). Approved by Autopilot instead of
+  // queued when it is on; rejecting discards.
+  "pr-ci-rerun",
 ]);
 export type ApprovalRunKind = z.infer<typeof ApprovalRunKindSchema>;
 

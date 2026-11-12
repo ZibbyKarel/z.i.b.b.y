@@ -92,7 +92,8 @@ export function parseApprovalDetail(a: ContractApproval): DashboardApproval {
     a.kind === "pr-review" ||
     a.kind === "pr-rebase" ||
     a.kind === "pr-address-comments" ||
-    a.kind === "pr-fix-ci"
+    a.kind === "pr-fix-ci" ||
+    a.kind === "pr-ci-rerun"
   ) {
     const split = a.detail.indexOf("\n\n");
     if (split === -1) return { ...a, text: a.detail };
@@ -295,6 +296,7 @@ export function approvalOrigin(
     case "pr-rebase":
     case "pr-address-comments":
     case "pr-fix-ci":
+    case "pr-ci-rerun":
       return { origin: "pr-review", href: `/work/tasks/${encodeURIComponent(a.runId)}`, ...url };
     case "machine":
       return { origin: "chat", ...url };

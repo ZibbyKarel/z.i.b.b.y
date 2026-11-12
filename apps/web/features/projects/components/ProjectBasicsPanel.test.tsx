@@ -232,6 +232,46 @@ describe("ProjectBasicsPanel prOpenMode field (NS2 F0b)", () => {
   });
 });
 
+describe("ProjectBasicsPanel ciIgnoredChecks field", () => {
+  it("saves one trimmed entry per line, dropping empty lines", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave} />);
+    await user.type(screen.getByPlaceholderText("media-vault"), "Alpha");
+    await user.type(
+      screen.getByLabelText("Ignorované CI checky"),
+      "  Review approved by everyone {Enter}{Enter}/^lint/",
+    );
+    await user.click(screen.getByTestId("save-basics"));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ ciIgnoredChecks: ["Review approved by everyone", "/^lint/"] }),
+    );
+  });
+
+  it("clearing a stored list sends [] and an untouched empty field omits it", async () => {
+    const onSave = vi.fn();
+    const user = userEvent.setup();
+    const { unmount } = render(
+      <ProjectBasicsPanel
+        categories={[]}
+        isNew={false}
+        onSave={onSave}
+        project={{ id: "alpha", name: "Alpha", path: "~/a", ciIgnoredChecks: ["x"] }}
+      />,
+    );
+    expect(screen.getByLabelText("Ignorované CI checky")).toHaveValue("x");
+    await user.clear(screen.getByLabelText("Ignorované CI checky"));
+    await user.click(screen.getByTestId("save-basics"));
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ ciIgnoredChecks: [] }));
+    unmount();
+    const onSave2 = vi.fn();
+    render(<ProjectBasicsPanel isNew categories={[]} onSave={onSave2} />);
+    await user.type(screen.getByPlaceholderText("media-vault"), "B");
+    await user.click(screen.getByTestId("save-basics"));
+    expect(onSave2).toHaveBeenCalledWith(expect.objectContaining({ ciIgnoredChecks: undefined }));
+  });
+});
+
 describe("ProjectBasicsPanel gitRemote field (Phase 77)", () => {
   it("seeds the field from the existing project", () => {
     render(

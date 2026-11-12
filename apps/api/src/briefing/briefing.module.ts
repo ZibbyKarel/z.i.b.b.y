@@ -5,7 +5,6 @@ import { GoalsModule } from "../goals/goals.module";
 import { LimitsModule } from "../limits/limits.module";
 import { ArchModule } from "../arch/arch.module";
 import { ReleaseModule } from "../release/release.module";
-import { MergeWatchModule } from "../release/merge-watch.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MonitorsModule } from "../monitors/monitors.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
@@ -52,9 +51,6 @@ import { ClaudeCliBriefer } from "./claude-cli-briefer";
     // NS2 F5c — Arch's quality findings (ArchService.readFindings). Same leaf
     // position — one-directional, no cycle.
     ArchModule,
-    // NS2 F7b-2 — the merge loop's recently-merged extras array (MergeWatchStore
-    // read directly, no service needed). A leaf module — one-directional, no cycle.
-    MergeWatchModule,
   ],
   controllers: [BriefingController],
   providers: [ClaudeCliBriefer, BriefingService],

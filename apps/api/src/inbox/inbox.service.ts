@@ -20,6 +20,7 @@ import type {
 } from "@zibby/contracts";
 import { ActivityEventsService } from "../activity/activity-events.service";
 import { CredentialsStore } from "../integrations/credentials.store";
+import { isIgnoredCheck } from "./ci-checks";
 import { ProjectPrService, resolveGithubToken } from "../projects/project-pr.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ResolvedProjectService } from "../projects/resolved-project.service";
@@ -40,8 +41,10 @@ interface GhReview {
   commit_id?: string;
 }
 interface GhCheckRun {
+  name?: string;
   status?: string;
   conclusion?: string | null;
+  completed_at?: string | null;
 }
 interface GhPull {
   number?: number;
@@ -97,14 +100,47 @@ export function myVerdict(
   };
 }
 
-/** CI from check-runs only (no combined commit status). */
-export function ciState(runs: readonly GhCheckRun[]): InboxPrCi {
-  if (runs.some((r) => ["failure", "cancelled", "timed_out"].includes(r.conclusion ?? ""))) {
-    return "failing";
-  }
-  if (runs.some((r) => r.status !== "completed")) return "pending";
-  const ok = runs.every((r) => ["success", "neutral", "skipped"].includes(r.conclusion ?? ""));
-  return runs.length > 0 && ok ? "passing" : "unknown";
+const FAILED_CONCLUSIONS = ["failure", "cancelled", "timed_out"];
+
+/** The check-runs that count: those not matched by the project's `ciIgnoredChecks`. */
+function countedRuns(runs: readonly GhCheckRun[], ignored?: readonly string[]): GhCheckRun[] {
+  return runs.filter((r) => !(r.name && isIgnoredCheck(r.name, ignored)));
+}
+
+/** CI from check-runs only (no combined commit status); ignored checks are left out (all ignored → `unknown`). */
+export function ciState(runs: readonly GhCheckRun[], ignored?: readonly string[]): InboxPrCi {
+  const counted = countedRuns(runs, ignored);
+  if (counted.some((r) => FAILED_CONCLUSIONS.includes(r.conclusion ?? ""))) return "failing";
+  if (counted.some((r) => r.status !== "completed")) return "pending";
+  const ok = counted.every((r) => ["success", "neutral", "skipped"].includes(r.conclusion ?? ""));
+  return counted.length > 0 && ok ? "passing" : "unknown";
+}
+
+/** `ciSettled` / `ciFailingChecks` / `ciCompletedAt` over the non-ignored check-runs. */
+export function ciDetails(
+  runs: readonly GhCheckRun[],
+  ignored?: readonly string[],
+): Pick<InboxPr, "ciSettled" | "ciFailingChecks" | "ciCompletedAt"> {
+  const counted = countedRuns(runs, ignored);
+  const failing = [
+    ...new Set(
+      counted
+        .filter((r) => FAILED_CONCLUSIONS.includes(r.conclusion ?? ""))
+        .map((r) => r.name ?? ""),
+    ),
+  ]
+    .filter(Boolean)
+    .sort();
+  const completed = counted
+    .map((r) => (r.completed_at ? Date.parse(r.completed_at) : NaN))
+    .filter((t) => Number.isFinite(t));
+  return {
+    ciSettled: counted.length > 0 && counted.every((r) => r.status === "completed"),
+    ciFailingChecks: failing,
+    ...(completed.length > 0
+      ? { ciCompletedAt: new Date(Math.max(...completed)).toISOString() }
+      : {}),
+  };
 }
 
 export function blockerOf(pr: {
@@ -307,6 +343,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
       if (review) addRun(review, "review", review);
       if (fix) addRun(fix, "address-comments", fix);
       if (task.prFixCi) addRun(task.prFixCi, "fix-ci", task.prFixCi);
+      if (task.prCiTriage) addRun(task.prCiTriage, "ci-triage");
       if (rebase) addRun(rebase, "rebase");
       if (review) {
         reviews.set(`${review.repo.toLowerCase()}#${review.number}`, {
@@ -468,7 +505,9 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
               ).catch(() => null)
             : Promise.resolve({ check_runs: [] }),
         ]);
-        const ci = checks ? ciState(checks.check_runs ?? []) : ("unknown" as const);
+        const ignored = project.ciIgnoredChecks;
+        const ci = checks ? ciState(checks.check_runs ?? [], ignored) : ("unknown" as const);
+        const ciExtra = checks ? ciDetails(checks.check_runs ?? [], ignored) : {};
         const review = reviewState(Array.isArray(reviews) ? reviews : []);
         const mergeable = pull.mergeable ?? null;
         const unresolvedThreads =
@@ -496,6 +535,7 @@ export class InboxService implements OnModuleInit, OnModuleDestroy {
           ...(pull.updated_at ? { updatedAt: new Date(pull.updated_at).toISOString() } : {}),
           draft: pull.draft === true,
           ci,
+          ...ciExtra,
           review,
           mergeable,
           ...(pull.mergeable_state === "behind" ? { behind: true } : {}),

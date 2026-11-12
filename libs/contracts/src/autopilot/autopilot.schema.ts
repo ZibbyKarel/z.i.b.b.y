@@ -40,7 +40,7 @@ export const FULL_AUTOPILOT_SCOPE: AutopilotScope = {
 /**
  * The autopilot toggles, one Global -> Company -> Team override tree. Precedence
  * team > company > global. Each key starts the work (`autoReview` / `autoAddressComments` /
- * `autoImplement`) in both levels; only while `full` does it also let the gate overlay act on
+ * `autoImplement` / `autoFixCi`) in both levels; only while `full` does it also let the gate overlay act on
  * its outcome ({@link AUTOPILOT_SCOPE_TOGGLE}). While `off` the outcome waits for approval.
  */
 export const AutomationTogglesSchema = z
@@ -50,6 +50,8 @@ export const AutomationTogglesSchema = z
     autoImplement: z.boolean(),
     // Default: trees written before communication joined the tree.
     autoCommunicate: z.boolean().default(false),
+    // Default: trees written before the PR CI auto-fix joined the tree. Lifts no gate scope.
+    autoFixCi: z.boolean().default(false),
   })
   .strict();
 export type AutomationToggles = z.infer<typeof AutomationTogglesSchema>;
@@ -60,6 +62,7 @@ export const NO_AUTOMATION: AutomationToggles = {
   autoAddressComments: false,
   autoImplement: false,
   autoCommunicate: false,
+  autoFixCi: false,
 };
 
 /** The tree key each gate-overlay class follows. */
@@ -73,6 +76,7 @@ export const AUTOPILOT_SCOPE_TOGGLE: Readonly<Record<AutopilotScopeKey, Automati
 export const AutomationOverrideSchema = AutomationTogglesSchema.extend({
   // No default here: a filled-in `false` would override the level above instead of inheriting.
   autoCommunicate: z.boolean().optional(),
+  autoFixCi: z.boolean().optional(),
 }).partial();
 export type AutomationOverride = z.infer<typeof AutomationOverrideSchema>;
 

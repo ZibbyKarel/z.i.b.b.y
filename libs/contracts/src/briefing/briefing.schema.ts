@@ -137,8 +137,6 @@ export const BriefingSchema = z.object({
   /** NS2 F6c — heartbeat watchers currently probing `stale` (fail-open: a stale
    * watcher is a briefing line, never a red /health). Absent when none are stale. */
   staleWatchers: z.array(z.string()).max(20).optional(),
-  /** NS2 F7b-2 — merged-work celebration + post-merge CI outcomes per project. */
-  mergedRecently: z.array(z.string()).max(50).optional(),
   /** NS2 F8c — today's personal calendar events (from the Ops-owned calendar reads). */
   personalAgenda: z.array(z.string()).max(50).optional(),
   /** NS2 F8c — open personal reminders parsed from the `personal-reminders` vault note. */

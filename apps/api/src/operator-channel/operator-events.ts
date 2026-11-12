@@ -58,7 +58,7 @@ const isPrUrl = (url: string | undefined): url is string =>
 
 /** PR-inbox tasks report through their own approvals, not a "run completed" line. */
 const isPrInboxTask = (t: ScheduledTask): boolean =>
-  !!(t.prReview || t.prRebase || t.prAddressComments || t.prFixCi);
+  !!(t.prReview || t.prRebase || t.prAddressComments || t.prFixCi || t.prCiTriage);
 
 /**
  * Map one EXISTING activity entry to an operator event, or `null` — the default for
@@ -69,7 +69,7 @@ const isPrInboxTask = (t: ScheduledTask): boolean =>
  * - `approval-requested` → `review-finished` (a `pr-review` approval), `budget-cap`
  *   (`spend-past-cap`) or `approval-waiting`
  * - `workflow-parked` (retries/limit only) / `goal-parked` → `run-parked`
- * - `monitor-alert`, `post-merge-outcome` with a fix task → `ci-red` (being fixed)
+ * - `monitor-alert` → `ci-red` (being fixed)
  * - `briefing-generated` → `briefing`
  * - `autopilot-action` → `autopilot-action` (Phase 4); `autopilot-changed` (on/off) is not pushed
  */
@@ -189,17 +189,19 @@ export async function toOperatorEvent(
         title: entry.summary,
         path: "/activity/runs",
       });
-    case "post-merge-outcome":
-      // Only the red outcome dispatches a fix task (and so rides `taskId`).
-      if (!refs.taskId) return null;
+    case "pr-ci-autofix-parked": {
+      // CI auto-fix gave up on a PR: a human has to look (no approval behind it).
+      const m = /^(.+)#(\d+)$/.exec(refs.itemId ?? "");
+      const prUrl = m ? `https://github.com/${m[1]}/pull/${m[2]}` : undefined;
       return event({
-        kind: "ci-red",
-        target: `${refs.projectId ?? ""}/${refs.itemId ?? refs.taskId}`,
-        state: "fixing",
+        kind: "run-parked",
+        target: refs.itemId ?? entry.id,
+        state: "ci-autofix-parked",
         title: entry.summary,
-        taskId: refs.taskId,
-        path: `/work/tasks/${refs.taskId}`,
+        ...(refs.taskId ? { taskId: refs.taskId, path: `/work/tasks/${refs.taskId}` } : {}),
+        ...(prUrl && isPrUrl(prUrl) ? { prUrl } : {}),
       });
+    }
     case "briefing-generated":
       return event({
         kind: "briefing",

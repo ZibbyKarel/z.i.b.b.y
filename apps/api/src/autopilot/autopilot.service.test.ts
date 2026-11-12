@@ -86,6 +86,7 @@ describe("AutopilotService", () => {
     autoAddressComments: false,
     autoImplement: false,
     autoCommunicate: false,
+    autoFixCi: false,
     ...over,
   });
 

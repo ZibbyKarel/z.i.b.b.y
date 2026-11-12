@@ -27,7 +27,8 @@ In `Schvalovat` the page also pops a system notification for every new approval
       "autoReview": true,
       "autoAddressComments": true,
       "autoImplement": false,
-      "autoCommunicate": false
+      "autoCommunicate": false,
+      "autoFixCi": false
     },
     "companies": { "acme": { "autoCommunicate": true } },
     "teams": { "frontend": { "autoReview": false } }
@@ -38,17 +39,18 @@ In `Schvalovat` the page also pops a system notification for every new approval
 `level` is `off` or `full`, and `by` is `operator` or `chat`. A missing or malformed file
 counts as `off`.
 
-## The four toggles
+## The five toggles
 
-`automation` is one Global -> Company -> Team tree of four toggles. Each toggle starts the work
+`automation` is one Global -> Company -> Team tree of five toggles. Each toggle starts the work
 in both levels, and while `full` also lets the gate overlay act on its outcome:
 
-| Toggle                | Starts                                             | Gate class (`scope`) it lifts                                                            |
-| --------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| `autoReview`          | PR-inbox code reviews (`PrAutomationService`)      | `reviews`: `pr-review` and the pr-review `workflow-gate` sign-off                        |
-| `autoAddressComments` | addressing review comments (`PrAutomationService`) | `comments`: `pr-address-comments` (fix push, thread replies), and a hook `gh.pr_comment` |
-| `autoImplement`       | roadmap pickup (roadmap tick)                      | none                                                                                     |
-| `autoCommunicate`     | none (channel items arrive on their own)           | `communication`: `channel` replies (GitHub, GitLab, Jira, Slack, …)                      |
+| Toggle                | Starts                                                               | Gate class (`scope`) it lifts                                                            |
+| --------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `autoReview`          | PR-inbox code reviews (`PrAutomationService`)                        | `reviews`: `pr-review` and the pr-review `workflow-gate` sign-off                        |
+| `autoAddressComments` | addressing review comments (`PrAutomationService`)                   | `comments`: `pr-address-comments` (fix push, thread replies), and a hook `gh.pr_comment` |
+| `autoImplement`       | roadmap pickup (roadmap tick)                                        | none                                                                                     |
+| `autoCommunicate`     | none (channel items arrive on their own)                             | `communication`: `channel` replies (GitHub, GitLab, Jira, Slack, …)                      |
+| `autoFixCi`           | PR CI triage + fix on the operator's own PRs (`PrAutomationService`) | none; a CI rerun under `off` parks as a `pr-ci-rerun` approval (`github.actions.rerun`)  |
 
 `companies` / `teams` are keyed by id and hold only the toggles the node overrides. Precedence is
 team > company > global (`resolveAutopilotAutomation`; `AutopilotService.automationFor`). The

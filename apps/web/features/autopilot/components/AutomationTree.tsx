@@ -32,6 +32,7 @@ export const AUTOMATION_KEYS: readonly AutomationKey[] = [
   "autoAddressComments",
   "autoImplement",
   "autoCommunicate",
+  "autoFixCi",
 ];
 
 type Level = "companies" | "teams";

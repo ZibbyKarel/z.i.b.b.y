@@ -13,18 +13,6 @@
     "system": true
   },
   {
-    "id": "release-post-merge-red",
-    "from": "rel",
-    "signalKind": "post-merge-red",
-    "to": {
-      "kind": "department",
-      "id": "dev"
-    },
-    "tier": 2,
-    "enabled": true,
-    "system": true
-  },
-  {
     "id": "arch-architecture",
     "from": "qa",
     "signalKind": "*",

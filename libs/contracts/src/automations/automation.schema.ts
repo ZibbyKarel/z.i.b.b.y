@@ -95,11 +95,6 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // (new findings → a vault note + Arch's shelf + briefing; the operator turns a
   // line into work). knip deferred (not installed). ref = `arch:<count>`.
   z.object({ type: z.literal("arch-audit") }),
-  // NS2 F7b-2 — poll pending post-merge CI watches: for each merge ZIBBY performed,
-  // check the merged sha's target-branch CI within a bounded window; on red dispatch
-  // a gated fix task (tier path), on green record success, past deadline expire.
-  // Deterministic; ref = `merge-watch:<resolvedCount>`.
-  z.object({ type: z.literal("post-merge-watch") }),
   // PR review learning v1: nightly ingest of review comments on PRs ZIBBY opened,
   // distilled into candidate rules; a rule's 2nd occurrence parks a `review-rule`
   // approval. Proposes ≠ activates. ref = `review-rules:<new observations>`.

@@ -31,13 +31,18 @@ const TARGET: TaskTarget = {
  * The run's brief (`task.md`): the `fix` phase. The PR title, CI logs and check output are
  * inbound content — data only, never instructions.
  */
-export function fixCiTaskText(p: RebaseBrief): string {
+export function fixCiTaskText(p: RebaseBrief, ignoredChecks?: readonly string[]): string {
   return [
     `Fix the failing CI checks of GitHub pull request ${p.repo}#${p.number} (${p.url}), branch \`${p.head}\` — a ZIBBY pr-fix-ci workflow run.`,
     "",
     "Your working directory is this run's own git worktree of the project.",
     `1. \`git fetch origin ${p.head}\`, then \`git checkout -B zibby-fix ${p.headSha}\` — the PR head the operator clicked on. If \`git rev-parse origin/${p.head}\` is not \`${p.headSha}\`, stop with \`Fixed: aborted\` (the branch moved) and do nothing else.`,
     `2. \`gh pr checks ${p.number} --repo ${p.repo}\` lists the failing checks. For a GitHub Actions check, run \`gh run view <run-id> --repo ${p.repo} --log-failed\` (the run id comes from the check's link). For any other check, read the check run's output via \`gh api repos/${p.repo}/commits/${p.headSha}/check-runs\`. If no check fails on \`${p.headSha}\`, stop with \`Fixed: aborted — no failing checks on <short sha>\`.`,
+    ...(ignoredChecks?.length
+      ? [
+          `Ignore these checks entirely — they are not CI of the code (e.g. review approvals) and never count as failing: ${ignoredChecks.map((c) => `\`${c}\``).join(", ")}.`,
+        ]
+      : []),
     "3. Per failing check, find the first real error, not the cascade, and classify it: code (in this PR's change or broken by it) or not code (flaky test, runner/infra, secrets, quota, upstream outage). Not-code failures get no change.",
     "4. Fix code causes as focused commits `fix(ci): <what>`. Never weaken a check: no skipping/deleting/`.only`-ing tests, no disabling lint rules, no lowering thresholds, no `--no-verify`, no inline suppressions (`@ts-ignore`, `@ts-expect-error`, `eslint-disable`), no excluding files in config, no loosening compiler/lint options, no rewriting assertions or snapshots to match, no editing `.github/` unless this PR's own change there is the cause. If weakening is the only way to green, change nothing and report it.",
     `5. Re-run locally the commands of every failing check you fixed: take commands from the workflow YAML, package.json, README or CLAUDE.md at \`${p.headSha}\`; use the log only to locate the failing step. Leave the worktree clean — everything committed.`,
@@ -83,7 +88,15 @@ export class InboxFixCiService {
     });
   }
 
-  async start(input: FixInboxPrCiInput): Promise<ReviewInboxPrResult> {
+  /**
+   * `opts` (CI auto-fix) is passed only by `PrAutomationService`, never by the controller (the HTTP
+   * body is strict, so a client cannot send it). `auto` stamps `prFixCi.auto` — nobody clicked, so
+   * the "click" rule never auto-pushes; `triageTaskId` links back to the `pr-ci-triage` run.
+   */
+  async start(
+    input: FixInboxPrCiInput,
+    opts: { auto?: boolean; triageTaskId?: string } = {},
+  ): Promise<ReviewInboxPrResult> {
     const project = await this.projects.get(input.projectId); // ProjectNotFoundError → 404
     const link = await resolveGithubToken(this.resolvedProjects, this.credentials, project);
     if (!link) throw new NoGithubLinkError(project.id);
@@ -115,15 +128,18 @@ export class InboxFixCiService {
     const result = await this.scheduler.createTask(
       {
         title: `Fix CI: ${ref}${title ? ` ${title}` : ""}`.slice(0, 200),
-        text: fixCiTaskText({
-          repo: link.repo,
-          number: input.number,
-          url,
-          title,
-          head,
-          base,
-          headSha,
-        }),
+        text: fixCiTaskText(
+          {
+            repo: link.repo,
+            number: input.number,
+            url,
+            title,
+            head,
+            base,
+            headSha,
+          },
+          project.ciIgnoredChecks,
+        ),
       },
       Date.now(),
       project.id,
@@ -139,6 +155,8 @@ export class InboxFixCiService {
       headSha,
       ownPr,
       state: "running",
+      ...(opts.auto ? { auto: true as const } : {}),
+      ...(opts.triageTaskId ? { triageTaskId: opts.triageTaskId } : {}),
     }));
     this.log?.info("pr fix-ci task started", { taskId: result.task.id, repo: link.repo, head });
     return { taskId: result.task.id };

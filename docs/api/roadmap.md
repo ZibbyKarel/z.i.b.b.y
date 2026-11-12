@@ -738,7 +738,7 @@ bogus release of the epic itself).
 1. **Eager** — `ProjectPrService.recordMerge` (the merge loop's head, reached
    only from the operator-triggered `POST /projects/:id/prs/:number/merge`
    route) fires `void this.roadmapGate.onMerge(projectId, number).catch(() =>
-{})` in the same spot it already records `merge-completed` + a `MergeWatch`.
+{})` in the same spot it already records `merge-completed`.
    Deliberately **unawaited** (fire-and-forget — the operator's merge
    response must never wait on roadmap bookkeeping) and **independently
    caught** right there — not just relying on `merge()`'s own
@@ -753,9 +753,7 @@ bogus release of the epic itself).
    "github rate limited", no github link → not found) — **fail-CLOSED**:
    any failure (including a thrown rate-limit) resolves to `false`, so an
    unreadable PR state never releases a downstream item. This is the
-   opposite posture from `PostMergeWatchService.rollup`'s fail-OPEN
-   `"pending"`, which is watching an ALREADY-merged sha's CI outcome, not
-   gating a fresh dispatch. A periodic call is 125h's job, same as
+   opposite of a fail-open status read: this gates a fresh dispatch. A periodic call is 125h's job, same as
    `reconcileRunning`.
 
 Both signals converge on the same private `markDone` → `lifecycle: "done"` →

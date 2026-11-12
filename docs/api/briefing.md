@@ -1,5 +1,9 @@
 # Briefing (Phase 6.2)
 
+<!-- Reviewed 2026-11-12 (post-merge watch removed): the briefing no longer reads merge
+watches, so the `mergedRecently` extras and the "## Merged" block are gone; old stored
+briefings that still carry the field parse fine. Nothing else here changed. -->
+
 > "Two bugs came in overnight — both fixed, PRs up for review. Company X asked about
 > feature Y; I answered. Nothing else needs you." — the butler's briefing, not a
 > firehose.

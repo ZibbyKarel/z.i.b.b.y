@@ -1,4 +1,4 @@
-import { Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { Injectable, type OnModuleDestroy, type OnModuleInit, Optional } from "@nestjs/common";
 import {
   type AutopilotLocation,
   type InboxPr,
@@ -17,7 +17,10 @@ import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
 import { ScheduledTasksStorageService } from "../tasks/scheduled-tasks.storage.service";
 import { TeamsStorageService } from "../teams/teams.storage.service";
+import { type CiFixRun, type CiTriageRun, decideCiAutofix } from "./ci-autofix";
 import { InboxAddressCommentsService } from "./inbox-address-comments.service";
+import { InboxCiTriageService } from "./inbox-ci-triage.service";
+import { InboxFixCiService } from "./inbox-fix-ci.service";
 import { InboxReviewService, ReviewOutOfScopeError } from "./inbox-review.service";
 import { InboxService, isDeadTask } from "./inbox.service";
 import { selectReviewLevel } from "./select-review-level";
@@ -45,6 +48,10 @@ const errMsg = (error: unknown): string => (error instanceof Error ? error.messa
  * - **`autoAddressComments`** — the operator's own PR with unresolved
  *   threads (any review state), same head dedupe → `InboxAddressCommentsService.start(…, { auto: true })`. Such a
  *   run never auto-pushes: its push always parks as an approval (Tier 3 — nobody clicked).
+ * - **`autoFixCi`** ("Automatická oprava CI mých PRs") — the operator's own non-draft PR whose CI
+ *   settled red (ignored checks left out) → the step {@link decideCiAutofix} picks: a cheap
+ *   `pr-ci-triage` run, a rerun of the failed jobs (flaky/infra), an auto `pr-fix-ci` run, or
+ *   parking it for the operator. Waits while address-comments is in flight on the same PR.
  *
  * Throttled to {@link PR_AUTOMATION_MAX_STARTS_PER_TICK} starts per tick. Fail open per PR; a
  * `listPrs` failure ends the tick quietly. Unreadable task storage ends it too — without the
@@ -80,6 +87,8 @@ export class PrAutomationService
     private readonly systemConfig: SystemConfigStore,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     logger: LoggerService,
+    @Optional() private readonly ciTriage?: InboxCiTriageService,
+    @Optional() private readonly fixCi?: InboxFixCiService,
   ) {
     super();
     this.log = logger.child(PrAutomationService.name);
@@ -132,6 +141,8 @@ export class PrAutomationService
     }
     const reviewRuns = runsOf(tasks, (t) => t.prReview);
     const addressRuns = runsOf(tasks, (t) => t.prAddressComments);
+    const triageRuns = ciTriageRunsOf(tasks);
+    const fixRuns = ciFixRunsOf(tasks);
     let started = 0;
     for (const pr of prs) {
       if (started >= PR_AUTOMATION_MAX_STARTS_PER_TICK) break;
@@ -151,6 +162,7 @@ export class PrAutomationService
         const effective = {
           autoReview: resolved.some((c) => c.autoReview),
           autoAddressComments: resolved.some((c) => c.autoAddressComments),
+          autoFixCi: resolved.some((c) => c.autoFixCi),
         };
         if (
           effective.autoReview &&
@@ -166,6 +178,11 @@ export class PrAutomationService
         ) {
           await this.startAddressing(pr, places);
           started++;
+        } else if (effective.autoFixCi && !addressingInFlight(pr, addressRuns)) {
+          const key = prKey(pr);
+          if (await this.stepCiAutofix(pr, places, triageRuns.get(key), fixRuns.get(key))) {
+            started++;
+          }
         }
       } catch (error) {
         this.log.warn("pr automation: one PR failed — skipped", {
@@ -195,7 +212,9 @@ export class PrAutomationService
         ),
       ].map((config) => config.catch(() => null)),
     );
-    return resolved.some((c) => c?.autoReview === true || c?.autoAddressComments === true);
+    return resolved.some(
+      (c) => c?.autoReview === true || c?.autoAddressComments === true || c?.autoFixCi === true,
+    );
   }
 
   /** False when the review was skipped: none of the PR's files is owned by the operator's teams. */
@@ -248,6 +267,59 @@ export class PrAutomationService
     this.record(pr, taskId, `auto address comments ${pr.repo}#${pr.number}`);
   }
 
+  /**
+   * One CI auto-fix step for one of my PRs ({@link decideCiAutofix}). True when it started work
+   * (a triage, a rerun or a fix) — parking is not a start.
+   */
+  private async stepCiAutofix(
+    pr: InboxPr,
+    at: AutopilotLocation[],
+    triages: CiTriageRun[] = [],
+    fixes: CiFixRun[] = [],
+  ): Promise<boolean> {
+    const ciTriage = this.ciTriage;
+    const fixCi = this.fixCi;
+    if (!ciTriage || !fixCi || !pr.headSha) return false;
+    const step = decideCiAutofix(pr, triages, fixes);
+    switch (step.kind) {
+      case "none":
+        return false;
+      case "triage": {
+        const project = await this.projects.get(pr.projectId);
+        const { taskId } = await ciTriage.start({
+          projectId: pr.projectId,
+          repo: pr.repo,
+          number: pr.number,
+          title: pr.title,
+          headSha: pr.headSha,
+          failingChecks: [...(pr.ciFailingChecks ?? [])],
+          ...(pr.ciCompletedAt ? { ciCompletedAt: pr.ciCompletedAt } : {}),
+          ...(project.ciIgnoredChecks?.length ? { ignoredChecks: project.ciIgnoredChecks } : {}),
+          autopilotAt: at,
+        });
+        this.record(pr, taskId, `auto CI triage ${pr.repo}#${pr.number}`);
+        return true;
+      }
+      case "rerun": {
+        // The service records the rerun itself; `failed` is parked on the next tick.
+        const outcome = await ciTriage.rerun(step.triageTaskId);
+        return outcome !== "failed";
+      }
+      case "fix": {
+        const { taskId } = await fixCi.start(
+          { projectId: pr.projectId, repo: pr.repo, number: pr.number, title: pr.title },
+          { auto: true, triageTaskId: step.triageTaskId },
+        );
+        await ciTriage.markFixStarted(step.triageTaskId, taskId);
+        this.record(pr, taskId, `auto CI fix ${pr.repo}#${pr.number}`);
+        return true;
+      }
+      case "park":
+        await ciTriage.park(step.triageTaskId, step.note);
+        return false;
+    }
+  }
+
   private record(pr: InboxPr, taskId: string, summary: string): void {
     void this.activity.record({
       kind: "pr-automation-started",
@@ -277,6 +349,62 @@ export function teamsOfPr(pr: InboxPr, teams: readonly Team[]): string[] {
   return teams
     .filter((t) => t.slug && owners.some((o) => teamSlugMatches(o, t.slug ?? "")))
     .map((t) => t.id);
+}
+
+const prKey = (pr: { repo: string; number: number }): string =>
+  `${pr.repo.toLowerCase()}#${pr.number}`;
+
+/** Address-comments in flight on the PR: its push and a CI fix would race for the same branch. */
+function addressingInFlight(pr: InboxPr, runs: Map<string, PrRun[]>): boolean {
+  return (runs.get(prKey(pr)) ?? []).some(
+    (r) => r.state === "running" || r.state === "awaiting-approval",
+  );
+}
+
+/** Past `pr-ci-triage` runs per `repo#number` (lowercased repo). */
+function ciTriageRunsOf(tasks: ScheduledTask[]): Map<string, CiTriageRun[]> {
+  const runs = new Map<string, CiTriageRun[]>();
+  for (const task of tasks) {
+    const t = task.prCiTriage;
+    if (!t) continue;
+    const key = prKey(t);
+    runs.set(key, [
+      ...(runs.get(key) ?? []),
+      {
+        taskId: task.id,
+        headSha: t.headSha,
+        state: t.state,
+        ...(t.verdict ? { verdict: t.verdict } : {}),
+        failingChecks: t.failingChecks,
+        ...(t.ciCompletedAt ? { ciCompletedAt: t.ciCompletedAt } : {}),
+        ...(t.note ? { note: t.note } : {}),
+        dead: isDeadTask(task),
+      },
+    ]);
+  }
+  return runs;
+}
+
+/** Past `pr-fix-ci` runs per `repo#number` (lowercased repo) — clicked ones too: they spend the chain. */
+function ciFixRunsOf(tasks: ScheduledTask[]): Map<string, CiFixRun[]> {
+  const runs = new Map<string, CiFixRun[]>();
+  for (const task of tasks) {
+    const f = task.prFixCi;
+    if (!f) continue;
+    const key = prKey(f);
+    runs.set(key, [
+      ...(runs.get(key) ?? []),
+      {
+        taskId: task.id,
+        headSha: f.headSha,
+        state: f.state,
+        ...(f.fixedSha ? { fixedSha: f.fixedSha } : {}),
+        ...(f.triageTaskId ? { triageTaskId: f.triageTaskId } : {}),
+        dead: isDeadTask(task),
+      },
+    ]);
+  }
+  return runs;
 }
 
 const headKey = (pr: InboxPr): string =>

@@ -14,6 +14,7 @@ const tree: AutopilotAutomation = {
     autoReview: false,
     autoAddressComments: false,
     autoCommunicate: false,
+    autoFixCi: false,
   },
   companies: { shoptet: { autoReview: true } },
   teams: { devrel: { autoReview: false, autoAddressComments: true } },
@@ -26,6 +27,7 @@ describe("resolveAutopilotAutomation", () => {
       autoReview: true,
       autoAddressComments: true,
       autoCommunicate: true,
+      autoFixCi: true,
     };
     expect(
       resolveAutopilotAutomation({ level: "off", automation: { ...tree, global: all } }, {}),
@@ -43,14 +45,30 @@ describe("resolveAutopilotAutomation", () => {
       autoReview: false,
       autoAddressComments: true,
       autoCommunicate: false,
+      autoFixCi: false,
     });
     expect(resolveAutopilotAutomation(s, { companyId: "shoptet", teamId: "frontend" })).toEqual({
       autoImplement: true,
       autoReview: true,
       autoAddressComments: false,
       autoCommunicate: false,
+      autoFixCi: false,
     });
     expect(resolveAutopilotAutomation(s, { teamId: "gone" })).toEqual(tree.global);
+  });
+});
+
+describe("autoFixCi", () => {
+  it("defaults to false for trees written before it existed, and is overridable per node", () => {
+    const legacy: Record<string, boolean> = { ...NO_AUTOMATION };
+    delete legacy.autoFixCi;
+    expect(AutomationTogglesSchema.parse(legacy).autoFixCi).toBe(false);
+    const s = {
+      level: "full" as const,
+      automation: { ...tree, companies: { shoptet: { autoFixCi: true } } },
+    };
+    expect(resolveAutopilotAutomation(s, {}).autoFixCi).toBe(false);
+    expect(resolveAutopilotAutomation(s, { companyId: "shoptet" }).autoFixCi).toBe(true);
   });
 });
 

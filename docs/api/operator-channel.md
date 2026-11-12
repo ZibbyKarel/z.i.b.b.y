@@ -121,7 +121,7 @@ never sent.
 | `approval-waiting` | 3    | any other `approval-requested` (including the roadmap question without an approval id). Skipped when autopilot decided it   |
 | `budget-cap`       | 3    | `approval-requested` with action `spend-past-cap`                                                                           |
 | `run-parked`       | 3    | `workflow-parked` (reason `retries`/`limit` only) and `goal-parked`                                                         |
-| `ci-red`           | 2    | `monitor-alert`, and a `post-merge-outcome` that dispatched a fix task                                                      |
+| `ci-red`           | 2    | `monitor-alert`                                                                                                             |
 | `briefing`         | 2    | `briefing-generated` (off by default)                                                                                       |
 | `autopilot-action` | 2    | `autopilot-action` (a gate or approval autopilot let through; the on/off switch is not pushed). See `docs/api/autopilot.md` |
 

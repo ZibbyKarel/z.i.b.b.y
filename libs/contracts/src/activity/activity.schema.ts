@@ -97,11 +97,10 @@ export const ActivityKindSchema = z.enum([
   // NS2 F5a/F5c — a department watcher completed a scheduled scan (Tier-1, silent +
   // recorded): new findings rode a proposal note; a critical one dispatched a gated task.
   "department-scan",
-  // NS2 F7b-2. An operator-merged PR (through ZIBBY's gated endpoint) — the merge
-  // loop's head; the post-merge watch rides its sha.
+  // NS2 F7b-2. An operator-merged PR (through ZIBBY's gated endpoint).
   "merge-completed",
-  // NS2 F7b-2. The merged sha's target-branch CI resolved (green: silent Tier-1;
-  // red: a gated fix task dispatched, riding taskId) or the watch window expired.
+  // legacy: historic entries only — the post-merge watch that wrote it was removed;
+  // kept so old activity history still parses.
   "post-merge-outcome",
   // LEGACY (read-only): written by the retired handoff engine. Kept so old activity
   // history still parses; nothing emits it any more (signal-triggered automations
@@ -129,6 +128,9 @@ export const ActivityKindSchema = z.enum([
   // on its own. Rides `projectId`, `taskId` and `itemId` = `<repo>#<n>`. Posting the review
   // and pushing the fixes both stay behind their approvals.
   "pr-automation-started",
+  // CI auto-fix gave up on a PR (caps reached, same failure after a fix, rerun failed): parked,
+  // the operator is told. Rides `projectId`, `taskId` and `itemId` = `<repo>#<n>`.
+  "pr-ci-autofix-parked",
   // review-scope (Tier-1 — silent + recorded). The PR heartbeat did NOT review a PR because none
   // of its changed files is owned (CODEOWNERS of the base branch) by the operator or their teams.
   // No task, no approval. Rides `projectId` and `itemId` = `<repo>#<n>`.

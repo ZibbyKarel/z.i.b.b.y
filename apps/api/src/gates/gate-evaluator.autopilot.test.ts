@@ -293,6 +293,7 @@ describe("GateEvaluatorService — autopilot overlay", () => {
         autoAddressComments: false,
         autoImplement: false,
         autoCommunicate: false,
+        autoFixCi: false,
       },
       companies: {},
       teams: {},

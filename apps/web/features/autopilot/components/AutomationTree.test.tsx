@@ -48,13 +48,19 @@ describe("AutomationTree", () => {
     expect(onChange).toHaveBeenCalledWith(empty);
   });
 
-  it("toggles are the four autopilot keys", () => {
+  it("toggles are the five autopilot keys", () => {
     setup({ ...empty, companies: { shoptet: { autoReview: true } } });
     const keys = (node: string) =>
       within(row(node) as HTMLElement)
         .getAllByTestId(AutomationTreeTestId.Toggle)
         .map((el) => el.getAttribute("data-key"));
-    const all = ["autoReview", "autoAddressComments", "autoImplement", "autoCommunicate"];
+    const all = [
+      "autoReview",
+      "autoAddressComments",
+      "autoImplement",
+      "autoCommunicate",
+      "autoFixCi",
+    ];
     expect(keys("company:shoptet")).toEqual(all);
   });
 

@@ -4,6 +4,7 @@ import { Injectable, type OnModuleInit, Optional } from "@nestjs/common";
 import {
   type AgentRun,
   type Approval,
+  type PrCiTriageVerdict,
   type PrOutput,
   type PrReviewEvent,
   type PrThreadOutcome,
@@ -43,6 +44,8 @@ export const PR_REBASE_ARTIFACT = "zibby-pr-rebase.md";
 export const PR_ADDRESS_COMMENTS_ARTIFACT = "zibby-pr-address-comments.md";
 /** "Fix CI" — the `pr-fix-ci` workflow's report (`Fixed: …` first line). */
 export const PR_FIX_CI_ARTIFACT = "zibby-pr-fix-ci.md";
+/** CI auto-fix — the `pr-ci-triage` workflow's report (`Triage: …` first line). */
+export const PR_CI_TRIAGE_ARTIFACT = "zibby-pr-ci-triage.md";
 /** PR inbox redesign — `github-commenter`'s thread replies (`PrThreadReply[]` JSON), posted by ZIBBY after the push. */
 export const PR_REPLIES_ARTIFACT = "zibby-pr-replies.json";
 /** The documentation agent's refreshed PR description (`# title` + body) — applied by ZIBBY after the push. */
@@ -69,6 +72,15 @@ const ADDRESSED_ALL = /^Addressed:\s*all\s*$/i;
 /** The Address-review-comments click authorises the push only when the report's FIRST line is `Addressed: all`. */
 export function isAutoPushAddressComments(report: string): boolean {
   return ADDRESSED_ALL.test(report.split("\n", 1)[0] ?? "");
+}
+
+const TRIAGE_FIRST_LINE = /^Triage:\s*(flaky|infra|code|unclear)\b/i;
+
+/** The `pr-ci-triage` report's verdict: its first non-empty line `Triage: flaky|infra|code|unclear`, else null. */
+export function parseCiTriageVerdict(report: string): PrCiTriageVerdict | null {
+  const first = report.split("\n").find((l) => l.trim()) ?? "";
+  const m = TRIAGE_FIRST_LINE.exec(first.trim());
+  return m ? (m[1]?.toLowerCase() as PrCiTriageVerdict) : null;
 }
 
 const FIXED_ALL = /^Fixed:\s*all\s*$/i;
@@ -706,7 +718,8 @@ export class TaskOutputService implements OnModuleInit {
     if (facts.sha === fix.headSha) {
       return fail(`no new commits — ${report.split("\n", 1)[0] ?? ""}`.slice(0, 300));
     }
-    const autoPush = isAutoPushFixCi(report) && fix.ownPr === true;
+    // `auto` = the heartbeat started it, nobody clicked: only the Autopilot path below may push.
+    const autoPush = isAutoPushFixCi(report) && fix.ownPr === true && !fix.auto;
     const approval = await this.approvals.requestApproval({
       runId: task.id,
       kind: "pr-fix-ci",
@@ -754,6 +767,29 @@ export class TaskOutputService implements OnModuleInit {
       },
     );
     return { summary: `Oprava CI ${ref}: ${pushed ? "oprava pushnuta" : "push selhal"}` };
+  }
+
+  /**
+   * CI auto-fix — a finished `pr-ci-triage` run: parse the verdict from the report's first line and
+   * record it. The heartbeat decides what follows (`triaged`); no verdict → `failed`.
+   */
+  async parkPrCiTriage(task: ScheduledTask, raw: string): Promise<TaskTerminalDelivery> {
+    const triage = task.prCiTriage;
+    if (!triage) return {};
+    const ref = `${triage.repo}#${triage.number}`;
+    const report = raw.trim().slice(0, PR_REVIEW_MAX_CHARS);
+    const verdict = parseCiTriageVerdict(report);
+    if (!verdict) {
+      await this.storage.setPrCiTriage(task.id, (c) =>
+        c ? { ...c, state: "failed", note: "no verdict", ...(report ? { report } : {}) } : c,
+      );
+      this.log.warn("pr ci-triage: no verdict", { taskId: task.id, ref });
+      return { summary: `Triáž CI ${ref}: bez verdiktu` };
+    }
+    await this.storage.setPrCiTriage(task.id, (c) =>
+      c ? { ...c, state: "triaged", verdict, report } : c,
+    );
+    return { summary: `Triáž CI ${ref}: ${verdict}` };
   }
 
   /** Write the run summary to the chosen file — a vault note or a path in the worktree. */

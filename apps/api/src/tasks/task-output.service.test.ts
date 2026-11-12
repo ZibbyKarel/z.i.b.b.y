@@ -16,6 +16,7 @@ import {
   isAutoPushAddressComments,
   isAutoPushFixCi,
   isAutoPushPrRebase,
+  parseCiTriageVerdict,
   parsePrDescription,
   parseThreadOutcomes,
   parseThreadReplies,
@@ -757,6 +758,18 @@ describe("TaskOutputService", () => {
       },
     );
 
+    it("Fixed: all on a heartbeat-started (auto) run is not click-authorised: parks Tier-3 high", async () => {
+      const task = await storage.setPrFixCi((await seed(true)).id, (c) =>
+        c ? { ...c, auto: true } : c,
+      );
+      const delivered = await service.parkPrFixCi(task, "Fixed: all", "/wt");
+      expect(approvals.requestApproval).toHaveBeenCalledWith(
+        expect.objectContaining({ risk: "high" }),
+      );
+      expect(approvals.approve).not.toHaveBeenCalled();
+      expect(delivered.summary).toMatch(/čeká na schválení/);
+    });
+
     it("`Fixed: not code` with commits parks Tier-3 high and never auto-approves", async () => {
       const task = await seed(true);
       await service.parkPrFixCi(task, "Fixed: not code\nflaky infra", "/wt");
@@ -801,6 +814,59 @@ describe("TaskOutputService", () => {
       await service.parkPrFixCi(task, raw, wt);
       expect(approvals.requestApproval).not.toHaveBeenCalled();
       expect((await storage.get("t_ci")).prFixCi).toMatchObject({ state: "failed", note });
+    });
+  });
+
+  describe("pr ci triage", () => {
+    async function seed(): Promise<ScheduledTask> {
+      const task = await storage.createDispatched(
+        "t_tri",
+        { text: "triage" },
+        "pr-ci-triage_1",
+        { kind: "workflow", id: "pr-ci-triage", name: "pr-ci-triage" },
+        Date.now(),
+        "p1",
+      );
+      return storage.setPrCiTriage(task.id, () => ({
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        headSha: "a".repeat(40),
+        failingChecks: ["build"],
+        state: "running",
+      }));
+    }
+
+    it("parses the first non-empty line, case-insensitively", () => {
+      expect(parseCiTriageVerdict("Triage: flaky\ncheck: x")).toBe("flaky");
+      expect(parseCiTriageVerdict("\n\n triage:  INFRA — runner")).toBe("infra");
+      expect(parseCiTriageVerdict("Triage: code")).toBe("code");
+      expect(parseCiTriageVerdict("Triage: unclear")).toBe("unclear");
+      expect(parseCiTriageVerdict("Triage: flakyish")).toBeNull();
+      expect(parseCiTriageVerdict("intro\nTriage: code")).toBeNull();
+      expect(parseCiTriageVerdict("")).toBeNull();
+    });
+
+    it("a verdict → triaged with the trimmed report and a Czech summary", async () => {
+      const delivered = await service.parkPrCiTriage(
+        await seed(),
+        "  Triage: infra\n\ncheck: build\n",
+      );
+      expect(delivered.summary).toBe("Triáž CI acme/app#7: infra");
+      expect((await storage.get("t_tri")).prCiTriage).toMatchObject({
+        state: "triaged",
+        verdict: "infra",
+        report: "Triage: infra\n\ncheck: build",
+      });
+    });
+
+    it.each(["", "I looked at it, seems flaky"])("report %j → failed, no verdict", async (raw) => {
+      await service.parkPrCiTriage(await seed(), raw);
+      expect((await storage.get("t_tri")).prCiTriage).toMatchObject({
+        state: "failed",
+        note: "no verdict",
+      });
     });
   });
 
@@ -1187,6 +1253,14 @@ describe("TaskOutputService", () => {
       approvals.approve.mockClear();
       await on.parkPrFixCi(await seed("c3", "feat", true), "Fixed: partial", "/wt");
       expect(approvals.approve).toHaveBeenCalledTimes(1);
+      approvals.approve.mockClear();
+      // heartbeat-started (auto) run: the Autopilot path still pushes on the operator's own PR
+      approvals.approve.mockClear();
+      const auto = await storage.setPrFixCi((await seed("c5", "feat", true)).id, (c) =>
+        c ? { ...c, auto: true } : c,
+      );
+      await on.parkPrFixCi(auto, "Fixed: all", "/wt");
+      expect(approvals.approve).toHaveBeenCalledWith("appr_1", { decidedBy: "autopilot" });
       approvals.approve.mockClear();
       await on.parkPrFixCi(await seed("c2", "zibby/run-1-x", false), "Fixed: partial", "/wt");
       await on.parkPrFixCi(await seed("c4", "feat", false), "Fixed: partial", "/wt");

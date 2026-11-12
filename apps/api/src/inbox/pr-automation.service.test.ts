@@ -555,3 +555,138 @@ describe("PrAutomationService (todo-16)", () => {
     });
   });
 });
+
+describe("PrAutomationService — autoFixCi (Automatická oprava CI mých PRs)", () => {
+  const T1 = "2026-11-12T10:00:00.000Z";
+  let prs: InboxPr[];
+  let tasks: ScheduledTask[];
+  let ciTriage: {
+    start: ReturnType<typeof vi.fn>;
+    rerun: ReturnType<typeof vi.fn>;
+    markFixStarted: ReturnType<typeof vi.fn>;
+    park: ReturnType<typeof vi.fn>;
+  };
+  let fixCi: { start: ReturnType<typeof vi.fn> };
+  let address: { start: ReturnType<typeof vi.fn> };
+
+  const redMine = (over: Partial<InboxPr> = {}) =>
+    mine({
+      unresolvedThreads: 0,
+      review: "none",
+      ci: "failing",
+      ciSettled: true,
+      ciFailingChecks: ["test"],
+      ciCompletedAt: T1,
+      ...over,
+    });
+
+  const triageTask = (
+    state: NonNullable<ScheduledTask["prCiTriage"]>["state"],
+    over: Partial<NonNullable<ScheduledTask["prCiTriage"]>> = {},
+  ): ScheduledTask =>
+    ({
+      id: `t_ci_${state}`,
+      status: "dispatched",
+      createdAt: "2026-11-12T10:05:00.000Z",
+      prCiTriage: {
+        repo: "acme/app",
+        number: 7,
+        url: "https://github.com/acme/app/pull/7",
+        head: "feat",
+        headSha: A,
+        failingChecks: ["test"],
+        ciCompletedAt: T1,
+        state,
+        ...over,
+      },
+    }) as ScheduledTask;
+
+  const make = () =>
+    new PrAutomationService(
+      { listPrs: vi.fn(async () => ({ prs, errors: [] })) } as never,
+      { start: vi.fn(), listPrFiles: vi.fn(async () => []) } as never,
+      address as never,
+      { list: async () => tasks } as never,
+      {
+        get: async (id: string) => ({ id, name: id, ciIgnoredChecks: ["Review approved"] }),
+        list: async () => [{ id: "p1", name: "p1" }],
+      } as never,
+      { resolveCompany: async () => undefined } as never,
+      { list: async () => [] } as never,
+      {
+        automationFor: () => ({
+          autoImplement: false,
+          autoReview: false,
+          autoAddressComments: false,
+          autoFixCi: true,
+        }),
+      } as never,
+      { record: vi.fn(async () => undefined) } as never,
+      fakeSystemConfigStore({}),
+      { register: () => {} } as never,
+      fakeLogger as never,
+      ciTriage as never,
+      fixCi as never,
+    );
+
+  beforeEach(() => {
+    prs = [redMine()];
+    tasks = [];
+    ciTriage = {
+      start: vi.fn(async () => ({ taskId: "t_tr" })),
+      rerun: vi.fn(async () => "rerun"),
+      markFixStarted: vi.fn(async () => undefined),
+      park: vi.fn(async () => undefined),
+    };
+    fixCi = { start: vi.fn(async () => ({ taskId: "t_fx" })) };
+    address = { start: vi.fn(async () => ({ taskId: "t_ad" })) };
+  });
+
+  it("triages my settled red PR with the project's ignored checks", async () => {
+    expect(await make().tick()).toEqual({ started: 1 });
+    expect(ciTriage.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        repo: "acme/app",
+        number: 7,
+        headSha: A,
+        failingChecks: ["test"],
+        ciCompletedAt: T1,
+        ignoredChecks: ["Review approved"],
+      }),
+    );
+  });
+
+  it("leaves others' PRs and still-running CI alone", async () => {
+    prs = [pr({ ci: "failing", ciSettled: true }), redMine({ number: 8, ciSettled: false })];
+    expect(await make().tick()).toEqual({ started: 0 });
+    expect(ciTriage.start).not.toHaveBeenCalled();
+  });
+
+  it("flaky verdict → rerun", async () => {
+    tasks = [triageTask("triaged", { verdict: "flaky" })];
+    expect(await make().tick()).toEqual({ started: 1 });
+    expect(ciTriage.rerun).toHaveBeenCalledWith("t_ci_triaged");
+  });
+
+  it("code verdict → auto fix-ci, linked back to the triage", async () => {
+    tasks = [triageTask("triaged", { verdict: "code" })];
+    expect(await make().tick()).toEqual({ started: 1 });
+    expect(fixCi.start).toHaveBeenCalledWith(
+      expect.objectContaining({ repo: "acme/app", number: 7 }),
+      { auto: true, triageTaskId: "t_ci_triaged" },
+    );
+    expect(ciTriage.markFixStarted).toHaveBeenCalledWith("t_ci_triaged", "t_fx");
+  });
+
+  it("a failed triage is parked with its note, not counted as a start", async () => {
+    tasks = [triageTask("failed", { note: "re-run rejected (HTTP 403)" })];
+    expect(await make().tick()).toEqual({ started: 0 });
+    expect(ciTriage.park).toHaveBeenCalledWith("t_ci_failed", "re-run rejected (HTTP 403)");
+  });
+
+  it("waits while address-comments is in flight on the same PR", async () => {
+    tasks = [addressTask(A, "running")];
+    expect(await make().tick()).toEqual({ started: 0 });
+    expect(ciTriage.start).not.toHaveBeenCalled();
+  });
+});

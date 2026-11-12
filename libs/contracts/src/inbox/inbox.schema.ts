@@ -9,6 +9,7 @@ import {
 } from "../roadmap/roadmap-item.schema";
 import {
   PrAddressCommentsStateSchema,
+  PrCiTriageStateSchema,
   PrFixCiStateSchema,
   PrRebaseStateSchema,
   PrReviewStateSchema,
@@ -122,8 +123,9 @@ export type InboxPrSection = z.infer<typeof InboxPrSectionSchema>;
 export const InboxPrRunSchema = z.object({
   taskId: z.string().min(1),
   runRef: z.string().min(1).optional(),
-  kind: z.enum(["review", "address-comments", "fix-ci", "rebase"]),
+  kind: z.enum(["review", "address-comments", "fix-ci", "ci-triage", "rebase"]),
   state: z.union([
+    PrCiTriageStateSchema,
     PrReviewStateSchema,
     PrAddressCommentsStateSchema,
     PrFixCiStateSchema,
@@ -152,6 +154,18 @@ export const InboxPrSchema = z.object({
   updatedAt: IsoDateTimeSchema.optional(),
   draft: z.boolean(),
   ci: InboxPrCiSchema,
+  /**
+   * True when every non-ignored check-run is `completed` and there is at least one (CI has
+   * settled). Absent when the checks were unreadable.
+   */
+  ciSettled: z.boolean().optional(),
+  /**
+   * Names of non-ignored check-runs that failed (failure / cancelled / timed_out), sorted and
+   * deduped. Absent when the checks were unreadable.
+   */
+  ciFailingChecks: z.array(z.string()).optional(),
+  /** Latest `completed_at` among non-ignored check-runs; omitted when none has completed. */
+  ciCompletedAt: IsoDateTimeSchema.optional(),
   review: InboxPrReviewSchema,
   /** `null` while GitHub is still computing mergeability. */
   mergeable: z.boolean().nullable(),
@@ -419,7 +433,6 @@ export type SetInboxHidden = z.infer<typeof SetInboxHiddenSchema>;
 export const INBOX_REFRESH_ACTIVITY_KINDS: readonly ActivityKind[] = [
   "task-outcome",
   "merge-completed",
-  "post-merge-outcome",
   "roadmap-item-dispatched",
   "roadmap-item-outcome",
   // todo-16 — an auto-started review / address-comments task changes the PR's chip.

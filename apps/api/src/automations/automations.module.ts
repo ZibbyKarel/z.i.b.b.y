@@ -5,7 +5,6 @@ import { BriefingModule } from "../briefing/briefing.module";
 import { ExternalSkillsModule } from "../external-skills/external-skills.module";
 import { GapsModule } from "../gaps/gaps.module";
 import { ArchModule } from "../arch/arch.module";
-import { ReleaseModule } from "../release/release.module";
 import { MemoryModule } from "../memory/memory.module";
 import { MemoryDistillerModule } from "../memory/memory-distiller.module";
 import { PatternsModule } from "../patterns/patterns.module";
@@ -41,10 +40,7 @@ export function resolveAutomationsDir(): string {
  * NS2 F5a: also imports `SecurityModule` (a leaf, same position as `GapsModule`) so the
  * `security-scan` target can dispatch to `SecurityService.scan`. NS2 F5c: also imports
  * `ArchModule` (same leaf position) so the `arch-audit` target can dispatch to
- * `ArchService.audit`. NS2 F7b-2: also imports `ReleaseModule` so the
- * `post-merge-watch` target can dispatch to `PostMergeWatchService.poll` — no
- * cycle, `ReleaseModule` imports Projects/ResolvedProject/Integrations/
- * MergeWatch/Monitors/Tasks, none of which import this module back. PR review
+ * `ArchService.audit`. PR review
  * learning v1: also imports `ReviewLearningModule` so the `review-learn` target
  * can dispatch to `ReviewLearningService.learn` — no cycle, `ReviewLearningModule`
  * imports Projects/ResolvedProject/Integrations/Artifacts/ScheduledTasksStorage/
@@ -62,7 +58,6 @@ export function resolveAutomationsDir(): string {
     ExternalSkillsModule,
     GapsModule,
     ArchModule,
-    ReleaseModule,
     MemoryDistillerModule,
     MemoryModule,
     PatternsModule,

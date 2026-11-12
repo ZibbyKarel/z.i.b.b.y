@@ -10,7 +10,6 @@ import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
 import { WatcherHealthRegistry } from "../health/watcher-health.registry";
 import { ArchService } from "../arch/arch.service";
-import { PostMergeWatchService } from "../release/post-merge-watch.service";
 import { ReviewLearningService } from "../review-learning/review-learning.service";
 import { SelfKnowledgeService } from "../self-knowledge/self-knowledge.service";
 import { SecurityService } from "../security/security.service";
@@ -55,7 +54,6 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly selfKnowledge: SelfKnowledgeService,
     private readonly security: SecurityService,
     private readonly arch: ArchService,
-    private readonly postMerge: PostMergeWatchService,
     private readonly watcherHealthRegistry: WatcherHealthRegistry,
     private readonly reviewLearning: ReviewLearningService,
     private readonly signalBus: SignalBusService,
@@ -284,13 +282,6 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         // + a madge circular-dep check, deterministic; ref = `arch:<count>`.
         const { findings } = await this.arch.audit();
         return `arch:${findings.length}`;
-      }
-      case "post-merge-watch": {
-        // NS2 F7b-2: frequent system automation — poll pending post-merge CI
-        // watches (green/red/expired), dispatching a gated fix task on red.
-        // Deterministic; ref = `merge-watch:<resolvedCount>`.
-        const { resolved } = await this.postMerge.poll();
-        return `merge-watch:${resolved}`;
       }
       case "review-learn": {
         // PR review learning v1: ingest new review comments on ZIBBY's own PRs,

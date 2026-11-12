@@ -262,6 +262,13 @@ export const ProjectSchema = z.object({
    */
   prOpenMode: PrOpenModeSchema.optional(),
   /**
+   * Check-run names the PR inbox ignores when computing a PR's CI state (e.g. a review-approval
+   * check that fails until the PR is approved). An entry matches a check-run name
+   * case-insensitively and exactly; an entry written as `/.../` is a case-insensitive regex (an
+   * invalid regex matches nothing). Absent/empty → every check counts.
+   */
+  ciIgnoredChecks: z.array(z.string().min(1).max(200)).max(50).optional(),
+  /**
    * TODO 13 — marks this as a WEB project and carries what a browser-driving
    * agent needs to reach it. A workflow with `requires: ["web"]` refuses to run
    * against a project without it. http(s) only: the URL is handed to a

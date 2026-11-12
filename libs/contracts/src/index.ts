@@ -49,7 +49,6 @@ export * from "./monitors/monitor.schema";
 export * from "./monitors/monitors.contract";
 export * from "./release/release.schema";
 export * from "./release/release.contract";
-export * from "./release/merge-watch.schema";
 export * from "./automations/signal.schema";
 export * from "./automations/automation.schema";
 export * from "./automations/automations.contract";

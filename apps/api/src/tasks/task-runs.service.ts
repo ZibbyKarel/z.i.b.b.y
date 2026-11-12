@@ -1064,6 +1064,7 @@ function sourcePrOf(task: ScheduledTask): TaskRunSourcePr | undefined {
     ["rebase", task.prRebase],
     ["address-comments", task.prAddressComments],
     ["fix-ci", task.prFixCi],
+    ["ci-triage", task.prCiTriage],
   ] as const;
   for (const [kind, stamp] of stamps) {
     if (stamp) return { kind, repo: stamp.repo, number: stamp.number, url: stamp.url };
@@ -1084,7 +1085,7 @@ function enrichRunWithTask(
   // approval itself counts too: the stamp lands only after the approval exists, so a
   // refetch triggered by `approval-requested` may see the approval but not the stamp yet.
   const gated =
-    [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi].some(
+    [task.prReview, task.prRebase, task.prAddressComments, task.prFixCi, task.prCiTriage].some(
       (gate) => gate?.state === "awaiting-approval",
     ) || pendingTaskIds.has(task.id);
   // An operator "continue" waiting for a run slot reads as queued on the run itself.

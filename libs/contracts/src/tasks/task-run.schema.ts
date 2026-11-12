@@ -77,7 +77,7 @@ export type Processor = z.infer<typeof ProcessorSchema>;
  * `goalParked`. Most are optional and present only for the relevant kind.
  */
 export const TaskRunSourcePrSchema = z.object({
-  kind: z.enum(["review", "rebase", "address-comments", "fix-ci"]),
+  kind: z.enum(["review", "rebase", "address-comments", "fix-ci", "ci-triage"]),
   repo: z.string().min(1),
   number: z.number().int().positive(),
   url: z.string().min(1),

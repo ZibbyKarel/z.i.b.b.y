@@ -18,15 +18,6 @@
     "system": true
   },
   {
-    "id": "post-merge-red",
-    "from": "rel",
-    "label": "Red CI after merge",
-    "description": "CI failed after a PR was merged.",
-    "severityBearing": false,
-    "status": "builtin",
-    "system": true
-  },
-  {
     "id": "god-node",
     "from": "qa",
     "label": "Graph god-node",

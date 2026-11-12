@@ -61,8 +61,6 @@ export interface BriefingInput {
   /** NS2 F6c — heartbeat watchers currently probing stale (formatted lines,
    * gathered from the WatcherHealthRegistry, fail-open to `[]`). */
   staleWatchers?: string[];
-  /** NS2 F7b-2 — merged-work celebration + post-merge CI outcomes per project. */
-  mergedRecently?: string[];
   /** NS2 F8c — open personal reminders parsed from the `personal-reminders` vault
    * note (gathered by the service — `buildPersonalAgenda` derives the agenda
    * lines here from `channelItems`, so only reminders need to be gathered). */
@@ -166,9 +164,6 @@ export function assembleBriefing(input: BriefingInput): Briefing {
       : {}),
     ...(input.staleWatchers && input.staleWatchers.length > 0
       ? { staleWatchers: input.staleWatchers }
-      : {}),
-    ...(input.mergedRecently && input.mergedRecently.length > 0
-      ? { mergedRecently: input.mergedRecently }
       : {}),
     ...(personalAgenda.length > 0 ? { personalAgenda } : {}),
     ...(input.reminders && input.reminders.length > 0 ? { reminders: input.reminders } : {}),
@@ -443,12 +438,6 @@ export function renderBriefingMarkdown(briefing: Briefing): string {
   if (briefing.mergeQueue && briefing.mergeQueue.length > 0) {
     lines.push("## Merge queue");
     for (const item of briefing.mergeQueue) lines.push(`- ${item}`);
-    lines.push("");
-  }
-
-  if (briefing.mergedRecently && briefing.mergedRecently.length > 0) {
-    lines.push("## Merged");
-    for (const item of briefing.mergedRecently) lines.push(`- ${item}`);
     lines.push("");
   }
 

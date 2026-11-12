@@ -1779,6 +1779,8 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         "Addressed: all",
         "/wt",
         "[]",
+        // the description file (the fake runner serves one content for every artifact)
+        expect.anything(),
       );
       expect(taskOutput.parkPrRebase).not.toHaveBeenCalled();
       expect((await storage.get(id)).outcome?.summary).toBe("fixes parked");
@@ -1799,6 +1801,7 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
         "Addressed: partial",
         "/wt",
         undefined,
+        expect.anything(),
       );
     });
 
