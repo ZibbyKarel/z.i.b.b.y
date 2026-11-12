@@ -24,6 +24,9 @@ export const TEST_SYSTEM_CONFIG: SystemConfig = SystemConfigSchema.parse({
   // 125h: off by default, same posture as every other tick — a suite drives
   // `RoadmapTickService.tick()` directly.
   roadmapTickMs: 0,
+  // A31 made opencode the production default; suites that aren't ABOUT the engine keep the
+  // native CLI (their fake `claude` binary), and opt in with `{ aiEngine: "opencode" }`.
+  aiEngine: "claude",
 });
 
 /**

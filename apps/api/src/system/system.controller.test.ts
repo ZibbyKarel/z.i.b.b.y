@@ -27,6 +27,16 @@ describe("SystemController.putConfig (operator-only engine switch)", () => {
     expect(store.current().aiEngine).toBe(cur.aiEngine);
   });
 
+  it("401s a model-family change without the token (A31)", async () => {
+    const { store, c } = make();
+    const cur = store.current();
+    await expect(c.putConfig({ ...cur, modelFamily: "openai" }, {})).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+    await c.putConfig({ ...cur, modelFamily: "openai" }, op);
+    expect(store.current().modelFamily).toBe("openai");
+  });
+
   it("401s a tier-mapping change without the token (A20), not a no-op resave", async () => {
     const { store, c } = make();
     const cur = store.current();

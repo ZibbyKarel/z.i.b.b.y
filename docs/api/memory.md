@@ -188,7 +188,8 @@ never knows any of this memory exists (learning is NOT an agent capability). It'
 driven by the nightly [`memory-distill` system automation](./automations.md#memory-distillation-memory-distill).
 
 `MemoryDistillerService.distill()` walks terminal workflow/agent/goal runs, a cheap
-model (haiku, fail-open) extracts durable insights from them, and saves them as one
+model (haiku tier through `spawnOneShot`: `claude -p`, or opencode per the engine, A32 —
+see [ai-engines.md](./ai-engines.md#one-shot-calls-a32); fail-open) extracts durable insights from them, and saves them as one
 nightly digest `distilled-<date>` in `knowledge/`, linked from the affected projects'
 MOCs. Idempotent via a `memory-distilled.json` marker in the run's `cwd`. See the
 automations doc for details.

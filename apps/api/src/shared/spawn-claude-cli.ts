@@ -38,6 +38,12 @@ export interface SpawnClaudeCliOptions {
    * read the project's repo. Additive — existing callers are unaffected.
    */
   cwd?: string;
+  /**
+   * Another binary with its own env (`spawnOneShot` runs `opencode` through this body).
+   * Set = the argv is passed as-is (no `--setting-sources`) and `env` replaces
+   * {@link agentBaseEnv}, so the caller must build it from `agentBaseEnv` itself.
+   */
+  bin?: { command: string; env: NodeJS.ProcessEnv };
 }
 
 /**
@@ -61,14 +67,15 @@ export interface SpawnClaudeCliOptions {
 export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
   const maxChars = opts.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_CHARS;
 
-  const args = opts.args.includes("--setting-sources")
-    ? opts.args
-    : [...ISOLATED_SETTING_SOURCES, ...opts.args];
+  const args =
+    opts.bin || opts.args.includes("--setting-sources")
+      ? opts.args
+      : [...ISOLATED_SETTING_SOURCES, ...opts.args];
 
   return new Promise((resolve, reject) => {
-    const child = spawn(process.env.CLAUDE_BIN ?? "claude", args, {
+    const child = spawn(opts.bin?.command ?? process.env.CLAUDE_BIN ?? "claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
-      env: agentBaseEnv(),
+      env: opts.bin?.env ?? agentBaseEnv(),
       ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });
 
@@ -113,7 +120,15 @@ export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
     child.on("exit", (code) => {
       clearTimeout(timer);
       if (code === 0) resolve(stdout);
-      else reject(new Error(`claude exited ${code}: ${stderr.slice(0, 200)}`));
+      else
+        reject(
+          new Error(
+            opts.bin
+              ? // opencode prints its `error` event on stdout and often nothing on stderr.
+                `opencode exited ${code}: ${(stderr.trim() || stdout.trim()).slice(-300)}`
+              : `claude exited ${code}: ${stderr.slice(0, 200)}`,
+          ),
+        );
     });
   });
 }

@@ -42,48 +42,72 @@ beforeEach(() => {
   engines = [{ id: "claude", available: true, version: "2.0.0" }, opencode()];
 });
 
+const ids = (...models: string[]) =>
+  models.map((id) => ({ id, free: false, subscription: false, variants: [] }));
+
 describe("AiEngineSection", () => {
-  it("shows availability and version of both engines", () => {
+  it("shows that everything runs on opencode, with its version, and no engine toggle", () => {
     render(<AiEngineSection />);
-    expect(screen.getByTestId(AiEngineSectionTestId.ClaudeStatus)).toHaveTextContent("2.0.0");
     expect(screen.getByTestId(AiEngineSectionTestId.OpencodeStatus)).toHaveTextContent("1.2.3");
+    expect(screen.queryByTestId("ai-engine-switch")).not.toBeInTheDocument();
   });
 
-  it("refuses opencode while no model is chosen and says why", async () => {
+  it("picking a family writes aiEngine, tiers and default filtered by the catalog", async () => {
+    engines = [
+      opencode({
+        providers: ["opencode"],
+        models: ids("claude-agent/haiku", "claude-agent/sonnet", "opencode/glm-5.3-flash-free"),
+      }),
+    ];
+    config = { ...config, aiEngine: "claude", modelFamily: "opencode" };
     render(<AiEngineSection />);
-    await userEvent.click(screen.getByTestId("button-group-option-opencode"));
-    expect(setConfig).not.toHaveBeenCalled();
-    expect(screen.getByTestId(AiEngineSectionTestId.Blocked)).toHaveTextContent("model");
+    await userEvent.click(screen.getByTestId("button-group-option-claude"));
+    expect(setConfig).toHaveBeenCalledWith({
+      body: {
+        ...config,
+        aiEngine: "opencode",
+        modelFamily: "claude",
+        opencodeModel: "claude-agent/sonnet",
+        // opus / fable are not in the catalog: left unset
+        opencodeTierModels: { haiku: "claude-agent/haiku", sonnet: "claude-agent/sonnet" },
+      },
+    });
   });
 
-  it("refuses opencode when the binary is missing or the model vanished", async () => {
+  it("a family whose provider is not connected is not applied and shows the login command", async () => {
+    render(<AiEngineSection />); // catalog has no openai/* model
+    expect(screen.getByTestId(`${AiEngineSectionTestId.FamilyHint}-openai`)).toHaveTextContent(
+      "opencode auth login openai",
+    );
+    await userEvent.click(screen.getByTestId("button-group-option-openai"));
+    expect(setConfig).not.toHaveBeenCalled();
+  });
+
+  it("writes the unfiltered preset and says so when the catalog is unreadable", async () => {
+    engines = [opencode({ models: [] })];
+    render(<AiEngineSection />);
+    expect(screen.getByTestId(AiEngineSectionTestId.Unchecked)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("button-group-option-openai"));
+    expect(setConfig).toHaveBeenCalledWith({
+      body: expect.objectContaining({
+        modelFamily: "openai",
+        aiEngine: "opencode",
+        opencodeModel: "openai/gpt-6.1-terra",
+      }),
+    });
+  });
+
+  it("says when the opencode binary is missing", () => {
     engines = [opencode({ available: false, version: undefined })];
-    const { unmount } = render(<AiEngineSection />);
-    await userEvent.click(screen.getByTestId("button-group-option-opencode"));
-    expect(setConfig).not.toHaveBeenCalled();
+    render(<AiEngineSection />);
     expect(screen.getByTestId(AiEngineSectionTestId.Blocked)).toBeInTheDocument();
-    unmount();
-
-    engines = [opencode()];
-    config = { ...config, opencodeModel: "gone/model" };
-    render(<AiEngineSection />);
-    await userEvent.click(screen.getByTestId("button-group-option-opencode"));
-    expect(setConfig).not.toHaveBeenCalled();
-  });
-
-  it("spread-PUTs aiEngine once a listed model is chosen", async () => {
-    config = { ...config, opencodeModel: "opencode/big-pickle" };
-    render(<AiEngineSection />);
-    expect(screen.queryByTestId(AiEngineSectionTestId.Blocked)).not.toBeInTheDocument();
-    await userEvent.click(screen.getByTestId("button-group-option-opencode"));
-    expect(setConfig).toHaveBeenCalledWith({ body: { ...config, aiEngine: "opencode" } });
   });
 
   it("choosing a model spread-PUTs opencodeModel", async () => {
     render(<AiEngineSection />);
     // the first picker is the default model
     await userEvent.click(screen.getAllByTestId("dropdown-trigger")[0] as HTMLElement);
-    await userEvent.click(screen.getAllByTestId("dropdown-option")[0] as HTMLElement);
+    await userEvent.click(await screen.findByRole("option", { name: /big-pickle/ }));
     expect(setConfig).toHaveBeenCalledWith({
       body: { ...config, opencodeModel: "opencode/big-pickle" },
     });
@@ -130,7 +154,7 @@ describe("AiEngineSection", () => {
     expect(screen.getByTestId("button-group-option-claude")).toHaveAttribute(
       "aria-pressed",
       "true",
-    );
+    ); // modelFamily default
   });
 
   it("any other failure shows the generic message, not the token notice", () => {

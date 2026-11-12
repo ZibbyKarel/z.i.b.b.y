@@ -1,12 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type { Briefing } from "@zibby/contracts";
 import { z } from "zod";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { envelopeInbound } from "../shared/text/untrusted-envelope";
 
 /** How long the headless `claude -p` briefer may take before we fall back. */
-const BRIEFER_TIMEOUT_MS = 8000;
+// A32: 15s, not 8s — opencode `claude-agent/haiku` measured 2.8–4.3s typical, outliers 7.4–9.6s
+// (native claude ~2.4s). A timeout only means the deterministic fallback.
+const BRIEFER_TIMEOUT_MS = 15_000;
 
 /** The briefer returns ONLY a headline — anything else is discarded (Law 4). */
 const HeadlineSchema = z.object({ headline: z.string().max(200) }).strict();
@@ -22,7 +25,7 @@ const BRIEFER_SYSTEM_PROMPT = [
 
 /**
  * The optional butler-voice pass over an assembled briefing (Phase 6.2). Copies
- * {@link ClaudeCliTriager}'s shape EXACTLY — 8s timeout, `--model haiku
+ * {@link ClaudeCliTriager}'s shape EXACTLY — 15s timeout, `--model haiku
  * --output-format json`, the SAME `process.env.VITEST` guard so tests never spawn
  * claude, envelope-unwrap + fence-tolerant parse — and validates the result against
  * a strict one-key schema. NEVER blocks: any failure returns `null` and the caller
@@ -36,7 +39,11 @@ const BRIEFER_SYSTEM_PROMPT = [
 export class ClaudeCliBriefer {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
+  ) {
     this.log = logger.child(ClaudeCliBriefer.name);
   }
 
@@ -87,10 +94,12 @@ export class ClaudeCliBriefer {
   }
 
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+    return spawnOneShot({
+      tier: "haiku",
+      prompt,
       timeoutMs: BRIEFER_TIMEOUT_MS,
       label: "briefer",
+      config: this.systemConfig?.current(),
     });
   }
 

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { AiEngineSchema, OpencodeTierModelsSchema } from "../ai-providers/ai-providers.schema";
+import {
+  AiEngineSchema,
+  MODEL_FAMILY_PRESETS,
+  ModelFamilySchema,
+  OpencodeTierModelsSchema,
+} from "../ai-providers/ai-providers.schema";
 import { ChatPersonaSchema } from "../chat/chat.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 import { TeamIdSchema } from "../teams/team.schema";
@@ -234,18 +239,21 @@ export const SystemConfigSchema = z
     dockDoneTasksLimit: z.number().int().min(1).max(100).default(20),
     /**
      * Which CLI runs agent runs and workflow agent stages by default (an agent's own
-     * `engine` overrides it). Chat and the one-shot helpers stay on Claude. See
-     * docs/api/ai-engines.md.
+     * `engine` overrides it). A31: the app runs on opencode by default, Claude included
+     * (`claude-agent/*`); `"claude"` (the native CLI) stays valid for stored configs and
+     * per-step overrides but the UI no longer offers it. See docs/api/ai-engines.md.
      */
-    aiEngine: AiEngineSchema.default("claude"),
+    aiEngine: AiEngineSchema.default("opencode"),
+    /** A31 — the model family last picked in Settings (an opencode provider id, see `MODEL_FAMILY_PRESETS`). */
+    modelFamily: ModelFamilySchema.default("claude"),
     /** The opencode `provider/model` used when the engine is `opencode` ("" = not chosen). */
-    opencodeModel: z.string().default(""),
+    opencodeModel: z.string().default(MODEL_FAMILY_PRESETS.claude.default),
     /**
      * A20 — the opencode model each model tier runs on (`haiku`/`sonnet`/`opus`/`fable`
      * → `provider/model[#variant]`). An unmapped tier takes the nearest mapped lower,
      * then higher tier, then `opencodeModel`. See docs/api/ai-engines.md.
      */
-    opencodeTierModels: OpencodeTierModelsSchema.default({}),
+    opencodeTierModels: OpencodeTierModelsSchema.default(MODEL_FAMILY_PRESETS.claude.tiers),
     /**
      * O-21: the ZibbyOS header's "CEO" identity and brand name. Both additive and
      * optional (no default here — an absent value reads as `undefined`, not a

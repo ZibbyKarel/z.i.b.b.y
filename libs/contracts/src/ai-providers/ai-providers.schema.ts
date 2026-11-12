@@ -90,6 +90,87 @@ export function resolveTierModel(
   return fallback;
 }
 
+/**
+ * A31 — a model family is an opencode provider id: claude → `claude-agent`, openai →
+ * `openai`, opencode → `opencode` (the free models). Picking one presets the tier models
+ * and the default model.
+ */
+export const MODEL_FAMILIES = ["claude", "openai", "opencode"] as const;
+export const ModelFamilySchema = z.enum(MODEL_FAMILIES);
+export type ModelFamily = z.infer<typeof ModelFamilySchema>;
+
+export const MODEL_FAMILY_PROVIDER: Record<ModelFamily, string> = {
+  claude: "claude-agent",
+  openai: "openai",
+  opencode: "opencode",
+};
+
+/**
+ * Preferred model per tier (weakest → strongest) and the default model of each family.
+ * claude: the `claude-agent` aliases. openai: `OPENAI_TEXT_MODELS` (cheapest first); the
+ * catalog lists no openai model before `opencode auth login openai`, so these ids are
+ * unverified against opencode until then. opencode: the free `opencode/*` catalog, ordered
+ * by judgment (lightning/small → larger context and output), not benchmarked.
+ */
+export const MODEL_FAMILY_PRESETS: Record<
+  ModelFamily,
+  { tiers: Record<ModelTier, string>; default: string }
+> = {
+  claude: {
+    tiers: {
+      haiku: "claude-agent/haiku",
+      sonnet: "claude-agent/sonnet",
+      opus: "claude-agent/opus",
+      fable: "claude-agent/fable",
+    },
+    default: "claude-agent/sonnet",
+  },
+  openai: {
+    tiers: {
+      haiku: "openai/gpt-6-luna",
+      sonnet: "openai/gpt-6.1-terra",
+      opus: "openai/gpt-6.1-sol",
+      fable: "openai/gpt-6-astra",
+    },
+    default: "openai/gpt-6.1-terra",
+  },
+  opencode: {
+    tiers: {
+      haiku: "opencode/nemotron-3.5-lightning-free",
+      sonnet: "opencode/glm-5.3-flash-free",
+      opus: "opencode/minimax-m3.1-flash-free",
+      fable: "opencode/nemotron-3.5-super-vl-free",
+    },
+    default: "opencode/glm-5.3-flash-free",
+  },
+};
+
+/**
+ * A31 — the config fields a family pick writes. With a readable catalog (`catalogIds`), a
+ * tier whose preferred id is not listed stays unset (`resolveTierModel` then falls back),
+ * and a missing default falls back to the resolved tier 2; with `undefined` (catalog
+ * unreadable) the preset is written as is. The native engine is never written back on.
+ */
+export function applyModelFamily(
+  family: ModelFamily,
+  catalogIds: readonly string[] | undefined,
+): {
+  aiEngine: "opencode";
+  modelFamily: ModelFamily;
+  opencodeModel: string;
+  opencodeTierModels: OpencodeTierModels;
+} {
+  const preset = MODEL_FAMILY_PRESETS[family];
+  const listed = (id: string) => !catalogIds || catalogIds.includes(id);
+  const opencodeTierModels: OpencodeTierModels = {};
+  for (const tier of MODEL_TIERS)
+    if (listed(preset.tiers[tier])) opencodeTierModels[tier] = preset.tiers[tier];
+  const opencodeModel = listed(preset.default)
+    ? preset.default
+    : resolveTierModel("sonnet", opencodeTierModels, "");
+  return { aiEngine: "opencode", modelFamily: family, opencodeModel, opencodeTierModels };
+}
+
 /** One engine's availability, from `GET /api/ai-providers/engines`. */
 /**
  * One opencode model. `free`: provider `opencode` with an all-zero price list in

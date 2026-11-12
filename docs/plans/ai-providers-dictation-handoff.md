@@ -319,3 +319,97 @@ toggle --print`, `hex model list`) and a local HTTP API (port + token in
 - Hex as a system-wide alternative: `brew trust anomalyco/tap` is the operator's call.
 - To use paid providers later: `opencode auth login <provider>` in a terminal (ZibbyOS never
   enters credentials).
+
+## A31 — model families (2026-11-12)
+
+- Settings → AI engine: "Runs on opencode" info + family picker (Claude / OpenAI / OpenCode free);
+  picking applies the preset (see `docs/api/ai-engines.md` → Model families). Not verified: the
+  UI in a browser, the `openai/*` ids (the catalog lists none before `opencode auth login openai`),
+  the free-tier ordering (judgment, not benchmarked).
+- Default `aiEngine` flipped to `opencode`: `chat-session.service.test.ts` has one test
+  ("A24 … unusable — no Claude fallback") that now needs `opencodeModel: ""` and
+  `opencodeTierModels: {}` in its config (default model is `claude-agent/sonnet`); not edited
+  (chat is off-limits for this change).
+
+## A32 — one-shots on opencode (2026-11-12)
+
+- `spawnOneShot` (`apps/api/src/shared/spawn-one-shot.ts`) routes all nine internal one-shots
+  (router, namer, briefer, triager, memory distiller, review learner, chat handoff, reply
+  researcher, phase advisor) by the engine; see `docs/api/ai-engines.md` → One-shot calls.
+- Live, `claude-agent/haiku`, through the helper: router ×11 (2.8–4.3 s, one 7.4 s; one
+  `null` verdict, parse — fallback path), helper ×4 (2.9–3.3 s, one 9.6 s), reply researcher
+  8.1 s (read `notes.txt` in the repo; outside file and `../outside.txt` refused with
+  `external_directory`), advisor fork 5.8–6.1 s (knew the source session's codename, read
+  outside the cwd, token-dir read blocked by the gate). Native `claude -p --model haiku`
+  2.3–2.5 s.
+- Not verified live: memory distiller, review learner, briefer, triager, namer, chat handoff
+  on opencode (same code path as the router, only prompt/tier differ); an advisor fork of a
+  real workflow stage session (verified with a session made by the helper); the
+  opencode one-shots under the Claude 5h window being exhausted.
+- `stageInfo()` now returns an opencode stage's `sessionId` too (the advisor checks the
+  engine before forking).
+
+## A33 — chat on opencode with the operator's tools (2026-11-12)
+
+- Chat on opencode (the default since A31) now mounts `atlassian` + `figma` (OAuth remotes),
+  the operator's own servers (`readOperatorMcpServers`, never `serena`) and `zibby` /
+  `zibby-kb`; allows `shell` + read/grep/glob/list; the chat gate plugin is fail-fast (run
+  classifier imported, risky shell / MCP writes refused with "delegate via create_task").
+  See `docs/api/chat.md` → Chat on opencode, decision A33. The native Claude chat path is
+  untouched and runs only for a stored `aiEngine: "claude"`.
+- MCP OAuth tokens: `~/.local/share/opencode/opencode.db`, table `credential`, column
+  `integration_id` = `mcp_` + `sha1(name + "\0" + url)[:16]` (from the 2.2.7 binary; matched
+  the ids `opencode` itself reported: `atlassian` → `mcp_59f565d9f67a5d68`, `figma` →
+  `mcp_59d4e7f540737ec2`). Shared by every config, standalone or not — the per-turn config
+  reuses a login as long as name + URL match.
+- `opencode mcp list|auth --standalone` with a per-run config prints "No MCP servers
+  configured": the CLI's single `mcp.list` call races the fresh server's MCP start (a
+  second call against the same server lists them). Hence the login goes through a
+  long-lived server (the background service), below.
+- Live, `claude-agent/haiku`, isolated API on :3391 through the real chat service:
+  tool list = shell/read/grep/glob/skill + zibby + zibby-kb (no serena); `git status
+  --short | head -5` ran; `rm <scratch>/dummy.txt` was refused (`"delete" — … create_task`),
+  file still there; Atlassian, Figma, context7 and claude-design logged `needs_auth`, the
+  turn answered normally; "postav mi malou todo aplikaci v Reactu" called `create_task`
+  (errored: the isolated data dir has no agents — dispatch itself verified).
+- Not verified: a successful operator-MCP **read** (every reachable read server needs a
+  login first; Playwright misses opencode's 2 s MCP startup budget — `npx
+  @playwright/mcp@latest` connects after ~3.7 s — so its tools never reach a turn; a
+  global install, e.g. `playwright-mcp` as the plugin command, would fix that); the OAuth
+  login flows themselves (credential entry is the operator's); whether the background
+  service reloads the global config without a restart.
+- Open: context7's `resolve-library-id` and all Playwright tools read as writes by name
+  (A28 ceiling) and are refused in chat.
+
+### Operator login commands
+
+Run in a normal terminal, in this order (each opens a browser; ZibbyOS never runs them):
+
+```sh
+# 1. OpenAI models (only if you want the OpenAI family; pick ChatGPT sign-in or API key)
+opencode auth login openai
+
+# 2. Register the chat's OAuth MCP servers globally — the name and URL must be exactly
+#    these (the stored token is keyed by both)
+opencode mcp add atlassian --global --url https://mcp.atlassian.com/v1/mcp
+opencode mcp add figma --global --url https://mcp.figma.com/mcp
+
+# 3. Until both show "⚠ … needs authentication" (the first call can print
+#    "No MCP servers configured" while the service starts them — run it again)
+opencode mcp list
+
+# 4. Log in
+opencode mcp auth atlassian
+opencode mcp auth figma
+
+# optional — your Claude plugin's context7 also needs a login on opencode
+opencode mcp add plugin_context7_context7 --global --url 'https://mcp.context7.com/mcp?client=claude-code-plugin'
+opencode mcp auth plugin_context7_context7
+```
+
+If step 3 keeps printing "No MCP servers configured", run `opencode` (TUI) in any folder,
+type `/mcps`, select the server and sign in — same credential. Slack: no command; there is
+no sanctioned path on opencode (its Slack is an OpenCode Console cloud-account feature:
+sign in with `opencode auth login opencode`, then connect Slack at
+https://opencode.ai/console → Integrations → Slack — this routes Slack through opencode.ai
+and is not mounted by ZibbyOS).

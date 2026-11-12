@@ -51,7 +51,7 @@ semantics.
 ```
 POST /api/tasks
 Body: {
-  title?: string             # optional short name; blank → derived from `text` via Haiku (`claude -p --model haiku`, 8s), falling back to the first non-empty line
+  title?: string             # optional short name; blank → derived from `text` via Haiku (`spawnOneShot`, haiku tier — `claude -p` or opencode per the engine, A32, 15s), falling back to the first non-empty line
   text: string                # the task description (what the RUN receives)
   routingText?: string        # the text to ROUTE on, when it differs from `text`.
                               # Absent (the ordinary case) → `text` is used for both.

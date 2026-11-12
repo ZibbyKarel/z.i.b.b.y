@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import {
   type ClassifyTaskInput,
   type Department,
@@ -7,11 +7,14 @@ import {
 } from "@zibby/contracts";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { type RoutableTarget, type TaskRouter, toTaskTarget } from "./task-router";
 
 /** How long the headless `claude -p` router may take before we give up and fall back. */
-const ROUTER_TIMEOUT_MS = 8000;
+// A32: 15s, not 8s — opencode `claude-agent/haiku` measured 2.8–4.3s typical, outliers 7.4–9.6s
+// (native claude ~2.4s). A timeout only means the deterministic fallback.
+const ROUTER_TIMEOUT_MS = 15_000;
 
 /** Cap the task text we hand the router so a giant paste can't bloat the prompt. */
 const MAX_TASK_CHARS = 4000;
@@ -128,6 +131,8 @@ export class ClaudeCliRouter implements TaskRouter {
   constructor(
     private readonly departments: DepartmentsStorageService,
     logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {
     this.log = logger.child(ClaudeCliRouter.name);
   }
@@ -261,10 +266,12 @@ export class ClaudeCliRouter implements TaskRouter {
    * (killing the child). Overridable for tests; production uses the real CLI.
    */
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+    return spawnOneShot({
+      tier: "haiku",
+      prompt,
       timeoutMs: ROUTER_TIMEOUT_MS,
       label: "router",
+      config: this.systemConfig?.current(),
     });
   }
 

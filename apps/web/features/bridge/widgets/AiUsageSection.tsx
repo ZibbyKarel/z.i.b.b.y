@@ -38,7 +38,12 @@ export function AiUsageSection() {
   const usage = useAiUsageQuery().data;
   const engines = useAiEnginesQuery().data?.engines;
   const config = useSystemConfigQuery().data;
-  const active: AiEngine = config?.aiEngine ?? "claude";
+  // A31: the Claude family spends the subscription (limits first); openai / free show tokens and cost.
+  const active: AiEngine =
+    (config?.aiEngine ?? "opencode") === "opencode" &&
+    (config?.modelFamily ?? "claude") !== "claude"
+      ? "opencode"
+      : "claude";
   // The usage endpoint answers `available`; the engines list is the fallback while it loads.
   const opencodeAvailable =
     usage?.opencode.available ?? engines?.find((e) => e.id === "opencode")?.available;

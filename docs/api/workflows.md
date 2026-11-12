@@ -404,7 +404,7 @@ level was not applied. The
 boundary pause on an exhausted Claude window is skipped before a stage none of whose
 attempts (first run and every escalation rung) spends the Claude subscription; a
 `claude-agent/*` model does (A18). The resulting `StageRun` carries `engine` /
-`engineModel`. The phase advisor is not available on an opencode stage (see below). The
+`engineModel`. The phase advisor runs on the stage's engine (A32, see below). The
 text-only `openaiModel` stage below is unchanged and takes precedence. See
 [ai-engines.md](./ai-engines.md).
 
@@ -544,6 +544,11 @@ phases:
   `<phase>.failure.txt` on a loop retry → the failing phase, e.g. the review). Only a
   settled stage of that phase is used, never a running one. The advisor runs
   `claude -p --resume <sessionId> --fork-session`, so the original session is untouched.
+  On an opencode stage (A32) it runs `opencode run --session <id> --fork` through
+  `spawnOneShot` (`read-guarded` profile: read/list/glob/grep anywhere, everything else
+  denied, the gate plugin refuses the operator-token dir; see
+  [ai-engines.md](./ai-engines.md#one-shot-calls-a32)). A session forks only on its own
+  engine; a claude source with an opencode stage (or the reverse) starts fresh.
   No captured session, or a resume the CLI rejects → a fresh session. The stage record
   now keeps `sessionId` across a restart.
 - **Read-only:** `--permission-mode dontAsk`, `--allowedTools Read Grep Glob`, Bash /
@@ -557,9 +562,7 @@ phases:
   `ESCALATE: <why>` and nothing else when the answer would change scope or acceptance
   criteria.
 - **Falls back to the operator, never around it:** no advisor configured / not a
-  workflow run, the asking stage runs on opencode (the advisor is a Claude session; it is
-  skipped with a log line rather than spend the Claude subscription behind the
-  operator's engine choice, A22), `maxCalls` reached, the run's spend (finished stages + this stage's
+  workflow run, `maxCalls` reached, the run's spend (finished stages + this stage's
   `costs.jsonl`) at or over its `budget` cap (checked before spawning), a failed call and an `ESCALATE:` line anywhere in the reply return text
   that tells the agent to call `ask_operator`.
 - **Audit:** every call writes `<stageDir>/advisor/NN.md` (question, answer or error,
@@ -567,7 +570,8 @@ phases:
   with an exclusive create, so `maxCalls` is counted from these files. A note left at
   `pending` by a crash mid-call still counts against `maxCalls`.
 - **Cost:** appended as `{"costUsd", "source": "advisor"}` to `<stageDir>/costs.jsonl`,
-  so it lands in the stage's `externalCostUsd`, the run's `costUsd` and the budget.
+  so it lands in the stage's `externalCostUsd`, the run's `costUsd` and the budget. On
+  `claude-agent/*` the cost is 0 (subscription; it counts in the Claude window instead).
 - **Review:** the contract tells a reviewer to read the reviewed stages'
   `advisor/*.md`; an advisor-approved deviation is declared and not a `gap` by itself.
 - **Timeout:** measured on claude 2.1.322 — a 150 s MCP tool call completes with the

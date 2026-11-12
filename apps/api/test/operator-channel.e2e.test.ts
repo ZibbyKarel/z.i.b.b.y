@@ -113,6 +113,8 @@ describe("Operator channel API (e2e)", () => {
   });
 
   it("an existing activity event reaches the operator DM exactly once", async () => {
+    // Outbound pushes only go out while autopilot is on (f87e9ec2a).
+    await withOperator(request(server()).put("/api/autopilot")).send({ level: "full" }).expect(200);
     const fake = app.get(OperatorChannelService).fake;
     const before = fake.sent.length;
     const activity = app.get(ActivityLogService);

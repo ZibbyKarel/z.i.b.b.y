@@ -1056,11 +1056,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   stageInfo(stageRunId: string): { cwd: string; sessionId?: string; engine?: "opencode" } | null {
     try {
       const rec = this.core.get(stageRunId);
-      // The advisor forks a claude session — an opencode stage's id is not one.
-      const sessionId = rec.engine === "opencode" ? undefined : rec.sessionId;
+      // The advisor forks this session on the same engine (`engine` absent = claude).
       return {
         cwd: rec.cwd,
-        ...(sessionId ? { sessionId } : {}),
+        ...(rec.sessionId ? { sessionId: rec.sessionId } : {}),
         ...(rec.engine === "opencode" ? { engine: "opencode" as const } : {}),
       };
     } catch {

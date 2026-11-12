@@ -453,8 +453,12 @@ as a "needs you" decision — there is nothing for the operator to decide yet.
 `research(item): Promise<string | null>` produces the concrete answer a reply
 draft is allowed to carry. It resolves the item's project to a local repo
 (`ProjectsStorageService.list()` + `ProjectLocalService.resolveForRun()`) and
-spawns a one-shot `claude -p` **inside that repo** so a question like "how does
-X work?" is answered from the code rather than guessed.
+spawns a one-shot (`spawnOneShot`: `claude -p`, or `opencode run` when the engine is
+opencode, A32) **inside that repo** so a question like "how does X work?" is answered
+from the code rather than guessed. On opencode the same grant is the `read-cwd`
+profile: read/list/glob/grep only, `external_directory` denied (a path outside the
+repo is refused, verified live), fail-closed on an `error` event — see
+[ai-engines.md](./ai-engines.md#one-shot-calls-a32).
 
 It returns `null` on **every** no-answer path — the `NO_ANSWER` security, a
 timeout, a spawn failure, empty output, a missing `projectId`, an unresolvable

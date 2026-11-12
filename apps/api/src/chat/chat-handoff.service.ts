@@ -1,13 +1,14 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type { ChatHandoff, ChatHandoffBody, ChatMessage } from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { ChatTranscriptStore } from "./chat-transcript.store";
 
 /** At or below this many rendered characters the transcript is carried verbatim. */
 export const HANDOFF_COMPACT_THRESHOLD_CHARS = 8000;
 
-/** Compaction reads a long transcript and writes a brief — far slower than the 8s namer. */
+/** Compaction reads a long transcript and writes a brief — far slower than the 15s namer. */
 const COMPACT_TIMEOUT_MS = 120_000;
 
 const COMPACT_PROMPT = [
@@ -34,6 +35,8 @@ export class ChatHandoffService {
   constructor(
     private readonly store: ChatTranscriptStore,
     logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {
     this.log = logger.child(ChatHandoffService.name);
   }
@@ -85,10 +88,12 @@ export class ChatHandoffService {
   }
 
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "sonnet"],
+    return spawnOneShot({
+      tier: "sonnet",
+      prompt,
       timeoutMs: COMPACT_TIMEOUT_MS,
       label: "handoff",
+      config: this.systemConfig?.current(),
     });
   }
 

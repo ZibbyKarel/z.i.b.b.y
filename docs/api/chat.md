@@ -48,7 +48,8 @@ for the dock's "Create task" button, so a task never gets only the clicked reply
 It renders the transcript up to (and including) `upToMessageId` as
 `**Operator:**` / `**ZIBBY:**` blocks (text only). Up to
 `HANDOFF_COMPACT_THRESHOLD_CHARS` (8000) it goes in verbatim; a longer thread is
-compacted by a one-shot `claude -p --model sonnet` call into an implementation
+compacted by a one-shot sonnet-tier call (`spawnOneShot`: `claude -p` or opencode per
+the engine, A32) into an implementation
 brief (`compacted: true`). If compaction fails, the last 8000 characters are used
 instead. The description always references the full `<id>.jsonl`
 (`ChatTranscriptStore.transcriptPath`); the New Task form detects that path and
@@ -150,7 +151,11 @@ claude -p <msg> [--resume <sid>] \
   whole process group, then `SIGKILL` after 3 s, and turns still running at shutdown are
   killed the same way — no grandchild outlives the turn with a valid token.
 
-### Chat on opencode (A24 / A25)
+### Chat on opencode (A24 / A33 — the default path)
+
+Since A31 the default `aiEngine` is `opencode`, so this is how the chat runs for every
+model family (Claude via `claude-agent/*`, OpenAI, OpenCode free). The native Claude path
+above runs only when `aiEngine: "claude"` is stored (or an `@agent` names it).
 
 A turn runs on the **effective engine**: `resolveAiEngine` with the mentioned `@agent`
 (its `engine` / `engineModel`), else `SystemConfig.aiEngine`. The model tier is the
@@ -161,26 +166,62 @@ opencode model comes from `opencodeTierModels` (`resolveTierModel`, an agent's
 ```
 opencode run --standalone --format json -m <provider/model> --agent zibby [--session <id>] -- <msg>
   env: OPENCODE_CONFIG=<0600 file, deleted after the turn>, OPENCODE_DISABLE_PROJECT_CONFIG=1,
-       PWD=<turn cwd>, ZIBBY_CHAT_MCP_SERVERS=zibby,zibby-kb,
+       PWD=<turn cwd>, ZIBBY_CHAT_MCP_SERVERS=atlassian,figma,<operator ids…>,zibby,zibby-kb,
        ZIBBY_CHAT_DENY_TOOLS=<zibby_create_task in an @agent turn, else empty>  (no inherited OPENCODE_*)
 ```
 
-- **Config:** the chat prompt (plus a note that shell, files and connectors need the
-  Claude engine) as the `zibby` agent; MCP servers `zibby` + `zibby-kb` (remote, bearer
-  header); `permissions` = deny `*`, allow `zibby_*` / `zibby-kb_*` (and deny
-  `zibby_create_task` when an `@agent` is mentioned); plugin
-  `chat/opencode-chat-gate/index.mjs`, which denies the `ZIBBY_CHAT_DENY_TOOLS` tools as
-  well (defence in depth). No `--auto`.
-- **Tool gating is fail-closed (A25):** only the mounted MCP tools run. Shell, edit,
-  write, execute, question, skill, subagent, web and `opencode_*` tools are denied, by
-  config and again by the plugin. Chat has no approval card for an `ask`, so nothing
-  is routed to the gate; it is refused.
-  On `claude-agent/*` models (Claude through opencode) Claude's own built-ins (Bash,
-  Write, …) are not exposed either: live on 2026-11-12 (`claude-agent/haiku`, opencode
-  2.2.7) the model saw only `mcp__opencode__skill`, ran nothing and created no file.
-- **Not on opencode:** the operator's own MCP servers (A30) — opencode has no auto-mode
-  classifier, and Playwright alone brings `browser_run_code_unsafe`; claude.ai
-  connectors (Slack, Jira, …) don't exist outside Claude.
+- **MCP servers (A33)**, later entries winning a name: the OAuth remotes `atlassian`
+  (`https://mcp.atlassian.com/v1/mcp`) and `figma` (`https://mcp.figma.com/mcp`); the
+  operator's own servers from `readOperatorMcpServers` for the turn cwd (user scope +
+  enabled plugins as `plugin_<plugin>_<server>`, minus the ones disabled for that cwd, and
+  never `serena`); then ZibbyOS's `zibby` + `zibby-kb` (bearer header, `oauth: false`).
+  A remote without its own headers keeps opencode's OAuth auto-detection. No Slack (see
+  below).
+- **Login is the operator's, once.** opencode stores an MCP OAuth credential in
+  `~/.local/share/opencode/opencode.db` (table `credential`), keyed by integration id
+  `mcp_` + the first 16 hex chars of `sha1(<server name> + "\0" + <url>)` — not by config
+  file. Any config naming the same server with the same URL reuses it, so the per-turn
+  config picks up a login made once in a terminal (see the handoff's "Operator login
+  commands"). ZibbyOS never runs a login itself.
+- **A server that needs auth doesn't break the turn:** opencode marks it `needs_auth`
+  ("requires a login before it can register a client"), logs a warning and runs the turn
+  without its tools (verified, opencode 2.2.7).
+- **Startup budget:** opencode waits at most 2 s for MCP servers before the first model
+  call (`MCP.awaitStartup`, hard-coded). A stdio server that starts slower — the
+  operator's Playwright plugin via `npx @playwright/mcp@latest` connected after ~3.7 s —
+  is not in that turn's toolset, and every turn is a fresh process.
+- **Config:** the chat prompt plus `OPENCODE_CHAT_NOTE` (what the chat has, that risky
+  steps go to `create_task`, that a server needing login is skipped, no Slack) as the
+  `zibby` agent; `permissions` = deny `*`, allow `shell`, `bash`, `read`, `grep`, `glob`,
+  `list` and `<server>_*` per mounted server (then deny `zibby_create_task` when an
+  `@agent` is mentioned); plugin `chat/opencode-chat-gate/index.mjs`. No `--auto`.
+  Write, edit, patch, Code Mode `execute`, question, skill, subagent, web and
+  `opencode_*` tools stay denied by the config and again by the plugin.
+- **Fail-fast gate (A33).** Chat has no approval card, no intent-request watcher and a
+  120 s turn, so the plugin never waits for a decision. It runs the run gate's own
+  classifier in-process (`classifyEvent` from `runner/claude-approval-hook.mjs`, events
+  mapped by the run plugin's `toClaudeEvents`):
+  - shell: an unclassified command runs; a classified one (push, rm/mv/overwrite,
+    publish, `gh pr create`, …) or a nested `opencode` / `claude` is refused at once;
+  - read/grep/glob/list run, except on the operator token dir / approvals API
+    (refused, as in runs);
+  - `zibby` / `zibby-kb` tools run; an operator-server call runs only when A28's
+    `classifyMcp` reads it as `mcp.read` — any write (by tool name) is refused.
+    A refusal reaches the model as `Blocked by the ZibbyOS gate: "<action>" — this needs
+the operator's approval, which the chat cannot ask for. … hand the work off with the
+zibby create_task tool …`, so the risky step goes through the real run gate.
+    Ceiling: as in runs, MCP classification is by tool name only — e.g. context7's
+    `resolve-library-id` and every Playwright tool read as writes and are refused.
+- **On `claude-agent/*`** the Claude Agent SDK runs with `settingSources: []`,
+  `strictMcpConfig: true` and `allowedTools: ["mcp__opencode__*"]` (hard-coded by
+  opencode): Claude sees only what opencode mounts, bridged as `mcp__opencode__<tool>`,
+  so claude.ai connectors (Slack, Atlassian, Figma, Claude Data/Docs) are unreachable —
+  Atlassian and Figma come from the remotes above instead.
+- **No Slack on opencode.** Slack's official MCP (`https://mcp.slack.com/mcp`) has no
+  dynamic client registration and admits only directory-published or internal apps.
+  opencode's own Slack ("OpenCode Console" → Integrations → Slack) needs an OpenCode
+  Console cloud account and relays through opencode.ai; it is not mounted. Slack stays
+  on the native Claude path and the channel adapters.
 - **Session:** the transcript stores `sessionEngine` next to `sessionId`. A stored session
   of the other engine is not resumed — the turn starts a fresh session.
 - **Stream:** `text` parts → `delta` (whole parts, joined with a blank line); `tool_use`

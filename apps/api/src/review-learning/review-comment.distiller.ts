@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 import { REVIEW_RULE_ID_REGEX } from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { envelopeInbound } from "../shared/text/untrusted-envelope";
 import type { FetchedComment } from "./review-comment.fetcher";
 
@@ -442,7 +443,11 @@ export async function distillChunks(
 export class ReviewCommentDistiller {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
+  ) {
     this.log = logger.child(ReviewCommentDistiller.name);
   }
 
@@ -462,17 +467,12 @@ export class ReviewCommentDistiller {
       // `known` rides into every prompt through this closure, not through a
       // `distillChunks` parameter — the loop itself has no use for it.
       (chunk) =>
-        spawnClaudeCli({
-          args: [
-            "-p",
-            buildDistillPrompt(chunk, known, system),
-            "--model",
-            "haiku",
-            "--output-format",
-            "json",
-          ],
+        spawnOneShot({
+          tier: "haiku",
+          prompt: buildDistillPrompt(chunk, known, system),
           timeoutMs: DISTILLER_TIMEOUT_MS,
           label: "review-learner",
+          config: this.systemConfig?.current(),
         }),
       this.log,
     );

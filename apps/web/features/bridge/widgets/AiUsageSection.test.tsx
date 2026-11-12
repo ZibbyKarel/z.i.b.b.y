@@ -6,7 +6,11 @@ const d = vi.hoisted(() => ({
   limits: undefined as unknown,
   usage: undefined as unknown,
   engines: undefined as unknown,
-  config: { aiEngine: "claude", opencodeModel: "" } as { aiEngine: string; opencodeModel: string },
+  config: { aiEngine: "claude", modelFamily: "claude", opencodeModel: "" } as {
+    aiEngine: string;
+    modelFamily: string;
+    opencodeModel: string;
+  },
 }));
 
 vi.mock("../../limits/queries", () => ({ useLimitsQuery: () => ({ data: d.limits }) }));
@@ -39,7 +43,7 @@ beforeEach(() => {
   };
   d.usage = usage();
   d.engines = undefined;
-  d.config = { aiEngine: "claude", opencodeModel: "opencode/big-pickle" };
+  d.config = { aiEngine: "claude", modelFamily: "claude", opencodeModel: "opencode/big-pickle" };
 });
 
 describe("AiUsageSection", () => {
@@ -92,7 +96,7 @@ describe("AiUsageSection", () => {
     expect(order()).toEqual([AiUsageSectionTestId.Claude, AiUsageSectionTestId.Opencode]);
     expect(screen.queryByTestId(AiUsageSectionTestId.ClaudeNote)).not.toBeInTheDocument();
     unmount();
-    d.config = { aiEngine: "opencode", opencodeModel: "" };
+    d.config = { aiEngine: "opencode", modelFamily: "opencode", opencodeModel: "" };
     renderWithProviders(<AiUsageSection />);
     expect(order()).toEqual([AiUsageSectionTestId.Opencode, AiUsageSectionTestId.Claude]);
     expect(screen.getByTestId(AiUsageSectionTestId.ClaudeNote)).toHaveTextContent("claude-agent");
@@ -103,10 +107,16 @@ describe("AiUsageSection", () => {
     expect(screen.getByTestId(`${AiUsageSectionTestId.Global}-claude`)).toBeInTheDocument();
     expect(screen.queryByTestId(`${AiUsageSectionTestId.Global}-opencode`)).not.toBeInTheDocument();
     unmount();
-    d.config = { aiEngine: "opencode", opencodeModel: "" };
+    d.config = { aiEngine: "opencode", modelFamily: "opencode", opencodeModel: "" };
     renderWithProviders(<AiUsageSection />);
     expect(screen.getByTestId(`${AiUsageSectionTestId.Global}-opencode`)).toBeInTheDocument();
     expect(screen.queryByTestId(`${AiUsageSectionTestId.Global}-claude`)).not.toBeInTheDocument();
+  });
+
+  it("the Claude family on opencode keeps the subscription limits first (A31)", () => {
+    d.config = { aiEngine: "opencode", modelFamily: "claude", opencodeModel: "" };
+    renderWithProviders(<AiUsageSection />);
+    expect(screen.getByTestId(`${AiUsageSectionTestId.Global}-claude`)).toBeInTheDocument();
   });
 
   it("says explicitly when opencode is not installed", () => {

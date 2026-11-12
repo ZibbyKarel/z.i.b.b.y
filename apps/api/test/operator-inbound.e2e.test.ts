@@ -142,6 +142,10 @@ describe("Operator channel inbound (e2e)", () => {
         publicBaseUrl: "https://zibby.tail.ts.net",
       })
       .expect(200);
+    // Outbound pushes (run outcome, PR opened) only go out while autopilot is on (f87e9ec2a).
+    await withOperator(request(app.getHttpServer()).put("/api/autopilot"))
+      .send({ level: "full" })
+      .expect(200);
   });
 
   afterAll(async () => {

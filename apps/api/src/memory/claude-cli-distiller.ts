@@ -1,8 +1,9 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { type NoteType, NoteTypeSchema } from "@zibby/contracts";
 import { z } from "zod";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { envelopeInbound } from "../shared/text/untrusted-envelope";
 
 /** How long the headless `claude -p` distiller may take before we fall back. */
@@ -135,7 +136,11 @@ const DISTILLER_SYSTEM_PROMPT = [
 export class ClaudeCliDistiller {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
+  ) {
     this.log = logger.child(ClaudeCliDistiller.name);
   }
 
@@ -210,10 +215,12 @@ export class ClaudeCliDistiller {
   }
 
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+    return spawnOneShot({
+      tier: "haiku",
+      prompt,
       timeoutMs: DISTILLER_TIMEOUT_MS,
       label: "distiller",
+      config: this.systemConfig?.current(),
     });
   }
 

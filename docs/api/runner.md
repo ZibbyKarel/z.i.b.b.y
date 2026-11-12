@@ -308,8 +308,10 @@ Key assembled pieces:
   logs `✖ blocked: <why>`.
 - **`--setting-sources ""`** (isolation) — on every run and every one-shot
   (router, task-namer, briefer, memory distiller, triager, review-comment
-  distiller, reply-draft researcher via `spawnClaudeCli`'s
-  `ISOLATED_SETTING_SOURCES`, prepended unless the caller passes its own; the
+  distiller, reply-draft researcher, phase advisor via `spawnOneShot` →
+  `spawnClaudeCli`'s `ISOLATED_SETTING_SOURCES`, prepended unless the caller passes
+  its own — on the opencode engine they run `opencode run` instead, A32, see
+  `ai-engines.md`; the
   product-factory haiku vision QA, `libs/product-factory/src/providers/haiku.ts`,
   passes the `--setting-sources ""` literal through its own `proc.ts` runner
   instead); chat already did (`docs/api/chat.md`). Not loaded: the

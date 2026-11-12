@@ -1,4 +1,9 @@
-# AI engines (claude / opencode)
+# AI engines (opencode, with Claude through it)
+
+**Since A31 the app runs on opencode by default**, Claude included (`claude-agent/*`). The
+Settings card no longer offers the native `claude` engine: the operator picks a **model
+family** (see [Model families](#model-families-a31)). `aiEngine: "claude"` stays valid for
+stored configs and per-step `engine` overrides.
 
 Agent runs and workflow agent stages run on one of two engines:
 
@@ -16,18 +21,45 @@ The **chat** follows the engine too (A24): with `aiEngine: "opencode"` (or a men
 tiers. Chat on opencode gets only the `zibby` / `zibby-kb` MCP tools — no shell, files,
 operator MCP servers or claude.ai connectors (A25). See [chat.md](./chat.md#chat-on-opencode-a24--a25).
 
-Decisions: `docs/plans/ai-providers-dictation-decisions.md` (A1–A26). Verified opencode
+Decisions: `docs/plans/ai-providers-dictation-decisions.md` (A1–A32). Verified opencode
 behaviour: `docs/plans/ai-providers-dictation-handoff.md` → _Verified facts_.
 
 ## Choosing the engine
 
 | Where                                                  | Field                                                                                      | Default                |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------- |
-| Global (`SystemConfig`, [system.md](./system.md))      | `aiEngine: "claude" \| "opencode"`                                                         | `"claude"`             |
+| Global (`SystemConfig`, [system.md](./system.md))      | `aiEngine: "claude" \| "opencode"`                                                         | `"opencode"` (A31)     |
 | Global                                                 | `opencodeModel: string` (`provider/model[#variant]`)                                       | `""` (no paid default) |
 | Global                                                 | `opencodeTierModels: { haiku?, sonnet?, opus?, fable? }` (each `provider/model[#variant]`) | `{}`                   |
 | Agent frontmatter ([agents-runs.md](./agents-runs.md)) | `engine`, `engineModel`                                                                    | absent = global        |
 | Workflow agent phase ([workflows.md](./workflows.md))  | `engine`, `engineModel` (A21)                                                              | absent = agent         |
+
+### Model families (A31)
+
+`SystemConfig.modelFamily` (`claude` | `openai` | `opencode`, default `claude`) names an
+opencode provider: `claude-agent`, `openai`, `opencode` (the free models). Picking one in
+Settings writes `aiEngine: "opencode"`, `modelFamily`, `opencodeModel` and
+`opencodeTierModels` in one `PUT /api/system/config` (operator token). The preset is
+resolved client-side by `applyModelFamily(family, catalogIds)` (`@zibby/contracts`, table
+`MODEL_FAMILY_PRESETS`), against the models `GET /ai-providers/engines` lists:
+
+| Family   | haiku (1)                              | sonnet (2) = default          | opus (3)                           | fable (4)                             |
+| -------- | -------------------------------------- | ----------------------------- | ---------------------------------- | ------------------------------------- |
+| claude   | `claude-agent/haiku`                   | `claude-agent/sonnet`         | `claude-agent/opus`                | `claude-agent/fable`                  |
+| openai   | `openai/gpt-6-luna`                    | `openai/gpt-6.1-terra`        | `openai/gpt-6.1-sol`               | `openai/gpt-6-astra`                  |
+| opencode | `opencode/nemotron-3.5-lightning-free` | `opencode/glm-5.3-flash-free` | `opencode/minimax-m3.1-flash-free` | `opencode/nemotron-3.5-super-vl-free` |
+
+Sources: claude = the `claude-agent` aliases in `opencode models`; openai = the repo's
+`OPENAI_TEXT_MODELS` (cheapest to dearest). `opencode models` lists **no** `openai/*` model
+until `opencode auth login openai`, so those ids are unverified against opencode; the free
+ids are real catalog entries, ordered by judgment (lightning/small first, large
+context/output last), not benchmarked. A tier whose id the catalog lacks is left unset
+(`resolveTierModel` falls back); a missing default falls back to the resolved tier 2. A
+family whose provider has no model in a readable catalog is **not applied**: the UI shows
+`opencode auth login <provider>` (ZibbyOS never enters credentials). With an unreadable
+catalog (binary missing or empty list) the preset is written as is and the UI says so.
+The per-tier pickers stay for manual overrides. The usage widget follows the family: Claude
+family = subscription limits first; the others show tokens and cost.
 
 ### Model tiers (A19/A20)
 
@@ -218,9 +250,10 @@ always denies. The plugin ignores those ids in `ZIBBY_MCP_SERVERS` too.
   built-in `general` subagent; its tool calls still go through the gate plugin (and are
   logged, see below),
 - custom hooks,
-- `--plugin-dir`s,
-- the phase advisor (`ask_advisor`): it is a Claude session, so an opencode stage gets
-  "not available" and is told to ask the operator (A22).
+- `--plugin-dir`s.
+
+The phase advisor (`ask_advisor`) runs on the asking stage's engine since A32 (see
+[One-shot calls](#one-shot-calls-a32)).
 
 A stage logs `ℹ opencode stage: tier <tier> → <model>[#variant]`, suffixed
 `(thinking "<level>" not supported by this model — no matching variant)` or
@@ -310,6 +343,78 @@ The watchdog does not fire while the run waits for an operator decision
 The per-run config (it holds MCP secrets) and the gate log are deleted when the run ends
 and when the run is deleted. A resume writes both again before it spawns.
 
+## One-shot calls (A32)
+
+The API's internal single-prompt calls follow the engine too (A32, superseding A22's
+"one-shots stay Claude"). They all go through `spawnOneShot`
+(`apps/api/src/shared/spawn-one-shot.ts`): on `claude` it is exactly the old
+`spawnClaudeCli` argv (`-p <prompt> --output-format json --model <tier>` + the caller's
+own flags); on opencode it runs
+
+```
+opencode run --standalone --archived --format json -m <model> --agent zibby-oneshot \
+  [--session <id> --fork] -- <prompt>
+```
+
+with the tier mapped like a run (`resolveAiEngine` → `resolveTierModel`, A20; the engine
+is `SystemConfig.aiEngine`, the advisor's is its stage's). The output is turned into the
+claude CLI's envelope `{ result, total_cost_usd, session_id }`, so every caller's parser is
+unchanged: `result` = the last assistant step's text (a "let me look…" step before a tool
+call never leaks into it), cost = the sum of `step_finish` costs. An `error` event, a
+non-zero exit, the timeout or empty text reject; each caller keeps its own fallback.
+
+| Caller                                                         | Tier                    | Timeout                   | opencode tools |
+| -------------------------------------------------------------- | ----------------------- | ------------------------- | -------------- |
+| task router `tasks/claude-cli-router.ts`                       | haiku                   | 15 s                      | none           |
+| task namer `tasks/claude-cli-task-namer.ts`                    | haiku                   | 15 s                      | none           |
+| briefer `briefing/claude-cli-briefer.ts`                       | haiku                   | 15 s                      | none           |
+| channel triager `channels/triage/claude-cli-triager.ts`        | haiku                   | 15 s                      | none           |
+| memory distiller `memory/claude-cli-distiller.ts`              | haiku                   | 30 s                      | none           |
+| review learner `review-learning/review-comment.distiller.ts`   | haiku                   | 30 s                      | none           |
+| chat handoff compaction `chat/chat-handoff.service.ts`         | sonnet                  | 120 s                     | none           |
+| reply researcher `channels/reply-draft/reply-draft.service.ts` | sonnet                  | 300 s                     | `read-cwd`     |
+| phase advisor `workflows/phase-advisor.service.ts`             | phase's `advisor.model` | stage MCP timeout − 2 min | `read-guarded` |
+
+The per-call config (temp dir, 0600, deleted after the call) defines the `zibby-oneshot`
+agent (a one-line "headless helper" system prompt) and the permissions:
+
+- **none**: `* deny` + `external_directory deny`. No tool at all (live: `skill` →
+  `Permission denied: skill`).
+- **read-cwd**: `* deny`, `read` / `list` / `glob` / `grep` allow, `external_directory`
+  deny, plus the gate plugin (the approval hook on every read: the operator-token dir).
+  Verified live (2026-11-12, opencode 2.2.7, `claude-agent/haiku`): a read inside the
+  repo works; an absolute read outside it, `../outside.txt`, and grep / glob on the
+  parent dir all fail with `Permission denied: external_directory`. Ceiling: a symlink
+  inside the repo that points outside is followed (the hook still refuses one into the
+  token dir, it realpaths).
+- **read-guarded** (advisor): like read-cwd, but `external_directory` allow (the claude
+  advisor reads anywhere too, `--add-dir <run dir>`); the gate plugin's hook refuses the
+  operator-token dir (live: `Blocked by the ZibbyOS gate: … read the operator token`).
+
+The env is `agentSpawnEnv` (no inherited `OPENCODE_*`, project config off, `PWD` and
+`ZIBBY_GATE_CWD` = the call's cwd, `OPENCODE_CLAUDE_PATH`); without a cwd the call runs in
+its temp dir. `--archived` keeps the sessions out of opencode's session list. Under vitest
+the opencode path refuses to start without `OPENCODE_BIN`.
+
+Latency (this machine, 2026-11-12, `claude-agent/haiku`): native `claude -p --model haiku`
+~2.3–2.5 s; opencode one-shot 2.8–4.3 s typical (n=12), outliers 7.4 s and 9.6 s. The
+8 s callers (router, namer, briefer, triager) were raised to 15 s on both engines; a
+timeout only means the deterministic fallback.
+
+**Advisor on opencode.** The stage session is forked with `--session <id> --fork`
+(verified: the fork knows the source session's context, gets a new id, and runs under
+the new per-call config). A session forks only on its own engine (claude: `--resume
+--fork-session`); across engines the advisor starts fresh. The fork needs the source
+session's directory to still exist (`Location not found: …` otherwise → the existing
+fresh retry). `thinking` rides the model variant (A26). Cost = summed `step_finish`
+cost, so on `claude-agent/*` it is 0: that use shows in the Claude window, not in the
+run's `budget` (the budget cap check is unchanged and never trips on it).
+
+**Accounting.** One-shots are not recorded as runs on either engine, as before. On a
+`claude-agent/*` mapping they spend the Claude subscription like the native CLI did; the
+task scheduler still defers an unrouted task on an exhausted window (its router and its
+target may be Claude).
+
 ## Claude usage limits
 
 The 5-hour / weekly window belongs to the Claude subscription. It applies to every run
@@ -337,7 +442,7 @@ run does not depend on it.
 
 Setting or changing the engine or model needs the operator token
 (`x-zibby-operator-token`, 401 otherwise): `PUT /api/system/config` when `aiEngine`,
-`opencodeModel` or any `opencodeTierModels` entry differs from the stored value, agent
+`modelFamily`, `opencodeModel` or any `opencodeTierModels` entry differs from the stored value, agent
 create/update when `engine` or `engineModel` differs (`null` on an agent without an
 override is not a change), and workflow create/update when a phase's `engine` /
 `engineModel` differs from the stored phase with the same id (A21). Every other config /

@@ -1,12 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import type { ChannelItem } from "@zibby/contracts";
 import { ProjectLocalService } from "../../projects/project-local.service";
 import { ProjectsStorageService } from "../../projects/projects.storage.service";
 import { LoggerService, type ScopedLogger } from "../../shared/logging/logger.service";
-import { spawnClaudeCli } from "../../shared/spawn-claude-cli";
+import { spawnOneShot } from "../../shared/spawn-one-shot";
+import { SystemConfigStore } from "../../system/system-config.store";
 import { envelopeInbound } from "../../shared/text/untrusted-envelope";
 
-/** Minutes, not seconds — this reads a repo, unlike the 8s triager. */
+/** Minutes, not seconds — this reads a repo, unlike the 15s triager. */
 const RESEARCH_TIMEOUT_MS = 300_000;
 
 /** The security the researcher returns when the repo does not hold the answer. */
@@ -91,6 +92,8 @@ export class ReplyDraftService {
     private readonly projects: ProjectsStorageService,
     private readonly projectLocal: ProjectLocalService,
     logger: LoggerService,
+    // A32: the researcher follows the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {
     this.log = logger.child(ReplyDraftService.name);
   }
@@ -245,16 +248,22 @@ export class ReplyDraftService {
    *   `ANTHROPIC_API_KEY`-only auth (no OAuth/keychain), which broke this
    *   environment's session entirely (`"Not logged in"`), so it would only
    *   work in a deployment that provisions a raw API key for this one call.
+   *
+   * On opencode (A32) the same contract is the `read-cwd` profile of `spawnOneShot`:
+   * every permission denied except `read`/`list`/`glob`/`grep`, and
+   * `external_directory` denied, so a path outside `cwd` is refused (verified live,
+   * opencode 2.2.7: `Permission denied: external_directory` for an absolute read and
+   * for grep/glob on the parent dir; `skill` denied). The gate plugin additionally runs
+   * the approval hook on every read (operator-token dir). Ceiling: a symlink INSIDE the
+   * repo that points outside is followed, as a path-scoped `Read` rule on claude would.
    */
   protected runClaude(prompt: string, cwd: string): Promise<string> {
-    return spawnClaudeCli({
-      args: [
-        "-p",
-        prompt,
-        "--output-format",
-        "json",
-        "--model",
-        "sonnet",
+    return spawnOneShot({
+      tier: "sonnet",
+      prompt,
+      tools: "read-cwd",
+      config: this.systemConfig?.current(),
+      claudeArgs: [
         "--permission-mode",
         "dontAsk",
         "--allowedTools",

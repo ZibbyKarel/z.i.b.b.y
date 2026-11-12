@@ -2,7 +2,7 @@ import * as path from "node:path";
 import { agentBaseEnv } from "../shared/agent-env";
 import type { ChatStreamEvent } from "./chat-stream-parser";
 
-/** The gate plugin an opencode chat turn loads (A25): default-deny, mounted MCP tools only. */
+/** The gate plugin an opencode chat turn loads (A25/A33): fail-fast, never waits for a decision. */
 export const OPENCODE_CHAT_GATE_PLUGIN = path.resolve(__dirname, "opencode-chat-gate");
 
 /** The opencode agent id the chat's system prompt is defined under. */
@@ -11,26 +11,51 @@ const OPENCODE_CHAT_AGENT = "zibby";
 /** opencode names an MCP tool `<server>_<tool>`; ids outside this set can't be matched safely. */
 const OPENCODE_MCP_ID = /^[A-Za-z0-9_-]+$/;
 
+/** Built-in tools a chat turn may use — mirrors the gate plugin's `CHAT_BUILTIN_TOOLS`. */
+export const OPENCODE_CHAT_BUILTIN_TOOLS = ["shell", "bash", "read", "grep", "glob", "list"];
+
 /** Server ids that would shadow opencode's own `opencode_*` / `browser_*` tools. */
 const RESERVED_IDS = new Set(["opencode", "browser"]);
 
 /**
- * Appended to the system prompt on opencode, so the model tells the operator why it has
- * no shell instead of pretending (A25).
+ * Appended to the system prompt on opencode (A33), so the model knows what it has and
+ * where a risky step goes instead of pretending or retrying.
  */
 export const OPENCODE_CHAT_NOTE =
-  "Běžíš na enginu opencode. Máš jen nástroje MCP serverů zibby a zibby-kb. Shell, práci " +
-  "se soubory, operátorovy vlastní MCP servery ani konektory claude.ai (Slack, Jira, …) tu " +
-  "nemáš — když je operátor potřebuje, řekni mu, že v chatu vyžadují engine Claude.";
+  "Běžíš na enginu opencode. Máš shell, čtení souborů (read/grep/glob), MCP servery zibby " +
+  "a zibby-kb, operátorovy vlastní MCP servery a — když je operátor přihlášený — Atlassian " +
+  "(Jira, Confluence) a Figmu. Slack tu nemáš. Gate chatu pustí jen čtení a neškodné " +
+  "příkazy; cokoli rizikového (push, mazání, přepis souborů, zápis přes MCP, publikace) " +
+  "odmítne — pak to nezkoušej obejít a předej práci přes create_task, nebo operátorovi " +
+  "řekni, co bys spustil. Server, který hlásí, že potřebuje přihlášení, prostě vynech.";
 
-/** A Claude `mcpServers` entry → opencode's `mcp.servers` shape (stdio → local, http/sse → remote). */
+/**
+ * A33 — remote MCP servers every opencode chat turn mounts (OAuth, public endpoints with
+ * dynamic client registration). opencode keys a server's stored OAuth credential by
+ * `sha1(name + "\0" + url)`, so these exact names + URLs are what the operator logs in
+ * to once (`opencode mcp auth <name>`, see docs/api/chat.md); until then opencode marks
+ * the server `needs_auth` and the turn runs without it. No Slack: its official MCP has
+ * no dynamic client registration.
+ */
+export const OPENCODE_CHAT_REMOTE_SERVERS: Record<string, Record<string, unknown>> = {
+  atlassian: { type: "http", url: "https://mcp.atlassian.com/v1/mcp" },
+  figma: { type: "http", url: "https://mcp.figma.com/mcp" },
+};
+
+/** Operator servers the chat never mounts, whatever their config says (operator: "serena nechci"). */
+export const OPENCODE_CHAT_EXCLUDED_SERVERS = new Set(["serena"]);
+
+/**
+ * A Claude `mcpServers` entry → opencode's `mcp.servers` shape (stdio → local, http/sse →
+ * remote). A remote server that brings its own headers (ZibbyOS's bearer-token servers)
+ * has OAuth off; any other remote keeps opencode's OAuth auto-detection (A33).
+ */
 export function toOpencodeMcpServer(config: Record<string, unknown>): Record<string, unknown> {
   if (typeof config.url === "string" && config.type !== "stdio") {
     return {
       type: "remote",
       url: config.url,
-      ...(config.headers ? { headers: config.headers } : {}),
-      oauth: false,
+      ...(config.headers ? { headers: config.headers, oauth: false } : {}),
       codemode: false,
     };
   }
@@ -49,10 +74,11 @@ export function opencodeChatServerIds(servers: Record<string, unknown>): string[
 
 /**
  * The per-turn opencode config (written 0600 by the caller, passed as `OPENCODE_CONFIG`):
- * the chat prompt as the `zibby` agent, the turn's MCP servers, and A25's fail-closed
- * permissions — deny everything, allow only `<server>_*` of the mounted servers (verified
- * on 2.2.7: the denied built-ins disappear from the toolset; `skill` stays listed and the
- * plugin refuses it). The turn runs without `--auto`.
+ * the chat prompt as the `zibby` agent, the turn's MCP servers, and fail-closed
+ * permissions — deny everything, allow the shell + file-read built-ins (A33) and
+ * `<server>_*` of the mounted servers (verified on 2.2.7: the denied built-ins — write,
+ * edit, patch, `execute`, web — disappear from the toolset; `skill` stays listed and the
+ * plugin refuses it). The gate plugin judges every allowed call. No `--auto`.
  */
 export function buildOpencodeChatConfig(
   system: string,
@@ -70,6 +96,11 @@ export function buildOpencodeChatConfig(
       agents: { [OPENCODE_CHAT_AGENT]: { mode: "primary", system } },
       permissions: [
         { action: "*", resource: "*", effect: "deny" },
+        ...OPENCODE_CHAT_BUILTIN_TOOLS.map((action) => ({
+          action,
+          resource: "*",
+          effect: "allow",
+        })),
         ...serverIds.map((id) => ({ action: `${id}_*`, resource: "*", effect: "allow" })),
         ...denyTools.map((action) => ({ action, resource: "*", effect: "deny" })),
       ],

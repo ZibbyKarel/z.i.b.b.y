@@ -3,26 +3,26 @@
 import { useTranslations } from "next-intl";
 import { ButtonGroup, Panel, Stack, Typography } from "@zibby/design-system";
 import {
-  type AiEngine,
   type AiEngineStatus,
+  MODEL_FAMILIES,
+  MODEL_FAMILY_PROVIDER,
   MODEL_TIERS,
+  type ModelFamily,
   type ModelTier,
   type SystemConfig,
+  applyModelFamily,
 } from "@zibby/contracts";
-import {
-  AiEngineModelPicker,
-  OperatorTokenNotice,
-  isModelMissing,
-  useAiEnginesQuery,
-} from "../../ai-providers";
+import { AiEngineModelPicker, OperatorTokenNotice, useAiEnginesQuery } from "../../ai-providers";
 import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
 /** Testids for the AI engine card. */
 export enum AiEngineSectionTestId {
-  Switch = "ai-engine-switch",
-  ClaudeStatus = "ai-engine-claude-status",
+  Family = "ai-engine-family",
   OpencodeStatus = "ai-engine-opencode-status",
+  /** Suffixed with the family, e.g. `ai-engine-family-hint-openai`. */
+  FamilyHint = "ai-engine-family-hint",
+  Unchecked = "ai-engine-unchecked",
   Providers = "ai-engine-providers",
   NoProviders = "ai-engine-no-providers",
   Blocked = "ai-engine-blocked",
@@ -31,11 +31,10 @@ export enum AiEngineSectionTestId {
   Level = "ai-engine-level",
 }
 
-const ENGINES: AiEngine[] = ["claude", "opencode"];
-
 /**
- * Global run-engine choice (Claude subscription vs opencode) plus the opencode model.
- * Persisted on the file-backed SystemConfig with the same spread-PUT as the chat section.
+ * Everything runs on opencode (A31): the operator picks a model family (Claude / OpenAI /
+ * OpenCode free), which presets the level models and the default model; the pickers below
+ * stay for manual overrides. Persisted on the file-backed SystemConfig with a spread-PUT.
  * Credentials are never entered here: connecting a provider is `opencode auth login` in a terminal.
  */
 export function AiEngineSection() {
@@ -53,24 +52,25 @@ interface AiEngineEditorProps {
 function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
   const t = useTranslations("aiEngine");
   const setConfig = useSetSystemConfigMutation();
-  const claude = engines?.find((e) => e.id === "claude");
   const opencode = engines?.find((e) => e.id === "opencode");
   const models = opencode?.models ?? [];
   const model = config.opencodeModel;
 
-  // Why opencode cannot be switched on right now (A7) — explained inline, not failed later.
-  const blocked = !opencode?.available
-    ? t("blockedUnavailable")
-    : model === ""
-      ? t("blockedNoModel")
-      : isModelMissing(models, model)
-        ? t("modelMissing")
-        : undefined;
+  // An unreadable catalog (binary missing / empty list) cannot filter a preset: it is written as is.
+  const catalogReadable = !!opencode?.available && models.length > 0;
+  const connected = (family: ModelFamily) =>
+    models.some((m) => m.id.startsWith(`${MODEL_FAMILY_PROVIDER[family]}/`));
+  const disconnected = catalogReadable ? MODEL_FAMILIES.filter((f) => !connected(f)) : [];
 
-  const chooseEngine = (next: string) => {
-    if (next === config.aiEngine) return;
-    if (next === "opencode" && blocked) return;
-    setConfig.mutate({ body: { ...config, aiEngine: next as AiEngine } });
+  const chooseFamily = (next: string) => {
+    const family = next as ModelFamily;
+    if (family === config.modelFamily || disconnected.includes(family)) return;
+    setConfig.mutate({
+      body: {
+        ...config,
+        ...applyModelFamily(family, catalogReadable ? models.map((m) => m.id) : undefined),
+      },
+    });
   };
   const chooseModel = (id: string) => setConfig.mutate({ body: { ...config, opencodeModel: id } });
 
@@ -83,13 +83,6 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
     });
   };
 
-  const status = (e: AiEngineStatus | undefined, name: string) =>
-    !e
-      ? name
-      : e.available
-        ? t("available", { name, version: e.version ?? "?" })
-        : t("notInstalled", { name });
-
   return (
     <Panel header={t("title")} padding="300">
       <Stack gap="200">
@@ -97,34 +90,56 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
           {t("hint")}
         </Typography>
 
-        <span data-testid={AiEngineSectionTestId.Switch}>
-          <ButtonGroup
-            ariaLabel={t("title")}
-            onChange={chooseEngine}
-            options={ENGINES.map((e) => ({ id: e, label: t(`engine.${e}`) }))}
-            value={config.aiEngine}
-          />
-        </span>
-        {blocked && (
+        <Typography data-testid={AiEngineSectionTestId.OpencodeStatus} size="sm" type="text">
+          {!opencode
+            ? t("runsOn")
+            : opencode.available
+              ? t("runsOnAvailable", { version: opencode.version ?? "?" })
+              : t("runsOnMissing")}
+        </Typography>
+        {opencode && !opencode.available && (
           <Typography data-testid={AiEngineSectionTestId.Blocked} size="sm" tone="warn" type="text">
-            {t("blockedPrefix", { reason: blocked })}
+            {t("blockedUnavailable")}
           </Typography>
         )}
 
-        <Typography data-testid={AiEngineSectionTestId.ClaudeStatus} size="sm" type="text">
-          {status(claude, t("engine.claude"))}
-        </Typography>
-        <Typography data-testid={AiEngineSectionTestId.OpencodeStatus} size="sm" type="text">
-          {status(opencode, t("engine.opencode"))}
-        </Typography>
+        <span data-testid={AiEngineSectionTestId.Family}>
+          <ButtonGroup
+            ariaLabel={t("familyTitle")}
+            onChange={chooseFamily}
+            options={MODEL_FAMILIES.map((f) => ({ id: f, label: t(`family.${f}`) }))}
+            value={config.modelFamily}
+          />
+        </span>
+        {disconnected.map((f) => (
+          <Typography
+            data-testid={`${AiEngineSectionTestId.FamilyHint}-${f}`}
+            key={f}
+            leading="snug"
+            size="sm"
+            tone="warn"
+            type="text"
+          >
+            {t("familyNotConnected", {
+              family: t(`family.${f}`),
+              command: `opencode auth login ${MODEL_FAMILY_PROVIDER[f]}`,
+            })}
+          </Typography>
+        ))}
+        {!catalogReadable && (
+          <Typography
+            data-testid={AiEngineSectionTestId.Unchecked}
+            leading="snug"
+            size="2xs"
+            type="note"
+            variant="tertiary"
+          >
+            {t("presetUnchecked")}
+          </Typography>
+        )}
 
         {opencode?.available && (
           <>
-            <Typography leading="snug" size="sm" type="note" variant="secondary">
-              {models.some((m) => m.id.startsWith("claude-agent/"))
-                ? t("claudeAgentConnected")
-                : t("claudeAgentHint")}
-            </Typography>
             {opencode.providers && opencode.providers.length > 0 ? (
               <Typography data-testid={AiEngineSectionTestId.Providers} size="sm" type="text">
                 {t("providers", { list: opencode.providers.join(", ") })}

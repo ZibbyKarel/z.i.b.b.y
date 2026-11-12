@@ -141,10 +141,10 @@ export interface ClaudeRunOptions {
 }
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
-const APPROVAL_HOOK = path.resolve(__dirname, "claude-approval-hook.mjs");
+export const APPROVAL_HOOK = path.resolve(__dirname, "claude-approval-hook.mjs");
 
 /** The opencode plugin dir that runs {@link APPROVAL_HOOK} on every tool call. */
-const OPENCODE_GATE_PLUGIN = path.resolve(__dirname, "opencode-gate-plugin");
+export const OPENCODE_GATE_PLUGIN = path.resolve(__dirname, "opencode-gate-plugin");
 
 /** The opencode agent id the run's system prompt is defined under. */
 const OPENCODE_AGENT = "zibby";

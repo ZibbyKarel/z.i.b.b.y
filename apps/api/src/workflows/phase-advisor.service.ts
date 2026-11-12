@@ -1,9 +1,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import { type ResolvedPhaseAdvisor, type WorkflowRun, resolvePhaseAdvisor } from "@zibby/contracts";
 import { readGuardSettings } from "../runner/claude-run-command.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 import { STAGE_MCP_TOOL_TIMEOUT_MS, WorkflowRunnerService } from "./workflow-runner.service";
 import { WorkflowsStorageService } from "./workflows.storage.service";
 
@@ -43,7 +44,10 @@ async function stageCostUsd(stageCwd: string): Promise<number> {
   return sum;
 }
 
-/** The `claude -p --output-format json` reply: answer text, cost, and an `ESCALATE:` reason. */
+/**
+ * The one-shot's `{ result, total_cost_usd, is_error }` reply (claude's own, or the
+ * envelope `spawnOneShot` builds from opencode): answer text, cost, `ESCALATE:` reason.
+ */
 export function parseAdvisorReply(stdout: string): {
   answer: string;
   costUsd: number;
@@ -108,11 +112,13 @@ function buildAdvisorPrompt(o: {
 export class PhaseAdvisorService {
   private readonly logger = new Logger(PhaseAdvisorService.name);
   /** Test seam. */
-  spawn = spawnClaudeCli;
+  spawn = spawnOneShot;
 
   constructor(
     private readonly runs: WorkflowRunnerService,
     private readonly workflows: WorkflowsStorageService,
+    // A32: the opencode tier mapping; absent (unit tests) = no opencode model.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {}
 
   /** Ask the advisor of `workflowRunId`'s live phase. Returns the text the agent gets back. */
@@ -129,12 +135,9 @@ export class PhaseAdvisorService {
     const workflow = await this.workflows.get(run.workflowId).catch(() => null);
     const cfg = workflow ? resolvePhaseAdvisor(workflow, phaseId) : null;
     if (!workflow || !cfg) return NO_ADVISOR;
-    // A22: the advisor is a Claude session. An opencode stage must not spend the Claude
-    // subscription behind the operator's engine choice, so it gets no advisor.
-    if (stage.engine === "opencode") {
-      this.logger.log(`advisor skipped for opencode stage ${run.currentStageRunId} (A22)`);
-      return `The advisor is not available on an opencode step. ${ASK_OPERATOR}`;
-    }
+    // A32 (replaces A22's refusal): the advisor runs on the asking stage's engine, so
+    // an opencode stage never spends the Claude subscription behind the operator's back.
+    const engine = stage.engine ?? "claude";
     const consumes = workflow.phases.find((p) => p.id === phaseId)?.consumes;
 
     // Never spend past the run's cap: finished stages + this stage's costs so far.
@@ -163,7 +166,9 @@ export class PhaseAdvisorService {
           .find((s) => s.phaseId === from && s.runId !== run.currentStageRunId)
       : undefined;
     const sourceInfo = source ? this.runs.stageInfo(source.runId) : null;
-    const sessionId = sourceInfo?.sessionId;
+    // A session forks only on its own engine; across engines the advisor starts fresh.
+    const sessionId =
+      (sourceInfo?.engine ?? "claude") === engine ? sourceInfo?.sessionId : undefined;
     const handoff = handoffPath
       ? (await fs.readFile(handoffPath, "utf8").catch(() => "")).slice(0, HANDOFF_CAP)
       : "";
@@ -179,6 +184,7 @@ export class PhaseAdvisorService {
     try {
       try {
         result = await this.call(
+          engine,
           cfg,
           cwd,
           run.cwd,
@@ -190,7 +196,13 @@ export class PhaseAdvisorService {
         // A session the CLI can't find (moved cwd, pruned history) → one fresh try.
         this.logger.warn(`advisor resume of ${sessionId} failed, retrying fresh: ${String(err)}`);
         resumed = false;
-        result = await this.call(cfg, cwd, run.cwd, buildAdvisorPrompt({ ...base, resumed }));
+        result = await this.call(
+          engine,
+          cfg,
+          cwd,
+          run.cwd,
+          buildAdvisorPrompt({ ...base, resumed }),
+        );
       }
     } catch (err) {
       error = err instanceof Error ? err.message : String(err);
@@ -226,18 +238,23 @@ export class PhaseAdvisorService {
     ].join("\n");
   }
 
+  /**
+   * One advisor call. claude: `--resume <id> --fork-session`, Read/Grep/Glob under the
+   * `readGuardSettings` hook. opencode (A32): `--session <id> --fork`, the
+   * `read-guarded` profile (read/list/glob/grep anywhere, all else denied, the gate
+   * plugin's hook denies the operator-token dir), thinking as a model variant. Cost is
+   * the summed `step_finish` cost — 0 on `claude-agent/*` (subscription, not priced), so
+   * that spend shows in the Claude window, not in the run budget.
+   */
   private async call(
+    engine: "claude" | "opencode",
     cfg: ResolvedPhaseAdvisor,
     cwd: string,
     runDir: string,
     prompt: string,
     sessionId?: string,
   ): Promise<ReturnType<typeof parseAdvisorReply>> {
-    const args = [
-      "-p",
-      prompt,
-      "--output-format",
-      "json",
+    const claudeArgs = [
       "--permission-mode",
       "dontAsk",
       "--allowedTools",
@@ -257,13 +274,23 @@ export class PhaseAdvisorService {
       readGuardSettings(),
       "--add-dir",
       runDir,
-      "--model",
-      cfg.model,
       "--effort",
       cfg.thinking,
       ...(sessionId ? ["--resume", sessionId, "--fork-session"] : []),
     ];
-    const stdout = await this.spawn({ args, cwd, timeoutMs: ADVISOR_TIMEOUT_MS, label: "advisor" });
+    const stdout = await this.spawn({
+      tier: cfg.model,
+      prompt,
+      engine,
+      config: this.systemConfig?.current(),
+      claudeArgs,
+      tools: "read-guarded",
+      thinking: cfg.thinking,
+      ...(sessionId ? { forkSession: sessionId } : {}),
+      cwd,
+      timeoutMs: ADVISOR_TIMEOUT_MS,
+      label: "advisor",
+    });
     return parseAdvisorReply(stdout);
   }
 

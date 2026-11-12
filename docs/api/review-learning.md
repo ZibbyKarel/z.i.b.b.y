@@ -248,7 +248,8 @@ dropped)` — a small standalone function so it's testable without the
 
 - `ReviewCommentDistiller.distill(comments, known)` is the cheap-model pass
   itself — same shape as `memory/claude-cli-distiller.ts`: `claude -p …
---model haiku --output-format json` via `spawnClaudeCli`, the same
+--model haiku --output-format json` via `spawnOneShot` (opencode's haiku-tier model
+  when the engine is opencode, A32), the same
   `process.env.VITEST` guard so tests never spawn a real CLI, a 30s timeout.
   **Never throws and never blocks.** It returns a discriminated `DistillOutcome`,
   not a bare array, because "the model ran and found nothing actionable" and

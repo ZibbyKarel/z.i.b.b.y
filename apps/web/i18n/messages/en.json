@@ -2463,7 +2463,7 @@
     "loadingMore": "Loading…"
   },
   "roadmap": {
-    "hint": "Pick an epic to see its tasks on the right.",
+    "hint": "All agents and workflow stages run on opencode, Claude included. Pick a model family and the levels and the default model are set for you; adjust any of them below.",
     "emptyEpicsTitle": "No epics yet",
     "emptyEpicsDescription": "This project has no roadmap yet — import it from a source, or create epics by hand.",
     "epic": {
@@ -3851,6 +3851,17 @@
       "claude": "Claude",
       "opencode": "opencode"
     },
+    "runsOn": "Runs on opencode",
+    "runsOnAvailable": "Runs on opencode (installed, {version})",
+    "runsOnMissing": "Runs on opencode (not installed)",
+    "familyTitle": "Model family",
+    "family": {
+      "claude": "Claude",
+      "openai": "OpenAI",
+      "opencode": "OpenCode (free)"
+    },
+    "familyNotConnected": "{family} is not connected yet. Connect it yourself in a terminal: {command}. ZibbyOS never asks for credentials.",
+    "presetUnchecked": "The model catalog could not be read, so a family preset is saved without checking that its models exist.",
     "available": "{name}: installed ({version})",
     "notInstalled": "{name}: not installed",
     "providers": "opencode providers connected: {list}",
@@ -3859,15 +3870,11 @@
     "modelPlaceholder": "Choose a model…",
     "free": "free",
     "subscription": "Claude subscription",
-    "claudeAgentHint": "Claude can also run through opencode (claude-agent/* models) once you connect it in a terminal: opencode auth login claude-agent. Such runs still count against the Claude limits.",
-    "claudeAgentConnected": "The claude-agent/* models run through your Claude subscription and count against the Claude limits.",
     "thinkingTag": "thinking",
     "noThinkingVariant": "This model has no “{level}” thinking variant — it will run without it.",
     "paidNotice": "This model is not confirmed free and may cost money.",
     "modelMissing": "The chosen model is no longer in the opencode list.",
     "blockedUnavailable": "the opencode binary is not installed",
-    "blockedNoModel": "no model is chosen",
-    "blockedPrefix": "opencode cannot be switched on: {reason}.",
     "saveFailed": "Saving the AI engine failed.",
     "agentField": "AI engine",
     "useGlobal": "Use global setting",

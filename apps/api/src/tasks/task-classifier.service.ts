@@ -193,7 +193,7 @@ export const PR_SIZING_RULE =
  * NS2 F10 splits the two ways that can go wrong, which used to collapse into one
  * path (see {@link RouteResult}). The keyword scorer is now strictly an
  * AVAILABILITY net — it answers when the router is unusable, and that answer always
- * resolves, because an 8s timeout or a missing binary must never wake the operator.
+ * resolves, because a timeout or a missing binary must never wake the operator.
  * A router that DID answer but couldn't separate its top two is a different thing
  * entirely: {@link isAmbiguous} flags it, the scorer is skipped, and each caller
  * decides its own tier — the interactive preview surfaces the doubt, stage 2 keeps

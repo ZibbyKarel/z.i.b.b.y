@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { type WorkflowRun, WorkflowSchema } from "@zibby/contracts";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SpawnOneShotOptions } from "../shared/spawn-one-shot";
 import type { WorkflowsStorageService } from "./workflows.storage.service";
 import type { WorkflowRunnerService } from "./workflow-runner.service";
 import { PhaseAdvisorService, handoffProducer, parseAdvisorReply } from "./phase-advisor.service";
@@ -16,6 +17,8 @@ const phase = (id: string, extra: Record<string, unknown> = {}) => ({
   thinking: "medium",
   ...extra,
 });
+
+type Call = SpawnOneShotOptions & { claudeArgs: string[] };
 
 const reply = (result: string, cost = 0.42) =>
   JSON.stringify({ type: "result", result, total_cost_usd: cost, is_error: false });
@@ -84,21 +87,24 @@ describe("PhaseAdvisorService", () => {
   it("answers from a fork of the architekt session and writes the audit note + cost", async () => {
     const text = await service.ask("delivery_1", "Skip the generator?");
     expect(text).toContain("Approved: keep the hand-written schema");
-    const call = spawn.mock.calls[0]?.[0] as { args: string[]; cwd: string };
+    const call = spawn.mock.calls[0]?.[0] as Call;
+    const args = call.claudeArgs;
     expect(call.cwd).toBe("/wt");
-    expect(call.args).toEqual(expect.arrayContaining(["--resume", "sess-arch", "--fork-session"]));
-    expect(call.args).toEqual(expect.arrayContaining(["--model", "opus", "--effort", "high"]));
-    const allowed = call.args.slice(call.args.indexOf("--allowedTools") + 1).slice(0, 3);
+    expect(call.engine).toBe("claude");
+    expect(args).toEqual(expect.arrayContaining(["--resume", "sess-arch", "--fork-session"]));
+    expect(call.tier).toBe("opus");
+    expect(args).toEqual(expect.arrayContaining(["--effort", "high"]));
+    const allowed = args.slice(args.indexOf("--allowedTools") + 1).slice(0, 3);
     expect(allowed).toEqual(["Read", "Grep", "Glob"]);
-    expect(call.args).toEqual(expect.arrayContaining(["--permission-mode", "dontAsk"]));
-    expect(call.args[call.args.indexOf("--disallowedTools") + 1]).toBe("Bash");
+    expect(args).toEqual(expect.arrayContaining(["--permission-mode", "dontAsk"]));
+    expect(args[args.indexOf("--disallowedTools") + 1]).toBe("Bash");
     // The token-dir guard rides along on the read tools only.
-    const settings = JSON.parse(call.args[call.args.indexOf("--settings") + 1] ?? "{}") as {
+    const settings = JSON.parse(args[args.indexOf("--settings") + 1] ?? "{}") as {
       hooks: { PreToolUse: Array<{ matcher: string }> };
     };
     expect(settings.hooks.PreToolUse.map((g) => g.matcher)).toEqual(["Read|Grep|Glob"]);
-    expect(call.args).not.toContain("--mcp-config");
-    const prompt = call.args[call.args.indexOf("-p") + 1] ?? "";
+    expect(args).not.toContain("--mcp-config");
+    const prompt = call.prompt;
     expect(prompt).toContain("Skip the generator?");
     expect(prompt).toContain("1. run the generator");
     expect(prompt).toContain("ESCALATE:");
@@ -113,12 +119,33 @@ describe("PhaseAdvisorService", () => {
     expect(JSON.parse(costs.trim())).toMatchObject({ costUsd: 0.42, source: "advisor" });
   });
 
-  it("is unavailable on an opencode stage and never spawns claude (A22)", async () => {
+  it("runs on opencode for an opencode stage and forks its opencode session (A32)", async () => {
+    sessions.s1 = {
+      cwd: path.join(dir, "01-architekt"),
+      sessionId: "ses_arch",
+      engine: "opencode",
+    };
     sessions.s2 = { cwd: koderCwd(), engine: "opencode" };
     const text = await service.ask("delivery_1", "Skip the generator?");
-    expect(text).toContain("not available on an opencode step");
-    expect(text).toContain("ask_operator");
-    expect(spawn).not.toHaveBeenCalled();
+    expect(text).toContain("Approved");
+    const call = spawn.mock.calls[0]?.[0] as Call;
+    expect(call).toMatchObject({
+      engine: "opencode",
+      tier: "opus",
+      thinking: "high",
+      tools: "read-guarded",
+      forkSession: "ses_arch",
+      cwd: "/wt",
+    });
+  });
+
+  it("never forks a session across engines (claude source, opencode stage)", async () => {
+    sessions.s2 = { cwd: koderCwd(), engine: "opencode" };
+    await service.ask("delivery_1", "q");
+    const call = spawn.mock.calls[0]?.[0] as Call;
+    expect(call.engine).toBe("opencode");
+    expect(call.forkSession).toBeUndefined();
+    expect(call.prompt).toContain("You start fresh");
   });
 
   it("on a loop retry resumes the review phase that wrote the failure context", async () => {
@@ -134,22 +161,22 @@ describe("PhaseAdvisorService", () => {
     });
     sessions.s3 = { cwd: path.join(dir, "03-review"), sessionId: "sess-review" };
     await service.ask("delivery_1", "Retry how?");
-    const call = spawn.mock.calls[0]?.[0] as { args: string[] };
-    expect(call.args).toEqual(expect.arrayContaining(["--resume", "sess-review"]));
+    const call = spawn.mock.calls[0]?.[0] as Call;
+    expect(call.claudeArgs).toEqual(expect.arrayContaining(["--resume", "sess-review"]));
   });
 
   it("falls back to a fresh session when the source phase captured none", async () => {
     delete sessions.s1?.sessionId;
     await service.ask("delivery_1", "q");
-    const call = spawn.mock.calls[0]?.[0] as { args: string[] };
-    expect(call.args).not.toContain("--resume");
+    const call = spawn.mock.calls[0]?.[0] as Call;
+    expect(call.claudeArgs).not.toContain("--resume");
   });
 
   it("retries fresh once when the resume itself fails", async () => {
     spawn.mockRejectedValueOnce(new Error("No conversation found"));
     const text = await service.ask("delivery_1", "q");
     expect(spawn).toHaveBeenCalledTimes(2);
-    expect((spawn.mock.calls[1]?.[0] as { args: string[] }).args).not.toContain("--resume");
+    expect((spawn.mock.calls[1]?.[0] as Call).claudeArgs).not.toContain("--resume");
     expect(text).toContain("Approved");
   });
 

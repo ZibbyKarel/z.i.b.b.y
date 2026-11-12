@@ -31,7 +31,7 @@ phases:
     consumes: plan.json
     produces: cast-report.md
     commands:
-      - PF_IMAGE_PROVIDER=openai PF_VISION_PROVIDER=none product-factory cast --report cast-report.md
+      - product-factory cast --report cast-report.md
     loop:
       to: plan
       maxRetries: 1
@@ -49,7 +49,7 @@ phases:
     consumes: jobs.json
     produces: produce-report.md
     commands:
-      - PF_IMAGE_PROVIDER=openai PF_VISION_PROVIDER=none product-factory produce jobs.json --report produce-report.md
+      - product-factory produce jobs.json --report produce-report.md
     loop:
       to: illustrate
       maxRetries: 2
@@ -174,7 +174,8 @@ reject` (0 = titulka) a kniha se vrací přes **illustrate** → produce → ren
 
 ## Nastavení
 
-Poskytovatel obrázků je v příkazech **cast** a **produce** fixně `openai` (bez vision
+Test fixture: příkazy **cast** a **produce** NEpinují poskytovatele, berou ho z env
+projektu (e2e nastaví `PF_IMAGE_PROVIDER=mock`). Živý recept pinuje `openai` (bez vision
 soudce, `PF_VISION_PROVIDER=none`, jen pixel QA); referenční listy postav jdou do
 endpointu `images/edits`. Klíč `OPENAI_API_KEY` se bere z Nastavení → AI modely → OpenAI.
 Ladit lze `PF_OPENAI_QUALITY`, `PF_OPENAI_IMAGE_MODEL` a `PF_OPENAI_SIZE` v env projektu

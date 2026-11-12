@@ -5,6 +5,7 @@ import {
   SetOpenAiKeyInputSchema,
   SystemConfigSchema,
   aiProvidersContract,
+  applyModelFamily,
   resolveTierModel,
 } from "../index";
 
@@ -29,8 +30,31 @@ describe("model tiers (A19/A20)", () => {
     expect(ChatModelSchema).toBe(AgentModelSchema);
   });
 
-  it("defaults opencodeTierModels to {}", () => {
-    expect(SystemConfigSchema.parse({}).opencodeTierModels).toEqual({});
+  it("defaults to opencode on the Claude family (A31)", () => {
+    const c = SystemConfigSchema.parse({});
+    expect(c.aiEngine).toBe("opencode");
+    expect(c.modelFamily).toBe("claude");
+    expect(c.opencodeModel).toBe("claude-agent/sonnet");
+    expect(c.opencodeTierModels.fable).toBe("claude-agent/fable");
+  });
+
+  it("applyModelFamily filters the preset against the catalog (A31)", () => {
+    const all = applyModelFamily("opencode", undefined); // unreadable catalog: written as is
+    expect(all).toMatchObject({ aiEngine: "opencode", modelFamily: "opencode" });
+    expect(Object.keys(all.opencodeTierModels)).toHaveLength(4);
+    const part = applyModelFamily("opencode", [
+      "opencode/nemotron-3.5-lightning-free",
+      "opencode/minimax-m3.1-flash-free",
+    ]);
+    expect(part.opencodeTierModels).toEqual({
+      haiku: "opencode/nemotron-3.5-lightning-free",
+      opus: "opencode/minimax-m3.1-flash-free",
+    }); // missing ids unset, never invented
+    expect(part.opencodeModel).toBe("opencode/nemotron-3.5-lightning-free"); // default missing -> resolved tier 2
+    expect(applyModelFamily("openai", ["claude-agent/haiku"])).toMatchObject({
+      opencodeModel: "",
+      opencodeTierModels: {},
+    });
   });
 
   it("resolves own tier → nearest lower → nearest higher → fallback", () => {

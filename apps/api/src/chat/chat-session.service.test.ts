@@ -10,6 +10,7 @@ import { clearOpencodeCache } from "../runner/ai-engine";
 import type { AgentsStorageService } from "../agents/agents.storage.service";
 import { CompanyNotFoundError } from "../companies/companies.errors";
 import type { CompaniesStorageService } from "../companies/companies.storage.service";
+import type { OperatorMcpServer } from "../inventory/operator-mcp-servers";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { ProjectNotFoundError } from "../projects/projects.errors";
 import type { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -124,10 +125,19 @@ class TestSession extends ChatSessionService {
   lastMcpConfig: { mcpServers: Record<string, { url: string }> } | undefined;
   /** Set to make the next spawn throw (spawn failure). */
   spawnError: Error | undefined;
+  /** A33: the operator's own MCP servers an opencode turn reads (never the real ~/.claude). */
+  operatorServers: OperatorMcpServer[] = [];
+  /** The opencode turn's config as it was at spawn — the file is gone once the turn ends. */
+  lastOpencodeConfig: Record<string, unknown> | undefined;
+  protected operatorMcpServers(): Promise<OperatorMcpServer[]> {
+    return Promise.resolve(this.operatorServers);
+  }
   protected createProcess(args: string[], cwd?: string, opts?: ChatSpawnOptions): ClaudeProcess {
     this.lastArgs = args;
     this.lastCwd = cwd;
     this.lastSpawn = opts;
+    const ocConfig = opts?.env?.OPENCODE_CONFIG;
+    if (ocConfig) this.lastOpencodeConfig = JSON.parse(readFileSync(ocConfig, "utf8"));
     const mcpConfig = args.indexOf("--mcp-config");
     if (mcpConfig !== -1) {
       this.lastMcpConfig = JSON.parse(readFileSync(args[mcpConfig + 1] ?? "", "utf8"));
@@ -1251,8 +1261,8 @@ describe("ChatSessionService", () => {
       expect(args).not.toContain("--session");
       expect(args).not.toContain("--auto");
       expect(args.at(-1)).toBe("ahoj");
-      // A25: the operator's own servers stay on Claude (no classifier on opencode).
-      expect(svc.lastSpawn?.env.ZIBBY_CHAT_MCP_SERVERS).toBe("zibby,zibby-kb");
+      // A33: the OAuth remotes + ZibbyOS's own servers (no operator servers in this test).
+      expect(svc.lastSpawn?.env.ZIBBY_CHAT_MCP_SERVERS).toBe("atlassian,figma,zibby,zibby-kb");
       expect(svc.lastSpawn?.env.ZIBBY_CHAT_DENY_TOOLS).toBe("");
       // The 0600 config (bearer tokens) is gone once the turn ends.
       await expect(fs.access(svc.lastSpawn?.env.OPENCODE_CONFIG ?? "")).rejects.toThrow();
@@ -1271,6 +1281,32 @@ describe("ChatSessionService", () => {
         { name: "recall_memory", status: "ok" },
         { name: "shell", status: "error", callId: "call_2" },
       ]);
+    });
+
+    it("mounts the operator's servers (minus serena) and the OAuth remotes; own servers can't be shadowed (A33)", async () => {
+      const svc = opencodeSession(ocLines("ses_m", "Hotovo."));
+      svc.operatorServers = [
+        { id: "serena", config: { type: "stdio", command: "serena" } },
+        { id: "plugin_context7_context7", config: { type: "http", url: "https://ctx7/mcp" } },
+        { id: "zibby", config: { type: "http", url: "https://shadow" } },
+      ];
+      const r = await svc.sendMessage({ conversationId: "c-ops", text: "ahoj" }, NOW);
+      await settled(r.turnId);
+      expect(svc.lastSpawn?.env.ZIBBY_CHAT_MCP_SERVERS).toBe(
+        "atlassian,figma,plugin_context7_context7,zibby,zibby-kb",
+      );
+      const servers = (svc.lastOpencodeConfig?.mcp as { servers: Record<string, unknown> }).servers;
+      expect(servers.serena).toBeUndefined();
+      // OAuth stays on for a header-less remote (operator logs in once, A33)…
+      expect(servers.atlassian).toEqual({
+        type: "remote",
+        url: "https://mcp.atlassian.com/v1/mcp",
+        codemode: false,
+      });
+      expect(servers.plugin_context7_context7).toMatchObject({ url: "https://ctx7/mcp" });
+      // …and ZibbyOS's own bearer-token server wins its name, OAuth off.
+      expect(servers.zibby).toMatchObject({ type: "remote", oauth: false });
+      expect((servers.zibby as { url: string }).url).toContain("/api/chat/mcp");
     });
 
     it("resumes its own session with --session", async () => {
@@ -1301,7 +1337,12 @@ describe("ChatSessionService", () => {
     });
 
     it("fails the turn with opencode's reason when it is unusable — no Claude fallback (A7)", async () => {
-      const svc = opencodeSession([], { aiEngine: "opencode" }); // no model anywhere
+      // No model anywhere (A31 defaults filled in by the fixture are cleared).
+      const svc = opencodeSession([], {
+        aiEngine: "opencode",
+        opencodeModel: "",
+        opencodeTierModels: {},
+      });
       const r = await svc.sendMessage({ conversationId: "c-x", text: "ahoj" }, NOW);
       await settled(r.turnId);
       expect(svc.lastArgs).toEqual([]);

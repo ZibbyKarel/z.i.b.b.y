@@ -1,12 +1,15 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { type TriageVerdict, TriageVerdictSchema } from "@zibby/contracts";
 import { LoggerService, type ScopedLogger } from "../../shared/logging/logger.service";
-import { spawnClaudeCli } from "../../shared/spawn-claude-cli";
+import { spawnOneShot } from "../../shared/spawn-one-shot";
+import { SystemConfigStore } from "../../system/system-config.store";
 import { envelopeInbound } from "../../shared/text/untrusted-envelope";
 import type { TriageInput, TriageRouter } from "./triage-router";
 
 /** How long the headless `claude -p` triager may take before we give up and fall back. */
-const TRIAGE_TIMEOUT_MS = 8000;
+// A32: 15s, not 8s — opencode `claude-agent/haiku` measured 2.8–4.3s typical, outliers 7.4–9.6s
+// (native claude ~2.4s). A timeout only means the deterministic fallback.
+const TRIAGE_TIMEOUT_MS = 15_000;
 
 /**
  * The frozen triager system prompt. The ONLY variable part is the enveloped item
@@ -44,7 +47,7 @@ const TRIAGE_SYSTEM_PROMPT = [
 /**
  * The AI triager: a one-shot headless `claude -p` call that classifies an inbound
  * item into a {@link TriageVerdict}. Copies {@link ClaudeCliRouter}'s shape exactly
- * — 8s timeout, `--model haiku --output-format json`, the SAME `process.env.VITEST`
+ * — 15s timeout, `--model haiku --output-format json`, the SAME `process.env.VITEST`
  * guard so tests never spawn claude, envelope-unwrap + fence-tolerant parse, and a
  * schema-validated (closed) verdict. Returns `null` on any failure; the service
  * then falls back to the deterministic keyword triager, so triage never hard-fails.
@@ -53,7 +56,11 @@ const TRIAGE_SYSTEM_PROMPT = [
 export class ClaudeCliTriager implements TriageRouter {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
+  ) {
     this.log = logger.child(ClaudeCliTriager.name);
   }
 
@@ -86,10 +93,12 @@ export class ClaudeCliTriager implements TriageRouter {
 
   /** Spawn `claude -p … --output-format json --model haiku`; resolve trimmed stdout. */
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+    return spawnOneShot({
+      tier: "haiku",
+      prompt,
       timeoutMs: TRIAGE_TIMEOUT_MS,
       label: "triager",
+      config: this.systemConfig?.current(),
     });
   }
 

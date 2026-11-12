@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  OPENCODE_CHAT_BUILTIN_TOOLS,
   OPENCODE_CHAT_GATE_PLUGIN,
   buildOpencodeChatConfig,
   opencodeChatArgs,
@@ -7,11 +8,15 @@ import {
   parseOpencodeChatLine,
   toOpencodeMcpServer,
 } from "./chat-opencode";
-// @ts-expect-error — plain .mjs plugin, no types
-import plugin, { isMountedMcpTool } from "./opencode-chat-gate/index.mjs";
+import plugin, {
+  CHAT_BUILTIN_TOOLS,
+  chatGateReason,
+  isMountedMcpTool,
+  // @ts-expect-error — plain .mjs plugin, no types
+} from "./opencode-chat-gate/index.mjs";
 
 describe("buildOpencodeChatConfig (A25)", () => {
-  it("denies everything, allows only the mounted servers' tools, then the extra denials", () => {
+  it("denies everything, allows the shell/read built-ins and the mounted servers' tools, then the extra denials", () => {
     const { config, serverIds } = buildOpencodeChatConfig(
       "PROMPT",
       {
@@ -31,6 +36,11 @@ describe("buildOpencodeChatConfig (A25)", () => {
       agents: { zibby: { mode: "primary", system: "PROMPT" } },
       permissions: [
         { action: "*", resource: "*", effect: "deny" },
+        ...["shell", "bash", "read", "grep", "glob", "list"].map((action) => ({
+          action,
+          resource: "*",
+          effect: "allow",
+        })),
         { action: "zibby_*", resource: "*", effect: "allow" },
         { action: "plugin_playwright_playwright_*", resource: "*", effect: "allow" },
         { action: "zibby_create_task", resource: "*", effect: "deny" },
@@ -53,6 +63,18 @@ describe("buildOpencodeChatConfig (A25)", () => {
         },
       },
     });
+  });
+
+  it("keeps OAuth on for a header-less remote (A33)", () => {
+    expect(toOpencodeMcpServer({ type: "http", url: "https://mcp.figma.com/mcp" })).toEqual({
+      type: "remote",
+      url: "https://mcp.figma.com/mcp",
+      codemode: false,
+    });
+  });
+
+  it("allows exactly the built-ins the gate plugin judges", () => {
+    expect(OPENCODE_CHAT_BUILTIN_TOOLS).toEqual(CHAT_BUILTIN_TOOLS);
   });
 
   it("maps stdio env to environment", () => {
@@ -165,12 +187,19 @@ describe("opencode chat gate plugin", () => {
     try {
       await plugin.setup({ permission: { hook: reg("evaluate") }, tool: { hook: reg("before") } });
       expect(() => hooks.before?.({ tool: "shell", input: { command: "rm -rf /" } })).toThrow(
+        /Blocked by the ZibbyOS gate: .*create_task/,
+      );
+      expect(() => hooks.before?.({ tool: "write", input: { filePath: "a" } })).toThrow(
         /Blocked by the ZibbyOS gate/,
       );
+      expect(hooks.before?.({ tool: "shell", input: { command: "git status" } })).toBeUndefined();
       expect(hooks.before?.({ tool: "zibby_recall_memory", input: {} })).toBeUndefined();
-      const ask = { action: "shell", effect: "ask" };
+      const ask = { action: "write", effect: "ask" };
       hooks.evaluate?.(ask);
       expect(ask.effect).toBe("deny");
+      const shell = { action: "shell", effect: "ask" };
+      hooks.evaluate?.(shell);
+      expect(shell.effect).toBe("allow");
       const mcp = { action: "zibby_recall_memory", effect: "ask" };
       hooks.evaluate?.(mcp);
       expect(mcp.effect).toBe("allow");
@@ -203,5 +232,49 @@ describe("opencode chat gate plugin", () => {
       delete process.env.ZIBBY_CHAT_MCP_SERVERS;
       delete process.env.ZIBBY_CHAT_DENY_TOOLS;
     }
+  });
+
+  describe("chatGateReason (A33 fail-fast)", () => {
+    const env = {
+      ZIBBY_CHAT_MCP_SERVERS: "zibby,zibby-kb,plugin_context7_context7,atlassian",
+      PWD: "/repo",
+    };
+    const reason = (tool: string, input: unknown) => chatGateReason(tool, input, env);
+
+    it("runs unclassified shell commands and file reads", () => {
+      expect(reason("shell", { command: "git status" })).toBeNull();
+      expect(reason("shell", { command: "ls -la && git log --oneline -5" })).toBeNull();
+      expect(reason("read", { filePath: "/repo/README.md" })).toBeNull();
+      expect(reason("grep", { pattern: "foo", path: "/repo" })).toBeNull();
+    });
+
+    it("refuses classified shell commands with the delegate message", () => {
+      for (const command of ["git push origin main", "rm -rf build", "npm publish"]) {
+        expect(reason("shell", { command })).toMatch(/create_task/);
+      }
+      expect(reason("shell", { command: "claude -p hi" })).toMatch(/nested/);
+    });
+
+    it("refuses the operator-only surface", () => {
+      expect(reason("read", { filePath: "~/.config/zibby/operator-token" })).toMatch(/operator/);
+      expect(reason("shell", { command: "cat ~/.config/zibby/operator-token" })).toMatch(
+        /operator/,
+      );
+    });
+
+    it("operator MCP: reads run, writes are refused; own servers always run", () => {
+      expect(reason("plugin_context7_context7_query-docs", { q: "x" })).toBeNull();
+      expect(reason("atlassian_getJiraIssue", { issueIdOrKey: "A-1" })).toBeNull();
+      expect(reason("atlassian_createJiraIssue", {})).toMatch(/create_task/);
+      expect(reason("zibby_create_task", {})).toBeNull();
+      expect(reason("zibby-kb_kb_write", {})).toBeNull();
+    });
+
+    it("refuses write/edit/execute/web and unmounted tools", () => {
+      for (const tool of ["write", "edit", "patch", "execute", "webfetch", "skill", "task"]) {
+        expect(reason(tool, {})).toMatch(/only the shell/);
+      }
+      expect(reason("serena_find_symbol", {})).toMatch(/only the shell/);
+    });
   });
 });

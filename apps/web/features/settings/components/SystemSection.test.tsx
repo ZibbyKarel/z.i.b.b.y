@@ -18,6 +18,7 @@ const DEFAULTS: SystemConfig = {
   goalAutoResume: false,
   chatPersona: "jarvis",
   aiEngine: "claude",
+  modelFamily: "claude",
   opencodeModel: "",
   opencodeTierModels: {},
   powerSaver: false,

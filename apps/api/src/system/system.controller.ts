@@ -29,6 +29,7 @@ export class SystemController {
     const cur = await this.config.read();
     requireOperatorTokenIf(
       body.aiEngine !== cur.aiEngine ||
+        body.modelFamily !== cur.modelFamily ||
         body.opencodeModel !== cur.opencodeModel ||
         MODEL_TIERS.some(
           (t) => (body.opencodeTierModels?.[t] ?? "") !== (cur.opencodeTierModels?.[t] ?? ""),

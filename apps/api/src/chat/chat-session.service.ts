@@ -30,6 +30,8 @@ import {
 import { AgentsStorageService } from "../agents/agents.storage.service";
 import { assertOpencodeReady, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
+import { resolveClaudeLocations } from "../inventory/claude-locations";
+import { type OperatorMcpServer, readOperatorMcpServers } from "../inventory/operator-mcp-servers";
 import { KbMcpAuthService } from "../kb/kb-mcp-auth.service";
 import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
@@ -45,7 +47,9 @@ import { ChatMcpAuthService } from "./chat-mcp-auth.service";
 import { buildAgentChatPrompt, chatAgentReadTools } from "./chat-agent-prompt";
 import { buildChatPrompt } from "./chat-persona";
 import {
+  OPENCODE_CHAT_EXCLUDED_SERVERS,
   OPENCODE_CHAT_NOTE,
+  OPENCODE_CHAT_REMOTE_SERVERS,
   buildOpencodeChatConfig,
   opencodeChatArgs,
   opencodeChatEnv,
@@ -644,9 +648,10 @@ export class ChatSessionService implements OnModuleInit, OnModuleDestroy {
 
   /**
    * A24 — one opencode chat turn: the chat prompt (plus {@link OPENCODE_CHAT_NOTE}) as the
-   * config's `zibby` agent, ZibbyOS's own `zibby` / `zibby-kb` servers, A25's fail-closed
-   * permissions + chat gate plugin, `--session` resume. The config holds both bearer
-   * tokens, so it is a 0600 file the caller deletes when the turn ends.
+   * config's `zibby` agent, the turn's MCP servers ({@link opencodeTurnServers}), the
+   * fail-closed permissions + fail-fast chat gate plugin (A33), `--session` resume. The
+   * config holds bearer tokens and operator secrets, so it is a 0600 file the caller
+   * deletes when the turn ends.
    */
   async buildOpencodeTurn(
     text: string,
@@ -658,11 +663,8 @@ export class ChatSessionService implements OnModuleInit, OnModuleDestroy {
   ): Promise<{ args: string[]; env: NodeJS.ProcessEnv; configFile: string; serverIds: string[] }> {
     const agent = await this.turnAgent(conversationId);
     const prompt = await this.buildPrompt(conversationId, agent, tags);
-    // A25: only ZibbyOS's own servers. The operator's servers stay on the Claude engine
-    // (loaded there from user settings, A30), where the CLI's auto classifier judges their
-    // calls; opencode has no classifier and would run e.g. Playwright's
-    // `browser_run_code_unsafe` unasked (seen live).
-    const servers = this.mcpServers(conversationId, teamId);
+    const cwd = tags?.project?.path ?? process.cwd();
+    const servers = await this.opencodeTurnServers(conversationId, cwd, teamId);
     // Inline delegation, not a run: an `@agent` turn never spawns a task (as on Claude).
     // Denied by the config AND by the chat gate plugin (defence in depth).
     const denyTools = agent ? ["zibby_create_task"] : [];
@@ -674,10 +676,40 @@ export class ChatSessionService implements OnModuleInit, OnModuleDestroy {
     const configFile = await this.writeSecretFile("opencode-chat", config);
     return {
       args: opencodeChatArgs(model, sessionId, text),
-      env: opencodeChatEnv(configFile, tags?.project?.path ?? process.cwd(), serverIds, denyTools),
+      env: opencodeChatEnv(configFile, cwd, serverIds, denyTools),
       configFile,
       serverIds,
     };
+  }
+
+  /**
+   * A33 — the MCP servers an opencode chat turn mounts, later entries winning a name:
+   * the OAuth remotes ({@link OPENCODE_CHAT_REMOTE_SERVERS}), the operator's own Claude
+   * Code servers (user scope + enabled plugins, minus the ones disabled for `cwd` and
+   * {@link OPENCODE_CHAT_EXCLUDED_SERVERS}), then ZibbyOS's own `zibby` / `zibby-kb`,
+   * which nothing may shadow. The chat gate plugin judges the operator's calls (reads
+   * run, writes are refused with "delegate via create_task").
+   */
+  private async opencodeTurnServers(
+    conversationId: string,
+    cwd: string,
+    teamId?: string,
+  ): Promise<Record<string, Record<string, unknown>>> {
+    const operator = await this.operatorMcpServers(cwd).catch((): OperatorMcpServer[] => []);
+    return {
+      ...OPENCODE_CHAT_REMOTE_SERVERS,
+      ...Object.fromEntries(
+        operator
+          .filter((s) => !OPENCODE_CHAT_EXCLUDED_SERVERS.has(s.id))
+          .map((s) => [s.id, s.config]),
+      ),
+      ...this.mcpServers(conversationId, teamId),
+    };
+  }
+
+  /** The operator's own MCP servers for `cwd` (A23 reader); overridden in tests. */
+  protected operatorMcpServers(cwd: string): Promise<OperatorMcpServer[]> {
+    return readOperatorMcpServers(resolveClaudeLocations(), cwd);
   }
 
   /** The real spawn; overridden in tests. Isolated stdin, piped stdout/stderr. Detached

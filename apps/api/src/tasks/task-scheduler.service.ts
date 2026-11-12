@@ -420,7 +420,7 @@ export class TaskSchedulerService
   ): Promise<CreateTaskResult> {
     // A task with no operator-given name gets one derived from its description (Haiku,
     // with a deterministic fallback) so the feed never shows an untitled task. The
-    // background path can't block the submit on an 8s namer — it takes the instant
+    // background path can't block the submit on a 15s namer — it takes the instant
     // fallback now and refines via Haiku off the response path (see `refineTitle`).
     const titleAuto = !input.title?.trim();
     input = background ? this.withFallbackTitle(input) : await this.ensureTitle(input);
@@ -901,7 +901,7 @@ export class TaskSchedulerService
    *     after that holder released, would see it as still held and run inline,
    *     unprotected — silently breaking mutual exclusion). This shape (rather than
    *     wrapping the call HERE) also lets `dispatchPending` title the task — a
-   *     documented ~8s Haiku call — BEFORE taking the lock (Task 3c fix, finding #3):
+   *     documented ≤15s Haiku call — BEFORE taking the lock (Task 3c fix, finding #3):
    *     titling is capacity-independent, so holding the concurrency slot across that
    *     network call would serialize concurrent same-project titling for nothing.
    *     `recoverPending`'s own `void this.dispatchPending(...)` (the boot-recovery
@@ -1024,7 +1024,7 @@ export class TaskSchedulerService
    * (`guardExisting → dispatch → recordLedger/markDispatched`) in
    * `project-capacity:${projectId}` rather than relying on the caller to wrap the
    * whole call — this covers `recoverPending`'s unguarded loop "for free" (finding
-   * #2) AND lets titling (`namer.name`, a documented ~8s LLM call) run BEFORE the
+   * #2) AND lets titling (`namer.name`, a documented ≤15s LLM call) run BEFORE the
    * lock is taken (finding #3): titling is capacity-independent, so holding the
    * concurrency slot across that network call would only serialize concurrent
    * same-project titling for no reason — exactly the latency regression the
@@ -1821,8 +1821,8 @@ export class TaskSchedulerService
     target: TaskTarget | undefined,
   ): Promise<{ resumeAt: number } | null> {
     // The window is Claude's: a task whose known target runs wholly off the Claude
-    // subscription is not deferred. An unrouted task still needs the (Claude)
-    // classifier, so it is.
+    // subscription is not deferred. An unrouted task still is: its target (and, A32,
+    // the router one-shot on a `claude-agent/*` mapping) may spend the window.
     if (await this.offClaude(target)) return null;
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,

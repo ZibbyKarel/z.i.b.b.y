@@ -2463,7 +2463,7 @@
     "loadingMore": "Načítám…"
   },
   "roadmap": {
-    "hint": "Vyber epik a uvidíš jeho tasky vpravo.",
+    "hint": "Všichni agenti a kroky workflow běží přes opencode, Claude včetně. Vyber rodinu modelů a úrovně i výchozí model se nastaví samy; kteroukoli z nich můžeš níže upravit.",
     "emptyEpicsTitle": "Zatím žádné epiky",
     "emptyEpicsDescription": "Tento projekt zatím nemá žádnou roadmapu — naimportuj ji ze zdroje, nebo epiky vytvoř ručně.",
     "epic": {
@@ -3851,6 +3851,17 @@
       "claude": "Claude",
       "opencode": "opencode"
     },
+    "runsOn": "Běží na opencode",
+    "runsOnAvailable": "Běží na opencode (nainstalováno, {version})",
+    "runsOnMissing": "Běží na opencode (není nainstalováno)",
+    "familyTitle": "Rodina modelů",
+    "family": {
+      "claude": "Claude",
+      "openai": "OpenAI",
+      "opencode": "OpenCode (zdarma)"
+    },
+    "familyNotConnected": "{family} ještě není připojeno. Připoj ho sám v terminálu: {command}. ZibbyOS nikdy nežádá přihlašovací údaje.",
+    "presetUnchecked": "Katalog modelů se nepodařilo načíst, proto se předvolba rodiny uloží bez ověření, že její modely existují.",
     "available": "{name}: nainstalováno ({version})",
     "notInstalled": "{name}: není nainstalováno",
     "providers": "Připojení poskytovatelé opencode: {list}",
@@ -3859,15 +3870,11 @@
     "modelPlaceholder": "Vyber model…",
     "free": "zdarma",
     "subscription": "předplatné Claude",
-    "claudeAgentHint": "Claude může běžet i přes opencode (modely claude-agent/*), jakmile ho v terminálu připojíš: opencode auth login claude-agent. Takové běhy se stále počítají do limitů Claude.",
-    "claudeAgentConnected": "Modely claude-agent/* běží přes předplatné Claude a počítají se do limitů Claude.",
     "thinkingTag": "myšlení",
     "noThinkingVariant": "Tento model nemá variantu myšlení „{level}“ — poběží bez ní.",
     "paidNotice": "Tento model není ověřený jako zdarma a může stát peníze.",
     "modelMissing": "Vybraný model už není v seznamu opencode.",
     "blockedUnavailable": "opencode není nainstalovaný",
-    "blockedNoModel": "není vybrán model",
-    "blockedPrefix": "opencode nelze zapnout: {reason}.",
     "saveFailed": "Uložení AI enginu selhalo.",
     "agentField": "AI engine",
     "useGlobal": "Použít globální nastavení",

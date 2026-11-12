@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChannelItem } from "@zibby/contracts";
 import type { LoggerService } from "../../shared/logging/logger.service";
 import { spawnClaudeCli } from "../../shared/spawn-claude-cli";
+import { fakeSystemConfigStore } from "../../system/system-config.fixture";
 import { ReplyDraftService } from "./reply-draft.service";
 
 // Mocked so the "scopes tool access" test can assert the exact argv shape
@@ -35,12 +37,16 @@ function make(over: {
   runClaude?: (prompt: string, cwd: string) => Promise<string>;
   resolveForRun?: () => Promise<{ path: string; isGitRepo: boolean }>;
   projects?: unknown[];
+  opencode?: boolean;
 }) {
   const projects = { list: async () => over.projects ?? [project] } as never;
   const local = {
     resolveForRun: over.resolveForRun ?? (async () => ({ path: "/repo", isGitRepo: true })),
   } as never;
-  const svc = new ReplyDraftService(projects, local, fakeLogger);
+  const config = over.opencode
+    ? fakeSystemConfigStore({ aiEngine: "opencode", opencodeModel: "claude-agent/sonnet" })
+    : undefined;
+  const svc = new ReplyDraftService(projects, local, fakeLogger, config);
   if (over.runClaude) {
     // `runClaude` is `protected` precisely so the test can stub the spawn.
     (svc as unknown as { runClaude: unknown }).runClaude = over.runClaude;
@@ -115,6 +121,44 @@ describe("ReplyDraftService.research", () => {
     expect(call?.args).not.toContain("Read");
     expect(call?.args).not.toContain("Grep");
     expect(call?.args).not.toContain("Glob");
+  });
+
+  it("on opencode (A32): read tools only, inside the repo, fail-closed on an error event", async () => {
+    process.env.OPENCODE_BIN = "/fake/opencode";
+    try {
+      let config: { permissions: Array<{ action: string; effect: string }> } | undefined;
+      vi.mocked(spawnClaudeCli).mockImplementation(async (o) => {
+        config = JSON.parse(
+          readFileSync(o.bin?.env.OPENCODE_CONFIG ?? "", "utf8"),
+        ) as typeof config;
+        return JSON.stringify({ type: "text", part: { text: "the answer" } });
+      });
+      const svc = make({ opencode: true });
+      await expect(svc.research(item)).resolves.toBe("the answer");
+      const call = vi.mocked(spawnClaudeCli).mock.calls[0]?.[0];
+      expect(call?.bin?.command).toBe("/fake/opencode");
+      expect(call?.cwd).toBe("/repo");
+      expect(call?.bin?.env.PWD).toBe("/repo");
+      expect(call?.args).toContain("claude-agent/sonnet");
+      expect(config?.permissions.filter((p) => p.effect === "allow").map((p) => p.action)).toEqual([
+        "read",
+        "list",
+        "glob",
+        "grep",
+      ]);
+      expect(config?.permissions).toContainEqual({
+        action: "external_directory",
+        resource: "*",
+        effect: "deny",
+      });
+
+      vi.mocked(spawnClaudeCli).mockResolvedValue(
+        JSON.stringify({ type: "error", error: { data: { message: "boom" } } }),
+      );
+      await expect(svc.research(item)).resolves.toBeNull();
+    } finally {
+      delete process.env.OPENCODE_BIN;
+    }
   });
 
   it("returns the researched answer text", async () => {

@@ -1,10 +1,13 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { z } from "zod";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
-import { spawnClaudeCli } from "../shared/spawn-claude-cli";
+import { spawnOneShot } from "../shared/spawn-one-shot";
+import { SystemConfigStore } from "../system/system-config.store";
 
 /** How long the headless `claude -p` namer may take before we fall back. */
-const NAMER_TIMEOUT_MS = 8000;
+// A32: 15s, not 8s — opencode `claude-agent/haiku` measured 2.8–4.3s typical, outliers 7.4–9.6s
+// (native claude ~2.4s). A timeout only means the deterministic fallback.
+const NAMER_TIMEOUT_MS = 15_000;
 
 /** The namer returns ONLY a title — anything else is discarded (Law 4). */
 const TitleSchema = z.object({ title: z.string().min(1).max(80) }).strict();
@@ -24,7 +27,7 @@ const NAMER_SYSTEM_PROMPT = [
 /**
  * Derives a short task title from the operator's free-text description via a headless
  * `claude -p --model haiku` call. Copies {@link ClaudeCliBriefer}'s shape EXACTLY —
- * 8s timeout, `--output-format json`, the SAME `process.env.VITEST` guard so tests
+ * 15s timeout, `--output-format json`, the SAME `process.env.VITEST` guard so tests
  * never spawn claude, envelope-unwrap + fence-tolerant parse — and validates the
  * result against a strict one-key schema. NEVER blocks: any failure returns `null`
  * and the caller keeps its deterministic fallback title.
@@ -33,7 +36,11 @@ const NAMER_SYSTEM_PROMPT = [
 export class ClaudeCliTaskNamer {
   private readonly log: ScopedLogger;
 
-  constructor(logger: LoggerService) {
+  constructor(
+    logger: LoggerService,
+    // A32: one-shots follow the engine; absent (unit tests) = native claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
+  ) {
     this.log = logger.child(ClaudeCliTaskNamer.name);
   }
 
@@ -65,10 +72,12 @@ export class ClaudeCliTaskNamer {
   }
 
   protected runClaude(prompt: string): Promise<string> {
-    return spawnClaudeCli({
-      args: ["-p", prompt, "--output-format", "json", "--model", "haiku"],
+    return spawnOneShot({
+      tier: "haiku",
+      prompt,
       timeoutMs: NAMER_TIMEOUT_MS,
       label: "namer",
+      config: this.systemConfig?.current(),
     });
   }
 

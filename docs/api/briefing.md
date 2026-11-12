@@ -103,7 +103,8 @@ of `generate`:
 ### The LLM-in-the-loop seam: `ClaudeCliBriefer`
 
 This is the one piece of the briefing module that shells out to an LLM. It spawns
-`claude -p <prompt> --output-format json --model haiku` (an 8-second timeout, killed
+`claude -p <prompt> --output-format json --model haiku` through `spawnOneShot` (on
+opencode the haiku tier's model, A32; a 15-second timeout, killed
 and treated as a failure past that) with a system prompt instructing it to return
 **only** `{"headline": string}` — no prose, no code fences. The prompt it builds is
 deliberately restricted to already-assembled, already-capped section data (`counts`,
