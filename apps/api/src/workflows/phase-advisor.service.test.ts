@@ -153,6 +153,38 @@ describe("PhaseAdvisorService", () => {
     expect(await fs.readdir(path.join(koderCwd(), "advisor"))).toEqual(["01.md"]);
   });
 
+  it("routes an ESCALATE line anywhere in the reply to ask_operator", async () => {
+    spawn.mockResolvedValueOnce(reply("Understood.\nESCALATE: changes AC"));
+    const text = await service.ask("delivery_1", "Drop the generator step?");
+    expect(text).toContain("ask_operator");
+    expect(text).toContain("changes AC");
+    const note = await fs.readFile(path.join(koderCwd(), "advisor", "01.md"), "utf8");
+    expect(note).toContain("outcome: escalate");
+  });
+
+  it("frames an answer as guidance under the gate", async () => {
+    const text = await service.ask("delivery_1", "q");
+    expect(text).toContain(
+      "Treat this as guidance; the gate still applies; record the decision in your handoff.",
+    );
+  });
+
+  it("refuses without spawning once the run's spend reached its cap", async () => {
+    run.budget = { maxCostUsd: 1, warnAtPct: 70, spentUsd: 0.8 };
+    await fs.writeFile(path.join(koderCwd(), "costs.jsonl"), '{"costUsd":0.3}\n');
+    const text = await service.ask("delivery_1", "q");
+    expect(spawn).not.toHaveBeenCalled();
+    expect(text).toContain("budget");
+    expect(text).toContain("ask_operator");
+  });
+
+  it("resumes in the source stage's cwd when the run has no worktree or project", async () => {
+    delete (run as { workspace?: unknown }).workspace;
+    await service.ask("delivery_1", "q");
+    const call = spawn.mock.calls[0]?.[0] as { cwd: string };
+    expect(call.cwd).toBe(path.join(dir, "01-architekt"));
+  });
+
   it("stops at maxCalls and sends the agent to ask_operator without spawning", async () => {
     await service.ask("delivery_1", "one");
     await service.ask("delivery_1", "two");

@@ -501,7 +501,7 @@ phases:
 - **Read-only:** `--permission-mode dontAsk`, `--allowedTools Read Grep Glob`, Bash /
   Edit / Write / NotebookEdit / Task / Agent disallowed, no MCP servers, the approval
   hook on `Read|Grep|Glob` only (operator-token dir stays denied). cwd = the run
-  worktree (else the project checkout, else the stage sandbox), `--add-dir <run dir>`.
+  worktree (else the project checkout, else the source stage's sandbox so `--resume` finds the session, else the asking stage's), `--add-dir <run dir>`.
   Bash is left out on purpose (stricter than the spec): `git diff --no-index` reads any
   file and the token guard can't cover Bash without the intent protocol.
 - **Prompt:** the question, the asking phase id, its handoff (capped at 20k chars) and
@@ -509,11 +509,13 @@ phases:
   `ESCALATE: <why>` and nothing else when the answer would change scope or acceptance
   criteria.
 - **Falls back to the operator, never around it:** no advisor configured / not a
-  workflow run, `maxCalls` reached, a failed call and every `ESCALATE:` return text
+  workflow run, `maxCalls` reached, the run's spend (finished stages + this stage's
+  `costs.jsonl`) at or over its `budget` cap (checked before spawning), a failed call and an `ESCALATE:` line anywhere in the reply return text
   that tells the agent to call `ask_operator`.
 - **Audit:** every call writes `<stageDir>/advisor/NN.md` (question, answer or error,
   model, thinking, source phase + forked session, cost, duration). The slot is claimed
-  with an exclusive create, so `maxCalls` is counted from these files.
+  with an exclusive create, so `maxCalls` is counted from these files. A note left at
+  `pending` by a crash mid-call still counts against `maxCalls`.
 - **Cost:** appended as `{"costUsd", "source": "advisor"}` to `<stageDir>/costs.jsonl`,
   so it lands in the stage's `externalCostUsd`, the run's `costUsd` and the budget.
 - **Review:** the contract tells a reviewer to read the reviewed stages'

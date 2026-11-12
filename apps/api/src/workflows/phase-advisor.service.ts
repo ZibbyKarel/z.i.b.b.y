@@ -28,6 +28,21 @@ export function handoffProducer(run: WorkflowRun, target: string): string | unde
   return run.stageRuns.find((s) => s.dir === dir)?.phaseId;
 }
 
+/** Sum of `<stageCwd>/costs.jsonl` (malformed lines skipped) — spend not yet on the run. */
+async function stageCostUsd(stageCwd: string): Promise<number> {
+  const raw = await fs.readFile(path.join(stageCwd, "costs.jsonl"), "utf8").catch(() => "");
+  let sum = 0;
+  for (const line of raw.split("\n")) {
+    try {
+      const cost = (JSON.parse(line) as { costUsd?: unknown }).costUsd;
+      if (typeof cost === "number" && Number.isFinite(cost) && cost > 0) sum += cost;
+    } catch {
+      // blank or malformed line
+    }
+  }
+  return sum;
+}
+
 /** The `claude -p --output-format json` reply: answer text, cost, and an `ESCALATE:` reason. */
 export function parseAdvisorReply(stdout: string): {
   answer: string;
@@ -43,7 +58,8 @@ export function parseAdvisorReply(stdout: string): {
   if (parsed.is_error === true || !answer)
     throw new Error(`advisor failed: ${answer || "empty reply"}`);
   const costUsd = typeof parsed.total_cost_usd === "number" ? parsed.total_cost_usd : 0;
-  const escalate = /^ESCALATE:\s*([\s\S]*)$/.exec(answer)?.[1]?.trim();
+  // Any line counts: "Understood.\nESCALATE: …" is still an escalation (fail toward the operator).
+  const escalate = /^ESCALATE:\s*(.*)$/m.exec(answer)?.[1]?.trim();
   return escalate !== undefined ? { answer, costUsd, escalate } : { answer, costUsd };
 }
 
@@ -115,6 +131,14 @@ export class PhaseAdvisorService {
     if (!workflow || !cfg) return NO_ADVISOR;
     const consumes = workflow.phases.find((p) => p.id === phaseId)?.consumes;
 
+    // Never spend past the run's cap: finished stages + this stage's costs so far.
+    if (run.budget) {
+      const spent = run.budget.spentUsd + (await stageCostUsd(stage.cwd));
+      if (spent >= run.budget.maxCostUsd) {
+        return `The run's budget is used up ($${spent.toFixed(2)} of $${run.budget.maxCostUsd.toFixed(2)}), so the advisor is not called. ${ASK_OPERATOR}`;
+      }
+    }
+
     const slot = await this.reserveSlot(stage.cwd, cfg.maxCalls);
     if (!slot) {
       return `The advisor limit for this phase is reached (${cfg.maxCalls} calls). ${ASK_OPERATOR}`;
@@ -132,14 +156,17 @@ export class PhaseAdvisorService {
           .reverse()
           .find((s) => s.phaseId === from && s.runId !== run.currentStageRunId)
       : undefined;
-    const sessionId = source ? this.runs.stageInfo(source.runId)?.sessionId : undefined;
+    const sourceInfo = source ? this.runs.stageInfo(source.runId) : null;
+    const sessionId = sourceInfo?.sessionId;
     const handoff = handoffPath
       ? (await fs.readFile(handoffPath, "utf8").catch(() => "")).slice(0, HANDOFF_CAP)
       : "";
 
     const started = Date.now();
     const base = { phaseId, from, question, consumes, handoff };
-    const cwd = run.workspace?.path ?? run.projectPath ?? stage.cwd;
+    // A claude session resumes only from the cwd it ran in: without a worktree/project
+    // the source stage spawned in its own sandbox.
+    const cwd = run.workspace?.path ?? run.projectPath ?? sourceInfo?.cwd ?? stage.cwd;
     let resumed = Boolean(sessionId);
     let result: ReturnType<typeof parseAdvisorReply> | null = null;
     let error: string | null = null;
@@ -169,6 +196,7 @@ export class PhaseAdvisorService {
       from: from ?? null,
       sessionId: resumed ? (sessionId ?? null) : null,
       answer: result?.answer ?? null,
+      escalated: result?.escalate !== undefined,
       error,
       costUsd: result?.costUsd ?? 0,
       durationMs,
@@ -188,7 +216,7 @@ export class PhaseAdvisorService {
       `The advisor (${cfg.model}${from ? `, from the "${from}" phase` : ""}) answered:`,
       result.answer,
       "",
-      "Follow it and record the decision in your handoff.",
+      "Treat this as guidance; the gate still applies; record the decision in your handoff.",
     ].join("\n");
   }
 
@@ -261,6 +289,7 @@ export class PhaseAdvisorService {
       from: string | null;
       sessionId: string | null;
       answer: string | null;
+      escalated: boolean;
       error: string | null;
       costUsd: number;
       durationMs: number;
@@ -273,7 +302,7 @@ export class PhaseAdvisorService {
       `- from: ${o.from ?? "(none)"}${o.sessionId ? ` (forked session ${o.sessionId})` : " (fresh session)"}`,
       `- costUsd: ${o.costUsd}`,
       `- durationMs: ${o.durationMs}`,
-      `- outcome: ${o.error ? "error" : o.answer?.startsWith("ESCALATE:") ? "escalate" : "answered"}`,
+      `- outcome: ${o.error ? "error" : o.escalated ? "escalate" : "answered"}`,
       "",
       "## Question",
       "",
