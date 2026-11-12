@@ -71,6 +71,18 @@ describe("IntegrationsStorageService", () => {
     expect(ok.lastSyncAt).toBe("2026-06-12T00:00:00.000Z");
   });
 
+  it("persists tokenExpiresAt (incl. null = never) and keeps it across stamps that omit it", async () => {
+    await service.create(sample);
+    await service.markSync("team-slack", {
+      status: "connected",
+      tokenExpiresAt: "2026-12-11T10:00:00.000Z",
+    });
+    await service.markSync("team-slack", { status: "error", lastError: "boom" });
+    expect((await service.get("team-slack")).tokenExpiresAt).toBe("2026-12-11T10:00:00.000Z");
+    await service.markSync("team-slack", { status: "connected", tokenExpiresAt: null });
+    expect((await service.get("team-slack")).tokenExpiresAt).toBeNull();
+  });
+
   it("keeps sync state in the gitignored sidecar, re-attached on read", async () => {
     await service.create(sample);
     await service.markSync("team-slack", {

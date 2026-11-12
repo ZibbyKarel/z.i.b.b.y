@@ -1,6 +1,6 @@
 import type { Integration } from "@zibby/contracts";
 import { describe, expect, it, vi } from "vitest";
-import { GitHubChannelAdapter } from "./github.adapter";
+import { GitHubChannelAdapter, parseTokenExpiration } from "./github.adapter";
 
 const gh: Integration = {
   id: "acme-gh",
@@ -280,6 +280,50 @@ describe("GitHubChannelAdapter", () => {
     expect(await ok.test(gh, { token: "ghp" })).toEqual({
       ok: true,
       detail: "authenticated as dana",
+      tokenExpiresAt: null,
+    });
+  });
+
+  it("test reports the token expiry from the github-authentication-token-expiration header", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ login: "dana" }), {
+          headers: { "github-authentication-token-expiration": "2026-12-11 10:00:00 UTC" },
+        }),
+    ) as unknown as typeof fetch;
+    const result = await new GitHubChannelAdapter(fetchImpl).test(gh, { token: "ghp" });
+    expect(result.tokenExpiresAt).toBe("2026-12-11T10:00:00.000Z");
+  });
+
+  it("poll reports the token expiry header from its search call (todo-8)", async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ items: [] }), {
+          headers: { "github-authentication-token-expiration": "2026-12-11 10:00:00 UTC" },
+        }),
+    ) as unknown as typeof fetch;
+    const adapter = new GitHubChannelAdapter(fetchImpl);
+    const result = await adapter.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z");
+    expect(result.tokenExpiresAt).toBe("2026-12-11T10:00:00.000Z");
+
+    const noHeader = new GitHubChannelAdapter(jsonFetch({ items: [] }));
+    expect(
+      (await noHeader.poll(gh, { token: "ghp" }, "2026-06-17T08:00:00.000Z")).tokenExpiresAt,
+    ).toBeNull();
+  });
+
+  describe("parseTokenExpiration", () => {
+    it("parses the UTC and offset header forms to ISO", () => {
+      expect(parseTokenExpiration("2026-12-11 10:00:00 UTC")).toBe("2026-12-11T10:00:00.000Z");
+      expect(parseTokenExpiration("2026-12-11 02:00:00 -0800")).toBe("2026-12-11T10:00:00.000Z");
+    });
+
+    it("absent header means the token never expires", () => {
+      expect(parseTokenExpiration(null)).toBeNull();
+    });
+
+    it("an unparseable header is unknown, not 'never'", () => {
+      expect(parseTokenExpiration("soon")).toBeUndefined();
     });
   });
 

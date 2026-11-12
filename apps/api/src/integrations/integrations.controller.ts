@@ -168,6 +168,7 @@ export class IntegrationsController {
                     status: "connected",
                     lastSyncAt: new Date().toISOString(),
                     lastError: undefined,
+                    tokenExpiresAt: result.tokenExpiresAt,
                   }
                 : { status: "error", lastError: result.detail },
             );

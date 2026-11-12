@@ -668,7 +668,10 @@
     "autonomyDispatch": "Dispatch (jednat)",
     "autonomyReply": "Odpověď (Comms)",
     "deleteTitle": "Smazat integraci?",
-    "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit."
+    "deleteBody": "Opravdu smazat integraci {name}? Uložené přihlašovací údaje se smažou také. Tuto akci nelze vrátit.",
+    "tokenNoExpiry": "NO EXPIRATION DATE",
+    "tokenExpiresIn": "vyprší za {days, plural, one {# den} few {# dny} other {# dní}}",
+    "tokenExpired": "token vypršel"
   },
   "release": {
     "title": "Fronta ke sloučení",

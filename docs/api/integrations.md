@@ -84,6 +84,14 @@ onto the sync-state sidecar: `connected` + `lastSyncAt` on success, `error` +
 `lastError` on failure. It returns `409` if no credentials are configured yet
 — there is nothing to test.
 
+The GitHub probe (`GET /user`) also reads the `github-authentication-token-expiration`
+response header into `tokenExpiresAt` (on the `TestResult` and stamped onto the
+sidecar): an ISO date, `null` when the header is absent (the token never expires),
+or absent when unknown. The watcher's GitHub poll captures the same header from its
+main search/list call on every heartbeat, so the value appears without a manual
+test. A stamp that doesn't carry it (failed test, first poll) keeps the previous value. The web card and detail page render it as
+"NO EXPIRATION DATE" / "expires in N days" / "token expired".
+
 ## Project scoping
 
 Every integration carries a `projectId` foreign key and `createIntegration`/

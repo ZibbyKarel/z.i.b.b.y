@@ -21,6 +21,7 @@ import { QueryError } from "../../components/LoadError/QueryError";
 import { QueryLoading } from "../../components/LoadingState/QueryLoading";
 import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { IntegrationAutonomyPanel } from "./components/IntegrationAutonomyPanel";
+import { TokenExpiryLabel } from "./components/TokenExpiryLabel";
 import { IntegrationFormFields, useIntegrationFormState } from "./components/IntegrationFormFields";
 import {
   useDeleteIntegrationMutation,
@@ -141,7 +142,10 @@ function IntegrationEditor({
           />
 
           <Stack wrap align="center" direction="row" gap="150" justify="between">
-            <Typography type="h1">{name}</Typography>
+            <Stack gap="50">
+              <Typography type="h1">{name}</Typography>
+              <TokenExpiryLabel tokenExpiresAt={integration.tokenExpiresAt} />
+            </Stack>
             <Stack align="center" direction="row" gap="100">
               <Button
                 data-testid={IntegrationDetailScreenTestId.Test}

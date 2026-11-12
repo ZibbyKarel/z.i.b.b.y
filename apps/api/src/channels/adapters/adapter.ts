@@ -39,6 +39,11 @@ export interface PollResult {
    * team discovery unavailable → personal scope only). The watcher logs each at warn.
    */
   notes?: string[];
+  /**
+   * Access-token expiry the poll observed (GitHub's `github-authentication-token-expiration`
+   * header): ISO date, `null` = never expires, absent = not reported (keeps the stored value).
+   */
+  tokenExpiresAt?: string | null;
 }
 
 /**

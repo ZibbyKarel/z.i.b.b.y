@@ -1,9 +1,10 @@
 import { renderWithProviders as render, screen } from "../../../test/render";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { IconTileTestId } from "@zibby/design-system";
 import { type Integration, type IntegrationKind, IntegrationKindSchema } from "@zibby/contracts";
 import { IntegrationCard } from "./IntegrationCard";
+import { TokenExpiryLabelTestId } from "./TokenExpiryLabel";
 
 const integration = (over: Partial<Integration> = {}): Integration => ({
   id: "team-slack",
@@ -84,5 +85,37 @@ describe("IntegrationCard brand logo", () => {
   it.each(IntegrationKindSchema.options)("renders a card for kind %s without throwing", (kind) => {
     render(<IntegrationCard integration={integration({ kind, config: CONFIG_BY_KIND[kind] })} />);
     expect(screen.getByTestId(IconTileTestId.Root)).toBeInTheDocument();
+  });
+});
+
+describe("IntegrationCard token expiry", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: Date.parse("2026-11-12T10:00:00Z"), toFake: ["Date"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const github = (tokenExpiresAt: string | null | undefined) =>
+    integration({ kind: "github", config: CONFIG_BY_KIND.github, tokenExpiresAt });
+
+  it("shows NO EXPIRATION DATE for a token without expiry", () => {
+    render(<IntegrationCard integration={github(null)} />);
+    expect(screen.getByTestId(TokenExpiryLabelTestId.Root)).toHaveTextContent("NO EXPIRATION DATE");
+  });
+
+  it("shows the days left until expiry", () => {
+    render(<IntegrationCard integration={github("2026-11-26T09:00:00.000Z")} />);
+    expect(screen.getByTestId(TokenExpiryLabelTestId.Root)).toHaveTextContent("vyprší za 14 dní");
+  });
+
+  it("flags an already expired token", () => {
+    render(<IntegrationCard integration={github("2026-11-01T00:00:00.000Z")} />);
+    expect(screen.getByTestId(TokenExpiryLabelTestId.Root)).toHaveTextContent("token vypršel");
+  });
+
+  it("renders nothing while the expiry is unknown", () => {
+    render(<IntegrationCard integration={github(undefined)} />);
+    expect(screen.queryByTestId(TokenExpiryLabelTestId.Root)).not.toBeInTheDocument();
   });
 });

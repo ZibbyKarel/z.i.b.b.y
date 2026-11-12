@@ -11,6 +11,7 @@ import {
 import type { Integration, IntegrationKind } from "@zibby/contracts";
 import { INTEGRATION_GLYPH, INTEGRATION_LOGO } from "../kindIcon";
 import { INTEGRATION_STATUS } from "../integrationStatus";
+import { TokenExpiryLabel } from "./TokenExpiryLabel";
 
 export interface IntegrationCardProps {
   integration: Integration;
@@ -83,6 +84,7 @@ export function IntegrationCard({
           <Typography mono truncate size="xs" type="note" variant="tertiary">
             {t("integrations.lastSync")}: {lastSyncCaption(integration.lastSyncAt)}
           </Typography>
+          <TokenExpiryLabel tokenExpiresAt={integration.tokenExpiresAt} />
           <Stack align="center" direction="row" gap="75" justify="between">
             {onToggleEnabled ? (
               <Toggle

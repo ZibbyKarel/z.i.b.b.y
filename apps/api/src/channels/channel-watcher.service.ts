@@ -334,6 +334,7 @@ export class ChannelWatcherService
       items,
       cursor: nextCursor,
       notes,
+      tokenExpiresAt,
     } = await withRetry(() => adapter.poll(integration, creds, cursor, ctx), {
       retries: intEnv("CHANNEL_POLL_RETRIES", 2),
       baseMs: intEnv("CHANNEL_POLL_BACKOFF_MS", 250),
@@ -393,6 +394,7 @@ export class ChannelWatcherService
       status: "connected",
       lastSyncAt: new Date().toISOString(),
       lastError: undefined,
+      tokenExpiresAt,
     });
     return ingested;
   }

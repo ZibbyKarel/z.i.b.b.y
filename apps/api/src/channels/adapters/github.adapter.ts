@@ -26,6 +26,17 @@ function tokenOf(creds: CredentialsInput): string | null {
 }
 
 /**
+ * GitHub's `github-authentication-token-expiration` response header
+ * (`2026-12-11 10:00:00 UTC`) → ISO. Absent (`null`) means the token never
+ * expires → `null`; an unparseable value is unknown → `undefined`.
+ */
+export function parseTokenExpiration(value: string | null): string | null | undefined {
+  if (value === null) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+/**
  * GitHub adapter over plain `fetch` (Node 20+ global). Polls `/repos/{repo}/issues`
  * (the API returns issues *and* PRs; the `pull_request` field distinguishes them) with
  * `since` = the cursor, normalizes each to an {@link InboundMessage} with a
@@ -117,7 +128,13 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       const res = await this.fetchImpl(`${GITHUB_API}/user`, { headers: this.headers(creds) });
       if (!res.ok) return { ok: false, detail: `github /user: HTTP ${res.status}` };
       const body = (await res.json()) as { login?: string };
-      return { ok: true, detail: `authenticated${body.login ? ` as ${body.login}` : ""}` };
+      return {
+        ok: true,
+        detail: `authenticated${body.login ? ` as ${body.login}` : ""}`,
+        tokenExpiresAt: parseTokenExpiration(
+          res.headers.get("github-authentication-token-expiration"),
+        ),
+      };
     } catch (err) {
       return { ok: false, detail: (err as Error).message };
     }
@@ -128,6 +145,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     repo: string,
     cursor: string | undefined,
     creds: CredentialsInput,
+    onResponse?: (res: Response) => void,
   ): Promise<GitHubIssue[]> {
     const params = new URLSearchParams({
       state: "open",
@@ -139,6 +157,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const res = await this.fetchImpl(`${GITHUB_API}/repos/${repo}/issues?${params}`, {
       headers: this.headers(creds),
     });
+    onResponse?.(res);
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
@@ -160,6 +179,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     qualifier: string,
     cursor: string | undefined,
     creds: CredentialsInput,
+    onResponse?: (res: Response) => void,
   ): Promise<GitHubIssue[]> {
     const since = cursor ? ` updated:>=${cursor}` : "";
     const q = `repo:${repo} is:open ${qualifier}${since}`;
@@ -167,6 +187,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const res = await this.fetchImpl(`${GITHUB_API}/search/issues?${params}`, {
       headers: this.headers(creds),
     });
+    onResponse?.(res);
     if (res.status === 429 || res.status === 403) {
       throw new Error(`github rate limited (HTTP ${res.status})`);
     }
@@ -241,12 +262,20 @@ export class GitHubChannelAdapter implements ChannelAdapter {
     const { teams, note } = includeTeams
       ? await this.teamsFor(integration, repo, creds)
       : { teams: [] as string[], note: undefined };
+    // todo-8: the heartbeat's main authenticated call also reports the token
+    // expiry header, so the UI shows it without a manual connection test.
+    let tokenExpiresAt: string | null | undefined;
+    const captureExpiry = (res: Response) => {
+      tokenExpiresAt = parseTokenExpiration(
+        res.headers.get("github-authentication-token-expiration"),
+      );
+    };
     const scoped = username
       ? [
-          ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds)),
+          ...(await this.searchScoped(repo, `mentions:${username}`, cursor, creds, captureExpiry)),
           ...(await this.searchScoped(repo, `assignee:${username}`, cursor, creds)),
         ]
-      : await this.listAll(repo, cursor, creds);
+      : await this.listAll(repo, cursor, creds, captureExpiry);
     const teamScoped: GitHubIssue[] = [];
     // ponytail: one Search call per team per poll (Search API ~30/min);
     // batch/OR the legs if an operator has many teams.
@@ -291,7 +320,7 @@ export class GitHubChannelAdapter implements ChannelAdapter {
       });
       if (newest === undefined || updated > newest) newest = updated;
     }
-    return { items, cursor: newest, ...(note ? { notes: [note] } : {}) };
+    return { items, cursor: newest, tokenExpiresAt, ...(note ? { notes: [note] } : {}) };
   }
 
   async send(

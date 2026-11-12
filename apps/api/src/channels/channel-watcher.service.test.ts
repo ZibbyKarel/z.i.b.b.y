@@ -52,13 +52,16 @@ function fakeModuleRef(locator?: { numbersFor: (projectId: string) => Promise<nu
 /** A registry whose `resolve` returns a spy adapter recording every `poll()` call
  * (including the `ctx` argument) instead of doing real work — used to assert what
  * `pollOne` hands the adapter, independent of any adapter's own poll behaviour. */
-function spyRegistry(calls: Array<{ integrationId: string; ctx: PollContext | undefined }>) {
+function spyRegistry(
+  calls: Array<{ integrationId: string; ctx: PollContext | undefined }>,
+  result: PollResult = { items: [], cursor: undefined },
+) {
   const adapter: ChannelAdapter = {
     kind: "fake",
     test: async () => ({ ok: true, detail: "spy" }),
     poll: (integration: Integration, _creds, _cursor, ctx): Promise<PollResult> => {
       calls.push({ integrationId: integration.id, ctx });
-      return Promise.resolve({ items: [], cursor: undefined });
+      return Promise.resolve(result);
     },
     send: async () => {},
   };
@@ -295,6 +298,19 @@ describe("ChannelWatcherService", () => {
 
     expect(calls.find((c) => c.integrationId === "gh")?.ctx).toEqual({ zibbyPrNumbers: [7, 9] });
     expect(calls.find((c) => c.integrationId === "team")?.ctx).toBeUndefined();
+  });
+
+  it("stamps the token expiry a poll reports, and keeps it when a poll reports none (todo-8)", async () => {
+    await integrations.create(github("gh"));
+    await credentials.write("gh", { token: "ghp" });
+    const expiry = "2026-12-11T10:00:00.000Z";
+    await makeWatcher(
+      spyRegistry([], { items: [], cursor: undefined, tokenExpiresAt: expiry }),
+    ).tick();
+    expect((await integrations.get("gh")).tokenExpiresAt).toBe(expiry);
+
+    await makeWatcher(spyRegistry([])).tick();
+    expect((await integrations.get("gh")).tokenExpiresAt).toBe(expiry);
   });
 
   it("fails open when ZibbyPrLocator throws — the poll still runs, with an empty PR-number set", async () => {
