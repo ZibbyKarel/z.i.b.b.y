@@ -12,7 +12,8 @@ import {
 } from "@zibby/design-system";
 import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { VoiceStatusStrip, VoiceToggleButton, useVoiceMode } from "../../../chat";
 import { useLimitsQuery } from "../../../limits";
 import { ProjectSelect, useProjectsQuery } from "../../../projects";
 import { type TaskSubmitResult, useTaskSubmit } from "../../hooks/useTaskSubmit";
@@ -172,6 +173,13 @@ export function TaskCommandLine({
   const [draftAttachments, setDraftAttachments] = useState<TaskAttachmentSet>({ files: [] });
   const [taskProjectId, setTaskProjectId] = useState<string | null>(() => initialProjectId ?? null);
   const [ack, setAck] = useState<AckInfo | null>(null);
+  // Dictation: finished chunks queue here until CommandLine appends them to the draft.
+  const [dictated, setDictated] = useState<string | undefined>(undefined);
+  const appendDictated = useCallback(
+    (chunk: string) => setDictated((prev) => (prev ? `${prev} ${chunk}` : chunk)),
+    [],
+  );
+  const voice = useVoiceMode({ onFinal: appendDictated });
   const [scheduledWhen, setScheduledWhen] = useState<string | null>(null);
   // A stable "now" for this instance's lifetime — presets and the goal id's uniqueness
   // suffix resolve against it (lazy: Date.now() in render is lint-banned).
@@ -324,26 +332,38 @@ export function TaskCommandLine({
 
   return (
     <Stack data-testid={TaskCommandLineTestId.Root} direction="col" gap="150">
+      {(voice.active || voice.transcribing) && (voice.interim || voice.transcribing) && (
+        <VoiceStatusStrip
+          interim={voice.interim}
+          listening={voice.listening}
+          transcribing={voice.transcribing}
+        />
+      )}
       <CommandLine
         chrome={chrome}
         disabled={disabled}
         initialTarget={initialTarget}
         initialText={initialText}
         injectedTarget={injectedTarget}
+        injectedText={dictated}
         label={label}
         leadingActions={
-          <Container data-testid={TaskCommandLineTestId.ProjectSelector}>
-            <ProjectSelect
-              activeProjectId={taskProjectId}
-              onChange={handleProjectChange}
-              projects={projects}
-            />
-          </Container>
+          <>
+            {voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />}
+            <Container data-testid={TaskCommandLineTestId.ProjectSelector}>
+              <ProjectSelect
+                activeProjectId={taskProjectId}
+                onChange={handleProjectChange}
+                projects={projects}
+              />
+            </Container>
+          </>
         }
         maxRows={maxRows}
         onAttachmentsChange={handleAttachmentsChange}
         onDraftChange={onDraftChange}
         onInjectedTargetConsumed={onInjectedTargetConsumed}
+        onInjectedTextConsumed={() => setDictated(undefined)}
         onScopeChange={(kind, id) => {
           if (kind === "project") handleProjectChange(id ?? null);
         }}

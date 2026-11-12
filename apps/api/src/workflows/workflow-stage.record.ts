@@ -1,3 +1,4 @@
+import { AiEngineSchema } from "@zibby/contracts";
 import { z } from "zod";
 import type { BaseRun, KindStrategy, RunSpec } from "../runner/runner-core.types";
 
@@ -27,6 +28,9 @@ export const WorkflowStageRecordSchema = z.object({
   costUsd: z.number().optional(),
   /** The captured claude session id — kept across a restart so the phase advisor can fork it. */
   sessionId: z.string().optional(),
+  /** The engine the stage ran on (absent = claude). */
+  engine: AiEngineSchema.optional(),
+  engineModel: z.string().optional(),
   workflowRunId: z.string(),
   phaseId: z.string(),
   attempt: z.number().int().min(1),

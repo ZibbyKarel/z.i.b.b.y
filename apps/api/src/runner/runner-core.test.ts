@@ -299,6 +299,236 @@ describe("RunnerCore", () => {
     expect(core.get(run.runId).pct).toBe(100);
   });
 
+  it("reads an opencode run's JSONL with the opencode formatter, cost and session extractors", async () => {
+    // A fake `opencode run --format json` binary (the OPENCODE_BIN seam): two steps
+    // with a cost each, a tool call, text, and the env the builder hands it echoed back.
+    const sid = "ses_fake123";
+    const line = (o: object) => `printf '%s\\n' '${JSON.stringify(o)}'`;
+    const bin = path.join(dir, "opencode");
+    await fs.writeFile(
+      bin,
+      [
+        "#!/bin/sh",
+        line({ type: "step_start", sessionID: sid, part: { type: "step-start" } }),
+        line({
+          type: "tool_use",
+          sessionID: sid,
+          part: {
+            tool: "shell",
+            state: { status: "completed", input: { command: "ls" }, output: "a.txt" },
+          },
+        }),
+        line({ type: "step_finish", sessionID: sid, part: { type: "step-finish", cost: 0.25 } }),
+        line({ type: "text", sessionID: sid, part: { type: "text", text: "all done" } }),
+        line({ type: "step_finish", sessionID: sid, part: { type: "step-finish", cost: 0.5 } }),
+        'echo "config=$OPENCODE_CONFIG"',
+        'echo "free=$ZIBBY_FREE_DIRS"',
+        'echo "gatecwd=$ZIBBY_GATE_CWD noproject=$OPENCODE_DISABLE_PROJECT_CONFIG"',
+        'echo "body=$(cat "$OPENCODE_CONFIG")"',
+        // A gated subagent call never shows in the JSONL — only in the plugin's log.
+        "echo '⛨ gate shell rm x → allowed' >> \"$ZIBBY_GATE_LOG\"",
+        "sleep 0.3",
+        'echo "PROGRESS 100"',
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    // The claude formatter stays wired on the core — the run's engine overrides it.
+    const core = new RunnerCore(
+      dir,
+      strategy,
+      undefined,
+      undefined,
+      undefined,
+      formatClaudeStreamLine,
+    );
+    await core.init();
+    const run = await core.start({
+      kind: "agent",
+      ownerId: "oc",
+      command: bin,
+      args: ["run", "--standalone", "--format", "json"],
+      cwd: path.join(dir, "oc_sandbox"),
+      // A project env can't point opencode at another config.
+      env: { OPENCODE_CONFIG: "/evil.json", OPENCODE_PERMISSION: "allow" },
+      opencodeConfig: '{"cfg":1}',
+      engine: "opencode",
+      engineModel: "opencode/big-pickle",
+      extra: { label: "x" },
+    });
+    await waitForStatus(core, run.runId, "done");
+    const rec = core.get(run.runId);
+    expect(rec.engine).toBe("opencode");
+    expect(rec.engineModel).toBe("opencode/big-pickle");
+    expect(rec.costUsd).toBeCloseTo(0.75);
+    expect(rec.sessionId).toBe(sid);
+    const { content } = await core.readLog(run.runId, 0);
+    expect(content).toContain("● Shell$ ls");
+    expect(content).toContain("all done");
+    expect(content).not.toContain('"step_finish"');
+    // The config lives in the runs dir, outside every free dir, written from the spec.
+    const config = /config=(.*)/.exec(content)?.[1] ?? "";
+    expect(path.dirname(config)).toBe(path.join(dir, ".opencode"));
+    // (The test dir sits in the OS temp dir, a shared free dir; the data root never does.)
+    const free = (/free=(.*)/.exec(content)?.[1] ?? "")
+      .split(path.delimiter)
+      .filter((f) => !dir.startsWith(f + path.sep));
+    expect(free.some((f) => config.startsWith(f + path.sep))).toBe(false);
+    expect(content).toContain('body={"cfg":1}');
+    expect(content).toContain(`gatecwd=${path.join(dir, "oc_sandbox")} noproject=1`);
+    expect(content).toContain("⛨ gate shell rm x → allowed");
+  });
+
+  it("rewrites an opencode run's config from the spec before a resume respawn", async () => {
+    const bin = path.join(dir, "opencode-cat");
+    await fs.writeFile(
+      bin,
+      '#!/bin/sh\necho "config=$OPENCODE_CONFIG"\necho "body=$(cat "$OPENCODE_CONFIG")"\n',
+      { mode: 0o755 },
+    );
+    const core = new RunnerCore(dir, strategy);
+    await core.init();
+    const spec = {
+      kind: "agent" as const,
+      ownerId: "ocr",
+      command: bin,
+      args: [],
+      cwd: path.join(dir, "ocr_sandbox"),
+      opencodeConfig: '{"gate":true}',
+      engine: "opencode" as const,
+      extra: {},
+    };
+    const first = await core.start(spec);
+    await waitForStatus(core, first.runId, "done");
+    const content = (await core.readLog(first.runId, 0)).content;
+    expect(content).toContain('body={"gate":true}');
+    const config = /config=(.*)/.exec(content)?.[1] ?? "";
+    // The config holds MCP secrets: gone with its gate log once the run ends.
+    await expect(fs.access(config)).rejects.toThrow();
+    await expect(fs.access(config.replace(/\.json$/, ".gate.log"))).rejects.toThrow();
+    // A stale / tampered file at that path is never what a respawn loads.
+    await fs.writeFile(config, '{"gate":false}');
+    const pending = await core.createPending(spec);
+    await core.resume(pending.runId);
+    await waitForStatus(core, pending.runId, "done");
+    expect((await core.readLog(pending.runId, 0)).content).toContain('body={"gate":true}');
+    // Deleting a run drops its files too (here: the ones planted after it finished).
+    await fs.writeFile(config, "{}");
+    await core.delete(pending.runId);
+    await expect(fs.access(config)).rejects.toThrow();
+  });
+
+  it("refuses an opencode spec without its config", async () => {
+    const core = new RunnerCore(dir, strategy);
+    await core.init();
+    await expect(
+      core.start({
+        kind: "agent",
+        ownerId: "nocfg",
+        command: "/bin/true",
+        args: [],
+        cwd: path.join(dir, "nocfg"),
+        engine: "opencode",
+        extra: {},
+      }),
+    ).rejects.toThrow(/opencodeConfig/);
+  });
+
+  describe("opencode idle watchdog", () => {
+    const saved = process.env.ZIBBY_OPENCODE_IDLE_MINUTES;
+    beforeEach(() => {
+      process.env.ZIBBY_OPENCODE_IDLE_MINUTES = String(1 / 60); // 1 s
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env.ZIBBY_OPENCODE_IDLE_MINUTES;
+      else process.env.ZIBBY_OPENCODE_IDLE_MINUTES = saved;
+    });
+
+    it("kills a silent opencode run and marks it error", async () => {
+      const bin = path.join(dir, "opencode-hang");
+      await fs.writeFile(bin, "#!/bin/sh\nsleep 30\n", { mode: 0o755 });
+      const core = new RunnerCore(dir, strategy);
+      await core.init();
+      const run = await core.start({
+        kind: "agent",
+        ownerId: "hang",
+        command: bin,
+        args: [],
+        cwd: path.join(dir, "hang"),
+        opencodeConfig: "{}",
+        engine: "opencode",
+        extra: {},
+      });
+      await waitForStatus(core, run.runId, "error", 5000);
+      expect((await core.readLog(run.runId, 0)).content).toMatch(/no output for .* killed as hung/);
+    });
+
+    it("counts a touched gate log as activity: a silent long tool survives", async () => {
+      // stdout stays silent for 2.5 s (well past the 1 s idle window) while the
+      // "plugin" bumps the gate log's mtime, as it does while a tool runs.
+      const bin = path.join(dir, "opencode-longtool");
+      await fs.writeFile(
+        bin,
+        [
+          "#!/bin/sh",
+          'touch "$ZIBBY_GATE_LOG"',
+          'for i in 1 2 3 4 5 6 7 8 9 10; do sleep 0.25; touch "$ZIBBY_GATE_LOG"; done',
+          "echo finished",
+        ].join("\n"),
+        { mode: 0o755 },
+      );
+      const core = new RunnerCore(dir, strategy);
+      await core.init();
+      const run = await core.start({
+        kind: "agent",
+        ownerId: "longtool",
+        command: bin,
+        args: [],
+        cwd: path.join(dir, "longtool"),
+        opencodeConfig: "{}",
+        engine: "opencode",
+        extra: {},
+      });
+      await waitForStatus(core, run.runId, "done", 8000);
+      expect((await core.readLog(run.runId, 0)).content).toContain("finished");
+    });
+
+    it("does not fire while the run waits for an operator decision", async () => {
+      const cwd = path.join(dir, "held");
+      const bin = path.join(dir, "opencode-held");
+      await fs.writeFile(
+        bin,
+        [
+          "#!/bin/sh",
+          `echo '{"action":"delete"}' > "${path.join(cwd, "intent-request.json")}"`,
+          `while [ ! -f "${path.join(cwd, "intent-decision.json")}" ]; do sleep 0.05; done`,
+          "echo released",
+        ].join("\n"),
+        { mode: 0o755 },
+      );
+      const ref: { core?: RunnerCore<TestRecord> } = {};
+      const core = new RunnerCore(dir, strategy, undefined, (runId) =>
+        ref.core?.holdForApproval(runId),
+      );
+      ref.core = core;
+      await core.init();
+      const run = await core.start({
+        kind: "agent",
+        ownerId: "held",
+        command: bin,
+        args: [],
+        cwd,
+        opencodeConfig: "{}",
+        engine: "opencode",
+        extra: {},
+      });
+      await waitForStatus(core, run.runId, "awaiting-approval");
+      await sleep(2500); // well past the idle window
+      expect(core.get(run.runId).status).toBe("awaiting-approval");
+      await core.resume(run.runId);
+      await waitForStatus(core, run.runId, "done");
+    });
+  });
+
   it("marks an exit-0 run as error when the agent reports ZIBBY_STATUS: blocked", async () => {
     const core = new RunnerCore(
       dir,

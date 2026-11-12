@@ -3,3 +3,4 @@ export {
   useChatConversationsQuery,
   getChatConversationsQueryKey,
 } from "./useChatConversationsQuery";
+export { useSpeechStatusQuery, getSpeechStatusQueryKey } from "./useSpeechStatusQuery";

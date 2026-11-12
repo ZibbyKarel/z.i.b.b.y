@@ -11,7 +11,10 @@ import { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import { ENTITY_MCP_SERVER_ID, McpServersStorageService } from "../mcp/mcp.storage.service";
 import { ISOLATED_SETTING_SOURCES } from "../shared/spawn-claude-cli";
 import { SkillsStorageService } from "../skills/skills.storage.service";
+import { SystemConfigStore } from "../system/system-config.store";
+import { type ResolvedAiEngine, opencodeBin, resolveAiEngine } from "./ai-engine";
 import { mapTools, toSubagentTools } from "./claude-tools";
+import { GRANT_DIRS_ENV } from "./runner-core";
 
 /**
  * Inputs for one `claude -p` run, projected from the selected agent (or skill).
@@ -121,6 +124,12 @@ export interface ClaudeRunOptions {
 
 /** Absolute path of the PreToolUse approval hook, resolved next to this module. */
 const APPROVAL_HOOK = path.resolve(__dirname, "claude-approval-hook.mjs");
+
+/** The opencode plugin dir that runs {@link APPROVAL_HOOK} on every tool call. */
+const OPENCODE_GATE_PLUGIN = path.resolve(__dirname, "opencode-gate-plugin");
+
+/** The opencode agent id the run's system prompt is defined under. */
+const OPENCODE_AGENT = "zibby";
 
 /**
  * How long the gate holds a destructive command for a human decision (seconds).
@@ -446,6 +455,50 @@ function resolveGrantId(grant: string, mcpServers: readonly McpServer[]): string
 }
 
 /**
+ * opencode permission actions denied on every run: interactive questions, Code Mode,
+ * and `skill` (it loads the operator's global `~/.claude/skills` into the run).
+ */
+const OPENCODE_ALWAYS_DENIED = ["question", "execute", "skill"];
+
+/**
+ * MCP server ids an opencode run never mounts: their tools would be named like
+ * opencode's own `opencode_*` / `browser_*` tools, which the gate always denies.
+ */
+const OPENCODE_RESERVED_MCP_IDS = new Set(["opencode", "browser"]);
+
+/**
+ * The agent's `tools` allow-list as opencode deny rules (Law 1: agent rules only
+ * tighten). Derived from the same {@link mapTools} expansion `--allowedTools` uses;
+ * an agent with no `tools` list is unrestricted, as on Claude. `glob`/`grep` come with
+ * `Read` (read-only, as Claude's auto mode runs them); `Bash(<prefix>:*)` keeps the
+ * shell but the gate plugin limits it to those prefixes (`shellPrefixes`).
+ */
+export function opencodeToolRules(tools: readonly string[] | undefined): {
+  deny: string[];
+  shellPrefixes?: string[];
+} {
+  if (!tools?.length) return { deny: [...OPENCODE_ALWAYS_DENIED] };
+  const allowed = new Set(mapTools(tools));
+  const has = (...names: string[]) => names.some((n) => allowed.has(n));
+  const shellPrefixes = [...allowed].flatMap((t) => /^Bash\((.+?):\*\)$/.exec(t)?.[1] ?? []);
+  const deny = [...OPENCODE_ALWAYS_DENIED];
+  const unless = (ok: boolean, ...actions: string[]) => {
+    if (!ok) deny.push(...actions);
+  };
+  unless(has("Bash") || shellPrefixes.length > 0, "shell", "bash");
+  unless(has("Write"), "write");
+  unless(has("Edit"), "edit");
+  unless(has("Write") && has("Edit"), "patch", "apply_patch");
+  unless(has("Read"), "read", "list");
+  unless(has("Read", "Glob"), "glob");
+  unless(has("Read", "Grep"), "grep");
+  unless(has("Task", "Agent"), "task", "subagent");
+  unless(has("WebFetch"), "webfetch");
+  unless(has("WebSearch"), "websearch");
+  return { deny, ...(!has("Bash") && shellPrefixes.length ? { shellPrefixes } : {}) };
+}
+
+/**
  * Kickoff prompt used when a run is launched with a blank task. `claude --print`
  * rejects an empty prompt ("Input must be provided …"), and a run started from the
  * UI may carry no prompt at all (the agent's body in `--append-system-prompt`
@@ -488,7 +541,120 @@ export class ClaudeRunCommandService {
     private readonly mcpCredentials: McpCredentialsStore,
     // Optional so direct constructions (tests) without marketplaces still work.
     @Optional() private readonly marketplaces?: MarketplacesStore,
+    // Optional for the same reason; absent = every run on claude.
+    @Optional() private readonly systemConfig?: SystemConfigStore,
   ) {}
+
+  /** The engine `agent` runs on: its own override ?? the global setting (A3). */
+  resolveEngine(agent: Pick<Agent, "engine" | "engineModel">): ResolvedAiEngine {
+    return resolveAiEngine(agent, this.systemConfig?.current());
+  }
+
+  /**
+   * The `opencode run` sibling of {@link buildClaudeCommand}. Everything the session
+   * needs rides one per-run config (`opencodeConfig`, written by RunnerCore outside the
+   * agent's free zone before every spawn — never `~/.config/opencode`): the system
+   * prompt as the `zibby` agent, the enabled MCP servers, and the approval gate —
+   * `permissions: ask *` (no `--auto`, so an unapproved call is auto-rejected), deny
+   * rules for `execute`, `question` and every tool the agent's `tools` list lacks
+   * ({@link opencodeToolRules}), plus the gate plugin that runs the Claude approval
+   * hook on every call. Project `opencode.json` files are ignored (RunnerCore sets
+   * `OPENCODE_DISABLE_PROJECT_CONFIG`), mirroring `--setting-sources ""`.
+   * Not carried over: the `--agents` catalog, custom hooks, plugin dirs, effort.
+   */
+  async buildOpencodeCommand(
+    opts: ClaudeRunOptions,
+    model: string,
+  ): Promise<{
+    command: string;
+    args: string[];
+    env: Record<string, string>;
+    opencodeConfig: string;
+  }> {
+    const enabled = (await this.enabledMcpServers(opts)).filter(
+      (server) => !OPENCODE_RESERVED_MCP_IDS.has(server.id),
+    );
+    const mcp = await this.buildMcpConfig(enabled, opts.runId);
+    const servers: Record<string, Record<string, unknown>> = {};
+    for (const [id, s] of Object.entries(mcp?.mcpServers ?? {})) {
+      servers[id] =
+        s.type === "stdio"
+          ? {
+              type: "local",
+              command: [s.command, ...(Array.isArray(s.args) ? s.args : [])],
+              ...(s.env ? { environment: s.env } : {}),
+              codemode: false,
+            }
+          : {
+              type: "remote",
+              url: s.url,
+              ...(s.headers ? { headers: s.headers } : {}),
+              oauth: false,
+              codemode: false,
+            };
+    }
+    const rules = opencodeToolRules(opts.tools);
+    const config = {
+      agents: {
+        [OPENCODE_AGENT]: {
+          mode: "primary",
+          system: withOperatingContract(opts.instructions, opts.grounding, opts.resumeContext),
+        },
+      },
+      permissions: [
+        { action: "*", resource: "*", effect: "ask" },
+        ...rules.deny.map((action) => ({ action, resource: "*", effect: "deny" })),
+      ],
+      plugins: [OPENCODE_GATE_PLUGIN],
+      ...(Object.keys(servers).length ? { mcp: { servers } } : {}),
+    };
+    const args = [
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "-m",
+      model,
+      "--agent",
+      OPENCODE_AGENT,
+    ];
+    if (opts.resumeSessionId) args.push("--session", opts.resumeSessionId);
+    args.push("--", withExecutionDirective(opts.task.trim() ? opts.task : KICKOFF_FALLBACK));
+    const grants = [...new Set([...(opts.grantDirs ?? []), opts.contextDir ?? ""])].filter(Boolean);
+    return {
+      command: opencodeBin(),
+      args,
+      // Always set (empty included), so a project env can't supply or widen them.
+      env: {
+        ZIBBY_GATE_NODE: process.execPath,
+        ZIBBY_GATE_HOOK: APPROVAL_HOOK,
+        ZIBBY_GATE_DEADLINE_S: String(GATE_DEADLINE_S),
+        [GRANT_DIRS_ENV]: grants.join(path.delimiter),
+        ZIBBY_MCP_SERVERS: enabled.map((server) => server.id).join(","),
+        ZIBBY_DENY_TOOLS: rules.deny.join(","),
+        ZIBBY_SHELL_PREFIXES: rules.shellPrefixes ? JSON.stringify(rules.shellPrefixes) : "",
+      },
+      opencodeConfig: JSON.stringify(config),
+    };
+  }
+
+  /**
+   * Enabled MCP servers are injected into every run — except grantOnly ones, which
+   * ride only runs whose tools/toolGrants reference them. A listing failure degrades
+   * to no MCP (never blocks the run).
+   */
+  private async enabledMcpServers(opts: ClaudeRunOptions): Promise<McpServer[]> {
+    const granted = [...(opts.tools ?? []), ...(opts.toolGrants ?? [])];
+    return (await this.mcp.list().catch((): McpServer[] => [])).filter(
+      (server) =>
+        server.enabled &&
+        (!server.grantOnly ||
+          granted.some(
+            (t) =>
+              t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
+          )),
+    );
+  }
 
   async buildClaudeCommand(opts: ClaudeRunOptions): Promise<{
     command: string;
@@ -502,20 +668,9 @@ export class ClaudeRunCommandService {
      */
     catalogAgentIds: string[];
   }> {
-    // Enabled MCP servers are injected into every run — except grantOnly ones, which
-    // ride only runs whose tools/toolGrants reference them. Their tools widen the
-    // session allow-list (see buildCatalog) and their connection config rides
-    // `--mcp-config`. A listing failure degrades to no MCP (never blocks the run).
-    const granted = [...(opts.tools ?? []), ...(opts.toolGrants ?? [])];
-    const mcpServers = (await this.mcp.list().catch((): McpServer[] => [])).filter(
-      (server) =>
-        server.enabled &&
-        (!server.grantOnly ||
-          granted.some(
-            (t) =>
-              t === server.id || t === `mcp__${server.id}` || t.startsWith(`mcp__${server.id}__`),
-          )),
-    );
+    // Their tools widen the session allow-list (see buildCatalog) and their
+    // connection config rides `--mcp-config`.
+    const mcpServers = await this.enabledMcpServers(opts);
     const { catalog, allowedTools, catalogAgentIds } = await this.buildCatalog(
       opts.tools,
       mcpServers,

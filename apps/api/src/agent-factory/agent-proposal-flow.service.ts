@@ -97,7 +97,12 @@ export class AgentProposalFlowService implements OnModuleInit, ResumableRunner {
    * deny). Returns the parked approval, or null when the gate discarded the candidate.
    */
   async propose(candidate: Agent): Promise<Approval | null> {
-    const written = await this.agents.create({ ...candidate, status: "proposed" });
+    // The engine is the operator's (token-guarded) choice — an LLM-drafted candidate
+    // can't pick one; it inherits the global setting.
+    const draft: Agent = { ...candidate, status: "proposed" };
+    delete draft.engine;
+    delete draft.engineModel;
+    const written = await this.agents.create(draft);
     const floor = await this.gate.floor();
     const evaluation = this.gate.evaluate(floor, {
       action: PROPOSE_ACTION,

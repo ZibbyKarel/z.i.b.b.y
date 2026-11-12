@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ResumableRunner } from "../approvals/approvals.service";
 import { autopilotCoversApproval } from "../autopilot/autopilot.service";
 import { ProjectLocalUnresolvedError } from "../projects/projects.errors";
+import { clearOpencodeCache } from "../runner/ai-engine";
 import { RunNotFoundError } from "../runner/runner-core";
 import { SkillNotFoundError } from "../skills/skills.errors";
 import {
@@ -109,7 +110,7 @@ async function makeHarness(dir: string): Promise<Harness> {
     dir,
     workflows as never,
     agents as never,
-    { buildClaudeCommand: vi.fn() } as never,
+    { buildClaudeCommand: vi.fn(), resolveEngine: () => ({ engine: "claude" }) } as never,
     { materialize: vi.fn(async () => {}) } as never,
     { assertAvailable: vi.fn(), probe: vi.fn() } as never,
     approvals as never,
@@ -696,6 +697,46 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       });
     });
 
+    it("opencode: an agent on opencode builds an opencode stage (config + engine), refuses an unknown model", async () => {
+      process.env.AGENT_RUNNER_MODE = "claude";
+      const bin = path.join(dir, "fake-opencode.sh");
+      await fs.writeFile(bin, "#!/bin/sh\necho opencode/big-pickle\n", { mode: 0o755 });
+      process.env.OPENCODE_BIN = bin;
+      clearOpencodeCache();
+      const buildOpencode = vi.fn(async () => ({
+        command: "opencode",
+        args: ["run"],
+        env: { ZIBBY_DENY_TOOLS: "question,execute" },
+        opencodeConfig: '{"cfg":1}',
+      }));
+      const buildClaude = vi.fn();
+      let model = "opencode/big-pickle";
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: buildClaude,
+        buildOpencodeCommand: buildOpencode,
+        resolveEngine: () => ({ engine: "opencode", model }),
+      };
+      try {
+        const cmd = await build(agentPhase(), PROJECT);
+        expect(cmd).toMatchObject({
+          command: "opencode",
+          opencodeConfig: '{"cfg":1}',
+          engine: { engine: "opencode", model: "opencode/big-pickle" },
+          spawnCwd: PROJECT.path,
+        });
+        expect(buildOpencode).toHaveBeenCalledWith(expect.anything(), "opencode/big-pickle");
+        expect(buildClaude).not.toHaveBeenCalled();
+        // A7: never falls back to claude.
+        model = "opencode/gone";
+        clearOpencodeCache();
+        await expect(build(agentPhase(), PROJECT)).rejects.toThrow(/opencode unavailable/);
+        expect(buildClaude).not.toHaveBeenCalled();
+      } finally {
+        delete process.env.OPENCODE_BIN;
+        clearOpencodeCache();
+      }
+    });
+
     it("tool: joins several commands with && under one shell", async () => {
       const cmd = await build(
         { id: "render", type: "tool", commands: ["a --x", "b"], produces: "r.md" },
@@ -710,7 +751,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: buildClaude,
+        resolveEngine: () => ({ engine: "claude" }),
+      };
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write", model: "opus" })),
       };
@@ -807,7 +851,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: buildClaude,
+        resolveEngine: () => ({ engine: "claude" }),
+      };
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
       };
@@ -824,7 +871,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     it("claude: plugin dirs are agent, project, then ZIBBY's commands plugin; the checkout is the context dir", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async () => ({ command: "claude", args: [] as string[] }));
-      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: buildClaude,
+        resolveEngine: () => ({ engine: "claude" }),
+      };
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write", plugins: ["/p/agent"] })),
       };
@@ -859,7 +909,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = { buildClaudeCommand: buildClaude };
+      (h.service as unknown as { claude: unknown }).claude = {
+        buildClaudeCommand: buildClaude,
+        resolveEngine: () => ({ engine: "claude" }),
+      };
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
       };
@@ -889,7 +942,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
           args: ["-p", opts.task],
         }));
         const svc = h.service as unknown as Record<string, unknown>;
-        svc.claude = { buildClaudeCommand: buildClaude };
+        svc.claude = {
+          buildClaudeCommand: buildClaude,
+          resolveEngine: () => ({ engine: "claude" }),
+        };
         svc.agents = { get: vi.fn(async () => ({ id: "writer", instructions: "write" })) };
         svc.skills = {
           get: vi.fn(async (id: string) => {
@@ -2411,6 +2467,32 @@ describe("operator pause (D-PAUSE)", () => {
     expect(run.currentStage).toBe("phase2");
     expect(run.pauseRequested).toBeFalsy();
     expect(order).toEqual(["phase1"]); // phase 2 never started (no lease, no fuse slot)
+  });
+
+  it("an exhausted Claude window pauses a claude stage but never an opencode one", async () => {
+    const internals = h.service as unknown as {
+      limits: { windowExhausted: ReturnType<typeof vi.fn> };
+      claude: { resolveEngine: () => { engine: string; model?: string } };
+    };
+    internals.limits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: 1 });
+    internals.claude.resolveEngine = () => ({ engine: "opencode", model: "opencode/big-pickle" });
+    const run = runOf();
+    const order: string[] = [];
+    scriptStages(order, () => {});
+
+    await svc().drive(run, threePhases);
+
+    expect(order).toEqual(["phase1", "phase2", "phase3"]);
+    expect(run.status).not.toBe("paused-limit");
+
+    // The same window on claude parks at the first boundary.
+    internals.claude.resolveEngine = () => ({ engine: "claude" });
+    const again = { ...runOf(), status: "running" as const, stageRuns: [] };
+    h.runs.set(WORKFLOW_RUN_ID, again);
+    order.length = 0;
+    await svc().drive(again, threePhases);
+    expect(order).toEqual([]);
+    expect(again.status).toBe("paused-limit");
   });
 
   it("rejecting a stage's approval interrupts the run, no retry", async () => {

@@ -37,6 +37,8 @@ describe("SystemConfigStore", () => {
     // Unspecified keys fall back to schema defaults.
     expect(store.current().limitResumeMax).toBe(3);
     expect(store.current().dockDoneTasksLimit).toBe(20);
+    expect(store.current().aiEngine).toBe("claude");
+    expect(store.current().opencodeModel).toBe("");
   });
 
   it("migrates the interim maxWorkingAgents key into maxConcurrentRuns", async () => {

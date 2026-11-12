@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { DepartmentsStorageService } from "../departments/departments.storage.service";
+import type { OperatorTokenService } from "../approvals/operator-token.service";
 import { AgentsController } from "./agents.controller";
 import type { AgentsStorageService } from "./agents.storage.service";
 
-function make(existing: { department?: string }) {
+function make(existing: { department?: string; engine?: string }) {
   const storage = { get: vi.fn().mockResolvedValue({ id: "a", instructions: "x", ...existing }) };
   const departments = {
     firstMissing: vi.fn(async (ids: string[]) => ids.find((i) => i === "ghost")),
@@ -11,6 +12,7 @@ function make(existing: { department?: string }) {
   return new AgentsController(
     storage as unknown as AgentsStorageService,
     departments as unknown as DepartmentsStorageService,
+    { token: () => "tok" } as unknown as OperatorTokenService,
   );
 }
 
@@ -38,5 +40,24 @@ describe("AgentsController.departmentUpdateGuard", () => {
     const c = make({});
     expect(await c.departmentUpdateGuard("a", { department: undefined })).toBeNull();
     expect(await c.departmentUpdateGuard("a", { title: "t" })).toBeNull();
+  });
+});
+
+describe("AgentsController.engineGuard (operator-only engine switch)", () => {
+  const op = { "x-zibby-operator-token": "tok" };
+  it("401s an engine / model change without the operator token", async () => {
+    const c = make({});
+    await expect(c.engineGuard("a", { engine: "opencode" }, {})).rejects.toThrow(/operator token/);
+    await expect(c.engineGuard(null, { engineModel: "opencode/x" }, {})).rejects.toThrow(
+      /operator token/,
+    );
+    await expect(c.engineGuard("a", { engine: "opencode" }, op)).resolves.toBeUndefined();
+  });
+
+  it("lets through an update that keeps the engine (or clears an absent one)", async () => {
+    const c = make({ engine: "opencode" });
+    await expect(c.engineGuard("a", { engine: "opencode" }, {})).resolves.toBeUndefined();
+    await expect(make({}).engineGuard("a", { engine: null }, {})).resolves.toBeUndefined();
+    await expect(c.engineGuard("a", {}, {})).resolves.toBeUndefined();
   });
 });

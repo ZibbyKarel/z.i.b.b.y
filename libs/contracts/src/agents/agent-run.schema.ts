@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
 import { AgentIdSchema } from "./agent.schema";
 import { IsoDateTimeSchema, RunStatusSchema, WorkspaceSchema } from "../common.schema";
 
@@ -84,6 +85,10 @@ export const AgentRunSchema = z.object({
    * this feature).
    */
   sessionId: z.string().optional(),
+  /** Which CLI ran this run; absent on runs from before engine selection (= claude). */
+  engine: AiEngineSchema.optional(),
+  /** The opencode `provider/model` the run used (opencode runs only). */
+  engineModel: z.string().optional(),
   startedAt: IsoDateTimeSchema,
   pid: z.number().int(),
   logFile: z.string(),

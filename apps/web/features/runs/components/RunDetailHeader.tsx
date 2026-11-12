@@ -24,6 +24,7 @@ import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { prListHref } from "../../inbox/inbox";
 import { useProjectsQuery } from "../../projects";
 import { useAssignRunProjectMutation } from "../mutations";
+import { formatEngine } from "../../../utils/engine";
 import { type RunView, runTitle } from "../run";
 import { MODE_TONE, type RunMetric, type RunMode } from "../runDetailModel";
 
@@ -32,6 +33,7 @@ export enum RunDetailHeaderTestId {
   Back = "run-detail-back",
   TaskLink = "run-detail-task-link",
   Title = "run-detail-title",
+  Engine = "run-detail-engine",
   State = "run-detail-state",
   AgentLink = "run-detail-agent-link",
   ProjectLink = "run-detail-project-link",
@@ -283,6 +285,19 @@ export function RunDetailHeader({
                   >
                     <LinkLabel icon={issueIcon(issueLabel)} text={issueLabel} />
                   </Pressable>
+                </>
+              )}
+              {run.engine && (
+                <>
+                  <Sep />
+                  <Typography
+                    as="span"
+                    data-testid={RunDetailHeaderTestId.Engine}
+                    type="label"
+                    variant="secondary"
+                  >
+                    {formatEngine(run.engine, run.engineModel)}
+                  </Typography>
                 </>
               )}
               {run.kind === "workflow" && !compact && (

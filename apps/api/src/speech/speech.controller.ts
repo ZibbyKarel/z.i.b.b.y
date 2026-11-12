@@ -3,6 +3,7 @@ import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
 import { speechContract } from "@zibby/contracts";
 import { SpeakdDaemonError, SpeakdTimeoutError, SpeakdUnreachableError } from "./speech.errors";
 import { SpeechService } from "./speech.service";
+import { SttService, SttTranscriptionError, SttUnavailableError } from "./stt.service";
 
 /** True for the two connectivity failures — daemon down or too slow to answer. */
 function isConnectionError(error: unknown): boolean {
@@ -17,7 +18,10 @@ function isConnectionError(error: unknown): boolean {
  */
 @Controller()
 export class SpeechController {
-  constructor(private readonly speech: SpeechService) {}
+  constructor(
+    private readonly speech: SpeechService,
+    private readonly stt: SttService,
+  ) {}
 
   @TsRestHandler(speechContract)
   handler() {
@@ -27,13 +31,30 @@ export class SpeechController {
           return { status: 200 as const, body: await this.speech.synthesize(body) };
         } catch (error) {
           if (error instanceof SpeakdDaemonError) {
-            if (error.status === 400) return { status: 400 as const, body: { message: error.message } };
-            if (error.status === 409) return { status: 409 as const, body: { message: error.message } };
-            if (error.status === 422) return { status: 422 as const, body: { message: error.message } };
+            if (error.status === 400)
+              return { status: 400 as const, body: { message: error.message } };
+            if (error.status === 409)
+              return { status: 409 as const, body: { message: error.message } };
+            if (error.status === 422)
+              return { status: 422 as const, body: { message: error.message } };
             return { status: 503 as const, body: { message: error.message } };
           }
           if (isConnectionError(error)) {
             return { status: 503 as const, body: { message: (error as Error).message } };
+          }
+          throw error;
+        }
+      },
+
+      transcribe: async ({ body }) => {
+        try {
+          return { status: 200 as const, body: await this.stt.transcribe(body) };
+        } catch (error) {
+          if (error instanceof SttTranscriptionError) {
+            return { status: 422 as const, body: { message: error.message } };
+          }
+          if (error instanceof SttUnavailableError) {
+            return { status: 503 as const, body: { message: error.message } };
           }
           throw error;
         }
@@ -50,9 +71,12 @@ export class SpeechController {
         }
       },
 
-      // SpeechService.status() never throws — every failure mode is folded into
-      // a reachable:false body, so there is no error branch to map here.
-      getStatus: async () => ({ status: 200 as const, body: await this.speech.status() }),
+      // Neither status() throws — every failure mode is folded into a
+      // reachable:false / stt.available:false body, so there is no error branch.
+      getStatus: async () => ({
+        status: 200 as const,
+        body: { ...(await this.speech.status()), stt: await this.stt.status() },
+      }),
     });
   }
 }

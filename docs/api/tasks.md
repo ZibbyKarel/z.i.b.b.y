@@ -714,6 +714,9 @@ rows), but stay reachable from the goal's detail view. Workflow sub-runs (a run 
 stage links to them. `TaskRun.department` (ZB-04a) is
 enriched from the underlying task's `department` field in `enrichRunWithTask` — the same
 value the parent/subtask read model above uses.
+`TaskRun.engine` / `engineModel` (optional) name the engine the run executes on: an
+agent run's own, a workflow run's latest stage that recorded one; absent = claude. See
+[ai-engines.md](./ai-engines.md).
 
 Workflow runs also expose per-stage timing: every non-synthetic `stageRuns[]` entry
 carries `startedAt` / `finishedAt` (ISO; absent on old runs and on the synthetic

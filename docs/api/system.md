@@ -49,6 +49,13 @@ system-config section — link there rather than duplicating the table here.
      queued tasks immediately. The interim key `maxWorkingAgents` migrates to it on read
      (the file is rewritten in the new shape on the next save). See
      [tasks.md](./tasks.md) → _Run slots_.
+   - `aiEngine` (`"claude"` | `"opencode"`, default `"claude"`) is the global run engine
+     for agent runs and workflow agent stages. An agent's own `engine` overrides it.
+     `opencodeModel` (default `""`) is the opencode `provider/model` used when the agent
+     has no `engineModel`. An empty model makes opencode runs fail fast; there is no
+     paid default. Both are read per run, so a change takes effect on the next run.
+     Changing either needs the operator token (401 without it); the rest of the config
+     stays open. See [ai-engines.md](./ai-engines.md).
    - `dockDoneTasksLimit` (1–100, default `20`) is UI-only: how many of the
      newest archived runs the web shell's activity dock lists under "Hotové"
      (read via `GET /tasks/runs/archive?limit=N`). The API stores it, nothing

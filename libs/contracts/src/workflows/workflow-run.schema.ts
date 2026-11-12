@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AgentIdSchema } from "../agents/agent.schema";
+import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
 import {
   DiffstatSchema,
   IsoDateTimeSchema,
@@ -72,6 +73,10 @@ export const StageRunSchema = z.object({
    * `costUsd` over the lines of `<stageDir>/costs.jsonl`. Absent when none.
    */
   externalCostUsd: z.number().nonnegative().optional(),
+  /** Which CLI ran this stage; absent on old runs and non-agent stages (= claude). */
+  engine: AiEngineSchema.optional(),
+  /** The opencode `provider/model` the stage used (opencode stages only). */
+  engineModel: z.string().optional(),
   /** A `workflow` phase: the child (sub-run) `workflowRunId` this stage ran. */
   childRunId: z.string().min(1).optional(),
   /** When this stage's child started / finished (ISO); absent on synthetic markers and old runs. */

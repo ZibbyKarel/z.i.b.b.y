@@ -2,6 +2,7 @@ import { renderWithProviders as render, screen } from "../../test/render";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Agent } from "@zibby/contracts";
+import { OperatorTokenNoticeTestId } from "../ai-providers";
 import { AgentDetailScreenTestId, DetailScreen } from "./DetailScreen";
 
 const push = vi.fn();
@@ -79,10 +80,33 @@ describe("agents DetailScreen (N4c grammar)", () => {
       expect(hooks.update).toHaveBeenCalledWith(
         expect.objectContaining({
           params: { id: "koder" },
-          body: expect.objectContaining({ instructions: "Write the code." }),
+          body: expect.objectContaining({ instructions: "Write the code.", engine: null }),
         }),
+        expect.any(Object),
       );
     });
+  });
+
+  it("a 401 on save shows the operator-token notice and snaps the engine back", async () => {
+    hooks.update.mockImplementation((_args, opts?: { onError?: (e: unknown) => void }) =>
+      opts?.onError?.({ status: 401 }),
+    );
+    render(<DetailScreen agentId="koder" />);
+    await userEvent.click(screen.getByTestId("button-group-option-opencode"));
+    expect(screen.getByTestId("button-group-option-opencode")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await userEvent.click(screen.getByTestId(AgentDetailScreenTestId.Save));
+    expect(await screen.findByTestId(OperatorTokenNoticeTestId.Root)).toBeInTheDocument();
+    expect(screen.getByTestId(OperatorTokenNoticeTestId.Link)).toHaveAttribute(
+      "href",
+      "/system/settings/general",
+    );
+    expect(screen.getByTestId("button-group-option-global")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
   });
 
   it("Delete asks in a CONFIRM dialog, then deletes and navigates back to the registry", async () => {

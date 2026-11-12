@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { type WriteStream, createWriteStream } from "node:fs";
+import { type WriteStream, createWriteStream, readFileSync, rmSync, statSync } from "node:fs";
 import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -10,6 +10,11 @@ import { agentBaseEnv } from "../shared/agent-env";
 import { writeFileAtomic } from "../shared/file-storage";
 import type { ScopedLogger } from "../shared/logging/logger.service";
 import { detectLimit } from "./detect-limit";
+import {
+  extractOpencodeCost,
+  extractOpencodeSessionId,
+  formatOpencodeStreamLine,
+} from "./opencode-stream-format";
 import type {
   BaseRun,
   KindStrategy,
@@ -64,12 +69,37 @@ export const INTENT_DIR_ENV = "ZIBBY_INTENT_DIR";
  */
 export const FREE_DIRS_ENV = "ZIBBY_FREE_DIRS";
 
+/**
+ * Env carrying a run's extra free-zone dirs (`path.delimiter`-separated). opencode has
+ * no `--add-dir`, so its grants ride here and {@link freeDirs} folds them in.
+ */
+export const GRANT_DIRS_ENV = "ZIBBY_GRANT_DIRS";
+
+/**
+ * An opencode run with no stdout/stderr byte (and no gate decision) for this many
+ * minutes is killed as hung (default 10). opencode's standalone mode was seen to
+ * hang silently; without this a workflow would wait on such a stage forever.
+ */
+export const OPENCODE_IDLE_ENV = "ZIBBY_OPENCODE_IDLE_MINUTES";
+
+function opencodeIdleMs(): number {
+  const min = Number(process.env[OPENCODE_IDLE_ENV]);
+  return (Number.isFinite(min) && min > 0 ? min : 10) * 60_000;
+}
+
 /** System dirs every run may freely use (scratch + `/etc`, which needs root anyway). */
 const SHARED_FREE_DIRS = [os.tmpdir(), "/tmp", "/var/tmp", "/etc"];
 
 /** The free zone of one run — see {@link FREE_DIRS_ENV}. */
-export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): string {
+export function freeDirs(
+  spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args" | "env" | "engine">,
+): string {
   const granted = spec.args.flatMap((a, i) => (a === "--add-dir" ? [spec.args[i + 1] ?? ""] : []));
+  // An opencode run has no `--add-dir`; its grants ride GRANT_DIRS_ENV instead (set by
+  // the builder over the project env). Never read on claude, where `env` is project env.
+  if (spec.engine === "opencode") {
+    granted.push(...(spec.env?.[GRANT_DIRS_ENV]?.split(path.delimiter) ?? []));
+  }
   const dirs = [spec.cwd, spec.spawnCwd ?? "", ...granted, ...SHARED_FREE_DIRS];
   return [...new Set(dirs.filter(Boolean))].join(path.delimiter);
 }
@@ -80,9 +110,10 @@ export function freeDirs(spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args">): stri
  * so a project secret with the same name cannot reintroduce them.
  */
 export function agentSpawnEnv(
-  spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args" | "env">,
+  spec: Pick<RunSpec, "cwd" | "spawnCwd" | "args" | "env" | "engine">,
+  opencode?: OpencodeRunFiles,
 ): NodeJS.ProcessEnv {
-  return agentBaseEnv({
+  const env = agentBaseEnv({
     // Runs spawn with --setting-sources "" (no project source), so the target
     // repo's CLAUDE.md only loads as an --add-dir (see ClaudeRunOptions.contextDir).
     CLAUDE_CODE_ADDITIONAL_DIRECTORIES_CLAUDE_MD: "1",
@@ -90,6 +121,22 @@ export function agentSpawnEnv(
     [INTENT_DIR_ENV]: spec.cwd,
     [FREE_DIRS_ENV]: freeDirs(spec),
   });
+  if (spec.engine !== "opencode") return env;
+  // No inherited or project OPENCODE_* reaches the run; only ours.
+  for (const key of Object.keys(env)) if (key.startsWith("OPENCODE_")) delete env[key];
+  return {
+    ...env,
+    OPENCODE_DISABLE_PROJECT_CONFIG: "1",
+    // The gate judges paths against the dir the run really spawned in.
+    ZIBBY_GATE_CWD: spec.spawnCwd ?? spec.cwd,
+    ...(opencode ? { OPENCODE_CONFIG: opencode.config, ZIBBY_GATE_LOG: opencode.gateLog } : {}),
+  };
+}
+
+/** Where an opencode run's config and gate decision log live (see {@link RunnerCore}). */
+export interface OpencodeRunFiles {
+  config: string;
+  gateLog: string;
 }
 
 /** A run id may only contain the safe characters our filenames are built from. */
@@ -142,6 +189,8 @@ interface RunHandle<R extends BaseRun> {
   interrupting?: boolean;
   /** Poll timer watching `cwd` for the hook's `intent-request.json` (Variant B). */
   intentTimer?: ReturnType<typeof setInterval>;
+  /** Set when the opencode idle watchdog killed the run (see {@link OPENCODE_IDLE_ENV}). */
+  idleKilled?: boolean;
 }
 
 /**
@@ -441,6 +490,7 @@ export class RunnerCore<R extends BaseRun> {
     const startedMs = spec.startedMs ?? Date.now();
     await fs.mkdir(this.dir, { recursive: true });
     await fs.mkdir(spec.cwd, { recursive: true });
+    const env = await this.spawnEnv(spec);
 
     // `detached` puts the child in its own process group (pgid === pid on Linux),
     // so Phase 6 can probe/kill the whole group and an orphan survives a crash.
@@ -454,7 +504,7 @@ export class RunnerCore<R extends BaseRun> {
       // coordination-dir pin is applied AFTER spec.env so a project can never
       // override it (the hook must write its request where {@link watchIntentRequest}
       // watches — not into whatever `--add-dir` target the destructive command runs in).
-      env: agentSpawnEnv(spec),
+      env,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -541,10 +591,12 @@ export class RunnerCore<R extends BaseRun> {
     await this.clearPendingSpec(runId);
 
     await fs.mkdir(spec.cwd, { recursive: true });
+    // Same per-run env + coordination-dir pin as the initial spawn (see {@link start});
+    // an opencode run's config is rewritten here too, never reused from disk.
+    const env = await this.spawnEnv(spec);
     const child = spawn(spec.command, spec.args, {
       cwd: spec.spawnCwd ?? spec.cwd,
-      // Same per-run env + coordination-dir pin as the initial spawn (see {@link start}).
-      env: agentSpawnEnv(spec),
+      env,
       detached: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
@@ -853,6 +905,7 @@ export class RunnerCore<R extends BaseRun> {
     if (cwd && this.isInsideDir(cwd)) {
       await fs.rm(cwd, { recursive: true, force: true }).catch(() => {});
     }
+    if (cwd) this.removeOpencodeFiles({ cwd });
   }
 
   /**
@@ -902,6 +955,44 @@ export class RunnerCore<R extends BaseRun> {
     return { content, nextOffset, done: atEof && runDone };
   }
 
+  /**
+   * An opencode run's config + gate log: `<runs dir>/.opencode/<hash of the sandbox>`.
+   * The runs dir holds the sandboxes but is never itself in a run's free zone, so an
+   * agent write there is gated like any write outside the project.
+   */
+  private opencodeFiles(spec: Pick<RunSpec, "cwd">): OpencodeRunFiles {
+    const key = createHash("sha256").update(spec.cwd).digest("hex").slice(0, 16);
+    const base = path.join(this.dir, ".opencode", key);
+    return { config: `${base}.json`, gateLog: `${base}.gate.log` };
+  }
+
+  /** Drop an opencode run's config + gate log (no-op for other runs). */
+  private removeOpencodeFiles(spec: Pick<RunSpec, "cwd">): void {
+    const { config, gateLog } = this.opencodeFiles(spec);
+    for (const f of [config, gateLog]) {
+      try {
+        rmSync(f, { force: true });
+      } catch {
+        // best-effort — finalize must not throw
+      }
+    }
+  }
+
+  /**
+   * The child env for one spawn. For opencode, (re)writes the run's config from the
+   * spec (0600) and truncates its gate log first — on start AND on every resume.
+   * An opencode spec without a config is refused: without it the gate isn't loaded.
+   */
+  private async spawnEnv(spec: RunSpec): Promise<NodeJS.ProcessEnv> {
+    if (spec.engine !== "opencode") return agentSpawnEnv(spec);
+    if (!spec.opencodeConfig) throw new Error("an opencode run needs its config (opencodeConfig)");
+    const files = this.opencodeFiles(spec);
+    await fs.mkdir(path.dirname(files.config), { recursive: true, mode: 0o700 });
+    await fs.writeFile(files.config, spec.opencodeConfig, { mode: 0o600 });
+    await fs.writeFile(files.gateLog, "", { mode: 0o600 });
+    return agentSpawnEnv(spec, files);
+  }
+
   /** Build the kind-agnostic base fields for a run record. */
   private baseRun(
     spec: RunSpec,
@@ -919,6 +1010,8 @@ export class RunnerCore<R extends BaseRun> {
       startedAt: new Date(startedMs).toISOString(),
       pid,
       logFile,
+      ...(spec.engine ? { engine: spec.engine } : {}),
+      ...(spec.engineModel ? { engineModel: spec.engineModel } : {}),
     };
   }
 
@@ -996,18 +1089,29 @@ export class RunnerCore<R extends BaseRun> {
     // over a chunk boundary must still be parsed whole — a missed INTENT would
     // strand the child blocking on its decision file indefinitely.
     let residual = "";
+    // The run's engine picks how its stdout is read: opencode emits its own JSONL
+    // (cost per `step_finish`, `sessionID` on every event); everything else keeps the
+    // core's formatter and the claude stream-json extractors.
+    const opencode = run.engine === "opencode";
+    const formatLine = opencode ? formatOpencodeStreamLine : this.formatLine;
+    const costOf = opencode ? extractOpencodeCost : (raw: string) => this.extractResultCost(raw);
+    const sessionOf = opencode
+      ? extractOpencodeSessionId
+      : (raw: string) => this.extractSessionId(raw);
+    let lastActivity = Date.now();
     const onChunk = (buf: Buffer) => {
+      lastActivity = Date.now();
       const text = buf.toString("utf8");
       // Without a formatter the raw buffer is the log, written verbatim (partial tail
       // included). With one, the log is written per complete line below — the trailing
       // partial line is held in `residual` until it completes (or `finalize` flushes it).
-      if (!this.formatLine) log.write(text);
+      if (!formatLine) log.write(text);
       residual += text;
       const lines = residual.split(/\r?\n/);
       residual = lines.pop() ?? "";
       for (const raw of lines) {
-        if (this.formatLine) {
-          const formatted = this.formatLine(raw);
+        if (formatLine) {
+          const formatted = formatLine(raw);
           if (formatted !== null) {
             log.write(`${formatted}\n`);
             const blocked = BLOCKED_STATUS.exec(formatted);
@@ -1016,13 +1120,13 @@ export class RunnerCore<R extends BaseRun> {
           // Cena z `result` eventu se akumuluje přes respawny (limit-pause
           // resume spouští stejný runId znovu bez `--resume`). Jen na reálném
           // claude běhu (formatLine wired), ne na demo/test výstupu.
-          const cost = this.extractResultCost(raw);
+          const cost = costOf(raw);
           if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
           // Phase 49: capture the session id from the first `system/init` line, so an
           // errored/interrupted run can later be re-run with `--resume <sessionId>`.
           // First one wins (a session keeps its id across the run); finalize persists it.
           if (!run.sessionId) {
-            const sid = this.extractSessionId(raw);
+            const sid = sessionOf(raw);
             if (sid) run.sessionId = sid;
           }
         }
@@ -1058,7 +1162,8 @@ export class RunnerCore<R extends BaseRun> {
       // — Phase 9 — is stashed so {@link finalize} can classify a child that dies on
       // it as `paused-limit` rather than `error`. Run detection whenever either
       // consumer is wired (the workflow runner now wires onLimitHit too).
-      if (!limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
+      // Claude's usage window only: an opencode run never pauses on it.
+      if (!opencode && !limitSeen && (this.onLimitHit || this.resolveResumeAt)) {
         const { hit, resetsAt } = detectLimit(text);
         if (hit) {
           limitSeen = true;
@@ -1078,21 +1183,67 @@ export class RunnerCore<R extends BaseRun> {
     // path so both demo and real runs route through the same {@link IntentHandler}.
     this.watchIntentRequest(handle);
 
+    // opencode: copy the gate plugin's decision log into the run log (subagent tool
+    // calls never reach the JSONL stream) and kill a run that went silent.
+    let watchdog: ReturnType<typeof setInterval> | undefined;
+    const gateLog = opencode && handle.spec ? this.opencodeFiles(handle.spec).gateLog : null;
+    let gateOffset = 0;
+    let gateMtime = 0;
+    const drainGateLog = () => {
+      if (!gateLog) return;
+      try {
+        // The plugin touches the log while a tool runs (a long test suite writes
+        // nothing to stdout until it finishes) — a new mtime is activity too.
+        const mtime = statSync(gateLog).mtimeMs;
+        if (mtime !== gateMtime) {
+          gateMtime = mtime;
+          lastActivity = Date.now();
+        }
+        const buf = readFileSync(gateLog);
+        if (buf.length <= gateOffset) return;
+        log.write(buf.subarray(gateOffset));
+        gateOffset = buf.length;
+        lastActivity = Date.now();
+        this.emitLog(run.runId);
+      } catch {
+        // no decisions yet
+      }
+    };
+    if (gateLog) {
+      const idleMs = opencodeIdleMs();
+      watchdog = setInterval(
+        () => {
+          drainGateLog();
+          // Waiting on the operator is not idling.
+          if (run.status !== "running") lastActivity = Date.now();
+          if (handle.idleKilled || Date.now() - lastActivity < idleMs) return;
+          handle.idleKilled = true;
+          killGroup(run.pgid ?? run.pid);
+        },
+        Math.min(30_000, Math.max(50, idleMs / 4)),
+      );
+      watchdog.unref?.();
+    }
+
     // Flush a final line the child emitted without a trailing newline (only the
     // formatted path buffers it; the raw path already wrote it as part of the chunk).
     const flushResidual = () => {
-      if (this.formatLine && residual) {
+      if (formatLine && residual) {
         // Poslední řádek běhu (typicky `result` event) může dorazit bez
         // trailing newline — parsuj cenu i tady, jinak by se ztratila.
-        const cost = this.extractResultCost(residual);
+        const cost = costOf(residual);
         if (cost !== null) run.costUsd = (run.costUsd ?? 0) + cost;
-        const formatted = this.formatLine(residual);
+        const formatted = formatLine(residual);
         if (formatted !== null) log.write(`${formatted}\n`);
         residual = "";
       }
     };
 
     const finalize = (status: RunnerRunStatus) => {
+      if (watchdog) clearInterval(watchdog);
+      drainGateLog();
+      // The config holds MCP secrets; a resume rewrites both files before it spawns.
+      if (opencode && handle.spec) this.removeOpencodeFiles(handle.spec);
       // A child that exits while the run is still `awaiting-approval` ended without
       // the gate ever being decided (e.g. its blocking hook died) — that must never
       // surface as `done`, which would read as "completed as if approved".
@@ -1134,6 +1285,12 @@ export class RunnerCore<R extends BaseRun> {
     child.on("error", () => finalize("error"));
     child.on("exit", (code) => {
       run.exitCode = code;
+      if (handle.idleKilled) {
+        log.write(
+          `✖ opencode produced no output for ${opencodeIdleMs() / 60_000} min — killed as hung (${OPENCODE_IDLE_ENV})\n`,
+        );
+        return finalize("error");
+      }
       // A run torn down on purpose (denied / rejected mid-run intent) exits non-zero
       // but its terminal state is `interrupted`, not `error`.
       if (handle.interrupting) return finalize("interrupted");

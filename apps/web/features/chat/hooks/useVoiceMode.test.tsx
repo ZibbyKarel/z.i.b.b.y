@@ -11,6 +11,24 @@ import {
 } from "../../../test/speechRecognitionMock";
 import { useVoiceMode } from "./useVoiceMode";
 
+// The recorder path needs a ts-rest provider; these tests cover the Web Speech
+// fallback (backend reports no local STT) and the recorder switch via mocks.
+const sttStatus = vi.hoisted(() => ({ available: false }));
+const statusPending = vi.hoisted(() => ({ value: false }));
+const recorderMock = vi.hoisted(() => ({
+  supported: true,
+  state: "idle" as "idle" | "recording" | "transcribing",
+  start: vi.fn(),
+  stop: vi.fn(),
+}));
+vi.mock("../queries", () => ({
+  useSpeechStatusQuery: () => ({
+    data: statusPending.value ? undefined : { stt: sttStatus },
+    isPending: statusPending.value,
+  }),
+}));
+vi.mock("./useDictationRecorder", () => ({ useDictationRecorder: () => recorderMock }));
+
 // The hook reads `chat.voice.*` toast copy via `useTranslations`, so the wrapper
 // carries the real cs catalog (same as `renderWithProviders`).
 function wrapper({ children }: { children: ReactNode }) {
@@ -25,6 +43,11 @@ describe("useVoiceMode", () => {
   let toastEmit: MockInstance;
 
   beforeEach(() => {
+    sttStatus.available = false;
+    statusPending.value = false;
+    recorderMock.state = "idle";
+    recorderMock.start.mockReset();
+    recorderMock.stop.mockReset();
     installMockSpeechRecognition();
     toastEmit = vi.spyOn(toastBus, "emit");
   });
@@ -37,6 +60,41 @@ describe("useVoiceMode", () => {
     const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
     expect(result.current.supported).toBe(true);
     expect(result.current.active).toBe(false);
+    expect(result.current.listening).toBe(false);
+  });
+
+  it("uses the recorder instead of Web Speech when the backend reports local STT", () => {
+    sttStatus.available = true;
+    uninstallSpeechRecognition();
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
+    expect(result.current.supported).toBe(true);
+
+    act(() => result.current.toggle());
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.toggle());
+    expect(recorderMock.stop).toHaveBeenCalled();
+  });
+
+  it("waits for /speech/status instead of arming Web Speech while it is loading", () => {
+    statusPending.value = true;
+    const { result, rerender } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
+    act(() => result.current.toggle());
+    expect(result.current.active).toBe(true);
+    expect(result.current.listening).toBe(false);
+    expect(recorderMock.start).not.toHaveBeenCalled();
+
+    sttStatus.available = true;
+    statusPending.value = false;
+    rerender();
+    expect(recorderMock.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("surfaces the recorder's transcribing state", () => {
+    sttStatus.available = true;
+    recorderMock.state = "transcribing";
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
+    expect(result.current.transcribing).toBe(true);
     expect(result.current.listening).toBe(false);
   });
 
@@ -84,7 +142,8 @@ describe("useVoiceMode", () => {
     expect(result.current.listening).toBe(false);
     expect(toastEmit).toHaveBeenCalledTimes(1);
     expect(toastEmit).toHaveBeenCalledWith({
-      message: "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky.",
+      message:
+        "Přístup k mikrofonu je zablokovaný — povolte ho v nastavení stránky, případně v macOS v Nastavení systému → Soukromí a zabezpečení → Mikrofon.",
     });
   });
 

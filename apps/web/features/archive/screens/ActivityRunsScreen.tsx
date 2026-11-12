@@ -26,6 +26,7 @@ import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { QueryError } from "../../../components/LoadError/QueryError";
 import { QueryLoading } from "../../../components/LoadingState/QueryLoading";
 import { formatCostUsd } from "../../../utils/cost";
+import { formatEngine } from "../../../utils/engine";
 import { compactAgo, formatDuration } from "../../../utils/time";
 import { useCompaniesQuery } from "../../companies";
 import { useProjectsQuery } from "../../projects";
@@ -195,7 +196,9 @@ export function ActivityRunsScreen() {
             {row.processor?.name ?? row.owner}
           </Typography>
           <Typography mono size="2xs" type="note" variant="tertiary">
-            {tRuns(`kind.${row.kind}`)}
+            {[tRuns(`kind.${row.kind}`), formatEngine(row.engine, row.engineModel)]
+              .filter(Boolean)
+              .join(" · ")}
           </Typography>
         </Stack>
       ),

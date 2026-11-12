@@ -24,6 +24,7 @@ import {
 import { useAiProvidersQuery, useAiProvidersSpendQuery } from "../../ai-providers";
 import { useCompaniesQuery } from "../../companies/queries";
 import { useBudgetQuery, useProjectsQuery } from "../../projects/queries";
+import { AiUsageSection } from "./AiUsageSection";
 import type { BridgeWidgetProps } from "./registry";
 import { useWidgetReport } from "./useWidgetReport";
 
@@ -108,7 +109,8 @@ export function BudgetsWidget({
   useWidgetReport(
     {
       loading,
-      count: loading || !built ? undefined : rows.length + (openaiSpent === undefined ? 0 : 1),
+      // +1: the always-present AI usage block (keeps the widget from collapsing to ALL CLEAR).
+      count: loading || !built ? undefined : rows.length + (openaiSpent === undefined ? 0 : 1) + 1,
       you: exhausted + near,
       aside,
       failed,
@@ -129,13 +131,16 @@ export function BudgetsWidget({
   if (loading || !built) return null;
   if (rows.length === 0 && openaiSpent === undefined) {
     return (
-      <BoardRow tone="neutral">
-        <span data-testid={BudgetsWidgetTestId.Empty}>
-          <BoardText kind="meta" tone="ink3">
-            {t("empty")}
-          </BoardText>
-        </span>
-      </BoardRow>
+      <>
+        <BoardRow tone="neutral">
+          <span data-testid={BudgetsWidgetTestId.Empty}>
+            <BoardText kind="meta" tone="ink3">
+              {t("empty")}
+            </BoardText>
+          </span>
+        </BoardRow>
+        <AiUsageSection />
+      </>
     );
   }
   return (
@@ -146,6 +151,7 @@ export function BudgetsWidget({
       {openaiSpent === undefined ? null : (
         <ProviderSpendRow name={t("providerOpenai")} usd={openaiSpent} />
       )}
+      <AiUsageSection />
     </>
   );
 }

@@ -53,7 +53,11 @@ import { GateEvaluatorService } from "../gates/gate-evaluator.service";
 import { GroundingService } from "../memory/grounding.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
-import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
+import { type ResolvedAiEngine, assertOpencodeReady } from "../runner/ai-engine";
+import {
+  ClaudeRunCommandService,
+  type ClaudeRunOptions,
+} from "../runner/claude-run-command.service";
 import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
 import { RunnerCore } from "../runner/runner-core";
@@ -474,11 +478,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     // Throws WorkflowNotFoundError / InvalidWorkflowIdError when unknown → 404.
     const workflow = await this.workflows.get(workflowId);
 
-    // Claude-mode stages spawn real `claude -p` sessions — refuse the whole run
-    // up front when the CLI can't start one (→ 503). Demo workflows keep working.
-    if (process.env.AGENT_RUNNER_MODE === "claude") {
-      await this.preflight.assertAvailable();
-    }
+    // Claude-mode stages spawn real agent sessions — refuse the whole run up front
+    // when an engine its agent phases use can't start one (→ 503). Demo workflows
+    // keep working. Each opencode stage is checked again at build time.
+    if (process.env.AGENT_RUNNER_MODE === "claude") await this.preflightEngines(workflow);
 
     // A caller-named project wins; else the workflow's own default binding.
     const project = await this.resolveProject(projectRef ?? workflow.project);
@@ -1047,7 +1050,9 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
   stageInfo(stageRunId: string): { cwd: string; sessionId?: string } | null {
     try {
       const rec = this.core.get(stageRunId);
-      return { cwd: rec.cwd, ...(rec.sessionId ? { sessionId: rec.sessionId } : {}) };
+      // The advisor forks a claude session — an opencode stage's id is not one.
+      const sessionId = rec.engine === "opencode" ? undefined : rec.sessionId;
+      return { cwd: rec.cwd, ...(sessionId ? { sessionId } : {}) };
     } catch {
       return null;
     }
@@ -1525,7 +1530,11 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // earliest reset as `resumeAt` and return without spawning. Auto-resume re-drives
       // from this same cursor. Fail-open: a stale/headroom reading just proceeds, and a
       // wrongly-dispatched stage that dies on a limit is caught by the mid-stage path.
-      const boundary = await this.limits.windowExhausted();
+      // An opencode stage never waits on Claude's window.
+      const boundary =
+        !settled && (await this.phaseOnOpencode(phase))
+          ? { exhausted: false, resumeAt: null }
+          : await this.limits.windowExhausted();
       if (!settled && boundary.exhausted) {
         run.status = "paused-limit";
         run.resumeAt = boundary.resumeAt ?? (await this.limits.resolveResumeAt(null));
@@ -2694,7 +2703,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         dir: path.basename(stageCwd),
       });
     }
-    const { command, args, spawnCwd } = built;
+    const { command, args, spawnCwd, engine } = built;
     // Per-project env + secrets injected into this stage's process (Phase D), plus
     // the run/stage folders (P1-01) so a tool can write run-wide artifacts (e.g. the
     // `book/` folder) and any stage can find them after a loop re-dispatch. A tool
@@ -2718,6 +2727,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       )
         .filter(Boolean)
         .join(path.delimiter),
+      ...built.env,
     };
     const rec = await this.core.start({
       kind: "workflow-stage",
@@ -2727,8 +2737,24 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       cwd: stageCwd,
       ...(spawnCwd ? { spawnCwd } : {}),
       env,
+      ...(engine
+        ? { engine: engine.engine, engineModel: engine.model, opencodeConfig: built.opencodeConfig }
+        : {}),
       extra: { workflowRunId: run.workflowRunId, phaseId: phase.id, attempt },
     });
+    // opencode runs on its configured model only: say so instead of silently dropping
+    // the phase's / escalation rung's claude model and thinking.
+    const claudeOnly = [escalation?.model ?? phase.model, escalation?.thinking ?? phase.thinking]
+      .filter(Boolean)
+      .join(", ");
+    if (engine && claudeOnly) {
+      await fs
+        .appendFile(
+          rec.logFile,
+          `ℹ opencode stage on ${engine.model}: ignoring the phase/escalation model settings (${claudeOnly})\n`,
+        )
+        .catch(() => {});
+    }
     // Expose the in-flight child so the detail timeline can tail its log live,
     // before this attempt lands in `stageRuns` (terminal-only). In-memory mutation
     // is enough for the live UI (it polls the aggregate); the driver clears it once
@@ -2752,6 +2778,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       startedAt: rec.startedAt,
       finishedAt: new Date().toISOString(),
       ...(finishedRec?.costUsd != null ? { costUsd: finishedRec.costUsd } : {}),
+      ...(engine ? { engine: engine.engine, engineModel: engine.model } : {}),
     };
   }
 
@@ -2910,6 +2937,39 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // A missing source (or a stale link already at `dest`) is not fatal — the
       // stage simply starts without input.
     });
+  }
+
+  /**
+   * Preflight every engine the workflow's agent phases resolve to: claude once (also
+   * when no phase names an agent, as before engines), each distinct opencode model
+   * once. An agent that can't be loaded is skipped — its stage fails at build time.
+   */
+  /** The phase runs on opencode (its agent resolves there) — Claude's window doesn't apply. */
+  private async phaseOnOpencode(phase: WorkflowPhase): Promise<boolean> {
+    if (!phase.agent) return false;
+    const agent = await this.agents.get(phase.agent).catch(() => null);
+    return !!agent && this.claude.resolveEngine(agent).engine === "opencode";
+  }
+
+  private async preflightEngines(workflow: Workflow): Promise<void> {
+    const engines = await Promise.all(
+      workflow.phases.flatMap((p) =>
+        p.agent
+          ? [
+              this.agents
+                .get(p.agent)
+                .then((agent) => this.claude.resolveEngine(agent))
+                .catch(() => null),
+            ]
+          : [],
+      ),
+    );
+    const resolved = engines.filter((e) => e !== null);
+    if (!resolved.length || resolved.some((e) => e.engine === "claude")) {
+      await this.preflight.assertAvailable();
+    }
+    const models = new Set(resolved.flatMap((e) => (e.engine === "opencode" ? [e.model] : [])));
+    for (const model of models) await assertOpencodeReady(model);
   }
 
   /**
@@ -3145,7 +3205,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
     commandsPluginDir?: string | null,
     /** The web base URL — set only for a workflow that `requires` web ({@link stageWebUrl}). */
     webUrl?: string,
-  ): Promise<{ command: string; args: string[]; spawnCwd?: string }> {
+  ): Promise<{
+    command: string;
+    args: string[];
+    spawnCwd?: string;
+    env?: Record<string, string>;
+    /** Set only for an opencode stage (absent = claude / tool / demo). */
+    engine?: ResolvedAiEngine;
+    opencodeConfig?: string;
+  }> {
     const spawnCwd = worktreePath ?? project?.path;
     // P1-01: a tool phase is a deterministic transform of the handoff — it runs IN
     // THE STAGE SANDBOX (its `consumes` symlink and `produces` file live there), never
@@ -3227,7 +3295,7 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       const baseGrant = phase.consumes ? [path.dirname(cwd)] : spawnCwd ? [cwd] : [];
       const allGrants = skillDir ? [...baseGrant, skillDir] : baseGrant;
       const grantDirs = allGrants.length > 0 ? allGrants : undefined;
-      const built = await this.claude.buildClaudeCommand({
+      const opts: ClaudeRunOptions = {
         instructions: agent.instructions,
         task,
         tools: agent.tools,
@@ -3256,7 +3324,15 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
         // run (thinking + tool calls), flattened by the core's formatLine — not
         // just claude's final message. Mirrors the agent runner.
         streamTranscript: true,
-      });
+      };
+      const engine = this.claude.resolveEngine(agent);
+      if (engine.engine === "opencode") {
+        // A7: refused when opencode or the model is unavailable — never run on claude.
+        await assertOpencodeReady(engine.model);
+        const oc = await this.claude.buildOpencodeCommand(opts, engine.model ?? "");
+        return { ...oc, engine, ...(spawnCwd ? { spawnCwd } : {}) };
+      }
+      const built = await this.claude.buildClaudeCommand(opts);
       return spawnCwd ? { ...built, spawnCwd } : built;
     }
     const script =

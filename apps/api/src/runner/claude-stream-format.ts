@@ -18,8 +18,8 @@
  */
 
 /** Hard caps so a noisy tool result (e.g. a huge directory listing) can't flood the log. */
-const MAX_RESULT_LINES = 40;
-const MAX_RESULT_CHARS = 2000;
+export const MAX_RESULT_LINES = 40;
+export const MAX_RESULT_CHARS = 2000;
 /** Cap for a tool call's inlined input JSON when it has no well-known target key. */
 const MAX_INPUT_CHARS = 200;
 
@@ -157,7 +157,7 @@ function extractText(content: unknown): string {
 }
 
 /** Clamp by both characters and lines, appending a count of what was dropped. */
-function truncate(
+export function truncate(
   text: string,
   maxChars = MAX_INPUT_CHARS,
   maxLines = Number.POSITIVE_INFINITY,
@@ -172,6 +172,6 @@ function truncate(
   return out;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }

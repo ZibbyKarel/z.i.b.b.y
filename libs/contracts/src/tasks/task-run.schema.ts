@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
 import {
   GoalIterationSchema,
   GoalParkedDetailSchema,
@@ -102,6 +103,13 @@ export const TaskRunSchema = z.object({
   logBase: z.literal("agents").nullable(),
   /** The processor handling the task; absent on an undispatched scheduled task. */
   processor: ProcessorSchema.optional(),
+  /**
+   * The engine the run executes on — an agent run's own, a workflow run's latest
+   * agent stage. Absent = claude (or not yet dispatched).
+   */
+  engine: AiEngineSchema.optional(),
+  /** The opencode `provider/model` (opencode runs only). */
+  engineModel: z.string().optional(),
   /** The task record this run was dispatched from (when born from one). */
   taskId: z.string().optional(),
   /** Enriched from the task record: its display title (or text). */

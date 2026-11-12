@@ -25,6 +25,7 @@ vi.mock("../../projects/queries", () => ({
   }),
   useProjectsQuery: () => ({ data: d.projects, isPending: false, isError: false }),
 }));
+vi.mock("./AiUsageSection", () => ({ AiUsageSection: () => null }));
 vi.mock("../../ai-providers", () => ({
   useAiProvidersQuery: () => ({ data: { openai: { configured: d.openaiConfigured } } }),
   useAiProvidersSpendQuery: () => ({
@@ -162,7 +163,7 @@ describe("BudgetsWidget", () => {
     const props = setup();
     renderWithProviders(<BudgetsWidget {...props} />);
     expect(props.onCountChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({ count: 3, you: 2, aside: "1 vyčerpáno" }),
+      expect.objectContaining({ count: 4, you: 2, aside: "1 vyčerpáno" }),
     );
     expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
@@ -179,14 +180,15 @@ describe("BudgetsWidget", () => {
     );
   });
 
-  it("shows the empty copy and reports empty", () => {
+  it("shows the empty copy and stays visible for the AI usage block", () => {
     d.budget = { global: global({ stale: true }), projects: [] };
     const props = setup();
     renderWithProviders(<BudgetsWidget {...props} />);
     expect(screen.getByTestId(BudgetsWidgetTestId.Empty)).toHaveTextContent(
       "Žádné budgety ani limity nejsou nastavené.",
     );
-    expect(props.onEmptyChange).toHaveBeenLastCalledWith(true);
+    // The AI usage block is always present, so the widget never reports empty.
+    expect(props.onEmptyChange).toHaveBeenLastCalledWith(false);
   });
 
   it("reports loading while the budget is pending", () => {

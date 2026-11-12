@@ -214,6 +214,11 @@ auto-approve their push "authorised by the click", so the click must be the oper
 (`OperatorTokenGuard` on `InboxController`, exported from `ApprovalsModule`).
 `GET` / `HEAD` / `OPTIONS` pass unguarded.
 
+Two routes stay open but guard single fields with `requireOperatorTokenIf` (same header, same
+`401 { message }`): `PUT /api/system/config` when `aiEngine` or `opencodeModel` changes, and
+agent create/update when `engine` or `engineModel` changes. Saving anything else on those
+routes needs no token. See [`ai-engines.md`](ai-engines.md).
+
 The expected token resolves from `ZIBBY_OPERATOR_TOKEN`, else the 0600 file
 `ZIBBY_OPERATOR_TOKEN_FILE ?? ~/.config/zibby/operator-token` (an absolute path — dotenv does
 not expand `~`). It is resolved at boot (the file is created then, and its path — never the

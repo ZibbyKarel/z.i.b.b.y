@@ -2,6 +2,7 @@ import type {
   Agent,
   AgentModel,
   AgentThinking,
+  AiEngine,
   DepartmentId,
   GateRuleInput,
   GlobalGateRule,
@@ -23,6 +24,10 @@ export type AgentEditValues = {
   model: AgentModel;
   thinking: AgentThinking;
   tools: string[];
+  /** Per-agent run engine; `""` = use the global setting. */
+  engine: AiEngine | "";
+  /** opencode `provider/model` (only meaningful with `engine: "opencode"`). */
+  engineModel: string;
   category: string;
   instructions: string;
   /** NS2 F1: the department that owns this agent (write-required by the API). */
@@ -44,6 +49,8 @@ export function toFormValues(agent: Agent): AgentEditValues {
     model: agent.model ?? "sonnet",
     thinking: agent.thinking ?? "medium",
     tools: agent.tools ?? [],
+    engine: agent.engine ?? "",
+    engineModel: agent.engineModel ?? "",
     category: agent.category ?? "",
     instructions: agent.instructions,
     department: agent.department ?? "dev",
@@ -74,6 +81,8 @@ export function applyFormValues(agent: Agent, values: AgentEditValues): Agent {
     model: values.model,
     thinking: values.thinking,
     tools: values.tools,
+    engine: values.engine || undefined,
+    engineModel: values.engine === "opencode" ? values.engineModel || undefined : undefined,
     category: values.category || undefined,
     instructions: values.instructions,
     department: values.department,

@@ -41,6 +41,38 @@ Every route requires the operator token.
   figure as an "OpenAI" row (shown once a key is set or there is spend) that opens
   Settings → AI models.
 
+- `GET /api/ai-providers/engines` returns the run engines' status (see
+  [ai-engines.md](./ai-engines.md)). Each probe shells out with a short timeout and is
+  cached for about 1 minute. It never fails: an engine that can't be probed reports
+  `available: false`.
+
+  ```ts
+  { engines: [
+    { id: "claude", available: boolean, version?: string },
+    { id: "opencode", available: boolean, version?: string,
+      providers?: string[],                     // `auth list` + model prefixes
+      models?: { id: string; free: boolean }[] } // `opencode models`
+  ] }
+  ```
+
+  `free` is true only for an `opencode`-provider model whose catalog price
+  (`opencode api GET /api/model`, every input/output/cache component) is 0. A zero-cost
+  model of another provider is not free. When the catalog can't be read (the call needs
+  opencode's background service), only an `opencode/…-free` id counts as free.
+
+- `GET /api/ai-providers/usage?days=N` (`days` 1–365, default 30) maps
+  `opencode stats --json --days N --models`:
+
+  ```ts
+  { days: number,
+    opencode: { available: boolean,
+      totals: AiUsage,
+      models: (AiUsage & { providerId: string; modelId: string; variant?: string })[] } }
+  // AiUsage = { steps, costUsd, tokens: { input, output, reasoning, cacheRead, cacheWrite } }
+  ```
+
+  When stats can't be read, it returns `available: false` with zeros.
+
 ## How keys reach work
 
 `WorkflowRunnerService.resolveProjectEnv` places `OPENAI_API_KEY` into the env of every

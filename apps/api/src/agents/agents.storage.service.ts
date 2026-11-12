@@ -7,6 +7,7 @@ import {
   AgentModelSchema,
   AgentSchema,
   AgentThinkingSchema,
+  AiEngineSchema,
   type CreateAgentInput,
   DepartmentIdSchema,
   GateRuleInputSchema,
@@ -98,6 +99,8 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     // `avatar: null` is the explicit "clear" signal (undefined can't survive JSON
     // transport) — drop the key so the full-entity parse below sees it as absent.
     if (patch.avatar === null) delete merged.avatar;
+    if (patch.engine === null) delete merged.engine;
+    if (patch.engineModel === null) delete merged.engineModel;
     const parsed = AgentSchema.parse(merged);
     await this.writeEntity(await this.toDiskEntity(parsed));
     return parsed;
@@ -181,6 +184,9 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     }
     if (AgentModelSchema.safeParse(data.model).success) candidate.model = data.model;
     if (AgentThinkingSchema.safeParse(data.thinking).success) candidate.thinking = data.thinking;
+    if (AiEngineSchema.safeParse(data.engine).success) candidate.engine = data.engine;
+    if (typeof data.engineModel === "string" && data.engineModel)
+      candidate.engineModel = data.engineModel;
     if (typeof data.requires_approval === "boolean")
       candidate.requires_approval = data.requires_approval;
     if (RiskSchema.safeParse(data.risk).success) candidate.risk = data.risk;
@@ -204,6 +210,8 @@ export class AgentsStorageService extends MarkdownEntityStore<Agent> {
     if (agent.avatar !== undefined) data.avatar = agent.avatar;
     if (agent.model !== undefined) data.model = agent.model;
     if (agent.thinking !== undefined) data.thinking = agent.thinking;
+    if (agent.engine !== undefined) data.engine = agent.engine;
+    if (agent.engineModel !== undefined) data.engineModel = agent.engineModel;
     if (agent.tools !== undefined) data.tools = agent.tools;
     if (agent.plugins !== undefined) data.plugins = agent.plugins;
     if (agent.category !== undefined) data.category = agent.category;

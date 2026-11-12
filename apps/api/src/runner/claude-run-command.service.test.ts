@@ -16,7 +16,7 @@ import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import { externalSkillPrompt } from "../external-skills/skill-repo";
-import { freeDirs } from "./runner-core";
+import { GRANT_DIRS_ENV, freeDirs } from "./runner-core";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import {
   CORE_DELEGATE_IDS,
@@ -27,6 +27,7 @@ import {
   MCP_CONFIG_FILE,
   OPERATING_CONTRACT,
   SYSTEM_PROMPT_FILE,
+  opencodeToolRules,
 } from "./claude-run-command.service";
 
 interface ServiceOpts {
@@ -1059,5 +1060,156 @@ describe("ClaudeRunCommandService.buildClaudeCommand", () => {
       }).buildClaudeCommand({ instructions: "x", task: "do it" });
       expect(args).not.toContain("--plugin-dir");
     });
+  });
+});
+
+describe("buildOpencodeCommand", () => {
+  let dir: string;
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "oc-cmd-"));
+  });
+  afterEach(async () => {
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  it("spawns a standalone gated run with no --auto and the config in a 0600 sandbox file", async () => {
+    const svc = makeService([CODER], [], {
+      mcpServers: [
+        {
+          id: "fs",
+          type: "stdio",
+          command: "npx",
+          args: ["-y", "server-fs"],
+          enabled: true,
+          hasCredentials: true,
+        },
+        {
+          id: "remote",
+          type: "sse",
+          url: "https://example.com/sse",
+          enabled: true,
+          hasCredentials: true,
+        },
+        // Reserved: would shadow opencode's own `browser_*` tools — never mounted.
+        { id: "browser", type: "sse", url: "https://b", enabled: true, hasCredentials: false },
+      ],
+      mcpCredentials: { fs: { env: { TOKEN: "s3cr3t" } }, remote: { authToken: "abc" } },
+    });
+    const { command, args, env, opencodeConfig } = await svc.buildOpencodeCommand(
+      {
+        instructions: "BODY",
+        task: "do it",
+        systemPromptDir: dir,
+        grantDirs: ["/grant"],
+        contextDir: "/repo",
+        resumeSessionId: "ses_1",
+      },
+      "opencode/big-pickle",
+    );
+    expect(command).toBe(process.env.OPENCODE_BIN ?? "opencode");
+    expect(args.slice(0, 8)).toEqual([
+      "run",
+      "--standalone",
+      "--format",
+      "json",
+      "-m",
+      "opencode/big-pickle",
+      "--agent",
+      "zibby",
+    ]);
+    expect(args).not.toContain("--auto");
+    expect(flagValue(args, "--session")).toBe("ses_1");
+    expect(args.at(-2)).toBe("--");
+    expect(args.at(-1)).toContain("do it");
+
+    // The config rides the spec (RunnerCore writes it before every spawn) — nothing
+    // lands in the sandbox, and OPENCODE_* is set by the core, not here.
+    await expect(fs.readdir(dir)).resolves.toEqual([]);
+    expect(Object.keys(env).filter((k) => k.startsWith("OPENCODE_"))).toEqual([]);
+    expect(env.ZIBBY_GATE_HOOK).toMatch(/claude-approval-hook\.mjs$/);
+    expect(env.ZIBBY_GATE_DEADLINE_S).toBe(String(GATE_DEADLINE_S));
+    expect(env[GRANT_DIRS_ENV]).toBe(["/grant", "/repo"].join(path.delimiter));
+    expect(env.ZIBBY_MCP_SERVERS).toBe("fs,remote");
+    expect(env.ZIBBY_DENY_TOOLS).toBe("question,execute,skill");
+
+    const cfg = JSON.parse(opencodeConfig);
+    expect(cfg.permissions).toEqual([
+      { action: "*", resource: "*", effect: "ask" },
+      { action: "question", resource: "*", effect: "deny" },
+      { action: "execute", resource: "*", effect: "deny" },
+      { action: "skill", resource: "*", effect: "deny" },
+    ]);
+    expect(cfg.plugins).toHaveLength(1);
+    expect(cfg.plugins[0]).toMatch(/opencode-gate-plugin$/);
+    expect(cfg.agents.zibby.mode).toBe("primary");
+    expect(cfg.agents.zibby.system).toContain(OPERATING_CONTRACT);
+    expect(cfg.agents.zibby.system).toContain("BODY");
+    expect(cfg.mcp.servers.browser).toBeUndefined();
+    expect(cfg.mcp.servers.fs).toEqual({
+      type: "local",
+      command: ["npx", "-y", "server-fs"],
+      environment: { TOKEN: "s3cr3t" },
+      codemode: false,
+    });
+    expect(cfg.mcp.servers.remote).toEqual({
+      type: "remote",
+      url: "https://example.com/sse",
+      headers: { Authorization: "Bearer abc" },
+      oauth: false,
+      codemode: false,
+    });
+  });
+
+  it("always sets the grant env, empty included, so a project env can't supply it", async () => {
+    const svc = makeService([CODER], []);
+    const { env } = await svc.buildOpencodeCommand(
+      { instructions: "x", task: "t" },
+      "opencode/big-pickle",
+    );
+    expect(env[GRANT_DIRS_ENV]).toBe("");
+    expect(env.ZIBBY_SHELL_PREFIXES).toBe("");
+  });
+
+  it("folds the grant env into the free zone of an opencode run only", () => {
+    const spec = {
+      cwd: "/sb",
+      args: [],
+      env: { [GRANT_DIRS_ENV]: ["/grant", "/"].join(path.delimiter) },
+    };
+    const oc = freeDirs({ ...spec, engine: "opencode" }).split(path.delimiter);
+    expect(oc).toEqual(expect.arrayContaining(["/sb", "/grant", "/"]));
+    // On claude `env` is the project env — a ZIBBY_GRANT_DIRS there must not widen it.
+    const claude = freeDirs(spec).split(path.delimiter);
+    expect(claude).not.toContain("/");
+    expect(claude).not.toContain("/grant");
+  });
+
+  it("turns the agent's tools allow-list into opencode deny rules", () => {
+    expect(opencodeToolRules(undefined)).toEqual({ deny: ["question", "execute", "skill"] });
+    expect(opencodeToolRules([]).deny).toEqual(["question", "execute", "skill"]);
+    // A read-only agent: no shell, write, edit, patch, delegation or web.
+    expect(opencodeToolRules(["read"]).deny).toEqual([
+      "question",
+      "execute",
+      "skill",
+      "shell",
+      "bash",
+      "write",
+      "edit",
+      "patch",
+      "apply_patch",
+      "task",
+      "subagent",
+      "webfetch",
+      "websearch",
+    ]);
+    expect(opencodeToolRules(["read", "write", "bash", "web", "Task"]).deny).toEqual([
+      "question",
+      "execute",
+      "skill",
+    ]);
+    // `git` = Bash(git:*): the shell stays, limited to that prefix by the gate plugin.
+    expect(opencodeToolRules(["read", "git"])).toMatchObject({ shellPrefixes: ["git"] });
+    expect(opencodeToolRules(["read", "git"]).deny).not.toContain("shell");
   });
 });

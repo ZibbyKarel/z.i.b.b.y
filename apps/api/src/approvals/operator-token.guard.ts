@@ -20,6 +20,21 @@ export function hasOperatorToken(
 }
 
 /**
+ * Field-level variant for routes that stay open except for one operator-only change
+ * (e.g. switching the AI engine / model): throws the guard's 401 when `needed` and the
+ * token is missing.
+ */
+export function requireOperatorTokenIf(
+  needed: boolean,
+  tokens: OperatorTokenService,
+  headers: Record<string, unknown>,
+  what: string,
+): void {
+  if (!needed || hasOperatorToken(tokens, headers)) return;
+  throw new UnauthorizedException({ message: `${what} requires the operator token.` });
+}
+
+/**
  * Every mutating route of a controller it guards needs the operator token: the
  * approvals decisions (approve/reject/revise/answer) and the inbox clicks whose task
  * output is auto-approved (rebase, address-comments, fix-ci).

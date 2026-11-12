@@ -30,7 +30,10 @@ const DEFAULT_SPEAKD_URL = "http://127.0.0.1:8899";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** A `speech.status()` reading for when the daemon can't be reached at all. */
-const UNREACHABLE_STATUS: SpeechStatus = {
+/** The TTS half of `SpeechStatus` — the `stt` block is added by `SttService`. */
+type TtsStatus = Omit<SpeechStatus, "stt">;
+
+const UNREACHABLE_STATUS: TtsStatus = {
   reachable: false,
   state: "degraded",
   engine: null,
@@ -152,7 +155,11 @@ export class SpeechService {
     const body = await res.json();
     const parsed = z.array(SpeechVoiceSchema).safeParse(body);
     if (!parsed.success) {
-      throw new SpeakdDaemonError(503, "malformed_response", "speakd returned an unexpected voices shape");
+      throw new SpeakdDaemonError(
+        503,
+        "malformed_response",
+        "speakd returned an unexpected voices shape",
+      );
     }
     return parsed.data;
   }
@@ -163,7 +170,7 @@ export class SpeechService {
    * body) resolves to {@link UNREACHABLE_STATUS} so the endpoint always answers
    * (mirrors `healthContract`'s "never fail silently").
    */
-  async status(): Promise<SpeechStatus> {
+  async status(): Promise<TtsStatus> {
     try {
       const res = await this.request("/v1/status", { method: "GET" });
       if (!res.ok) return UNREACHABLE_STATUS;

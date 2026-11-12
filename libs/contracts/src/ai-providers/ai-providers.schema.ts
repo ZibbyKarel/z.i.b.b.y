@@ -39,6 +39,72 @@ export const AiProvidersSpendSchema = z.object({
 });
 export type AiProvidersSpend = z.infer<typeof AiProvidersSpendSchema>;
 
+/**
+ * Which CLI runs an agent / workflow agent stage: the native `claude` CLI (the
+ * Claude subscription) or `opencode run` with an operator-chosen `provider/model`.
+ * See docs/api/ai-engines.md.
+ */
+export const AiEngineSchema = z.enum(["claude", "opencode"]);
+export type AiEngine = z.infer<typeof AiEngineSchema>;
+
+/** One engine's availability, from `GET /api/ai-providers/engines`. */
+/**
+ * One opencode model. `free` is true for an `opencode/…-free` id (the opencode
+ * provider's free tier naming) or a model `opencode stats` shows used at zero cost.
+ */
+export const AiEngineModelSchema = z.object({ id: z.string(), free: z.boolean() });
+export type AiEngineModel = z.infer<typeof AiEngineModelSchema>;
+
+export const AiEngineStatusSchema = z.object({
+  id: AiEngineSchema,
+  available: z.boolean(),
+  /** CLI version string; absent when the binary is missing. */
+  version: z.string().optional(),
+  /** opencode only: providers with stored credentials (`opencode auth list`) + model prefixes. */
+  providers: z.array(z.string()).optional(),
+  /** opencode only: every `provider/model` id `opencode models` lists. */
+  models: z.array(AiEngineModelSchema).optional(),
+});
+export type AiEngineStatus = z.infer<typeof AiEngineStatusSchema>;
+
+export const AiEnginesSchema = z.object({ engines: z.array(AiEngineStatusSchema) });
+export type AiEngines = z.infer<typeof AiEnginesSchema>;
+
+/** Recorded usage (no quota — opencode exposes none). */
+export const AiUsageSchema = z.object({
+  steps: z.number().nonnegative(),
+  costUsd: z.number().nonnegative(),
+  tokens: z.object({
+    input: z.number().nonnegative(),
+    output: z.number().nonnegative(),
+    reasoning: z.number().nonnegative(),
+    cacheRead: z.number().nonnegative(),
+    cacheWrite: z.number().nonnegative(),
+  }),
+});
+export type AiUsage = z.infer<typeof AiUsageSchema>;
+
+/** `GET /api/ai-providers/usage?days=N` — opencode usage per `provider/model`. */
+export const AiProvidersUsageSchema = z.object({
+  days: z.number().int().positive(),
+  opencode: z.object({
+    available: z.boolean(),
+    totals: AiUsageSchema,
+    models: z.array(
+      AiUsageSchema.extend({
+        providerId: z.string(),
+        modelId: z.string(),
+        variant: z.string().optional(),
+      }),
+    ),
+  }),
+});
+export type AiProvidersUsage = z.infer<typeof AiProvidersUsageSchema>;
+
+export const AiProvidersUsageQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+});
+
 export const SetOpenAiKeyInputSchema = z.object({
   apiKey: z
     .string()

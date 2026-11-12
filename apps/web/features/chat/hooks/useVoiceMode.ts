@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toastBus } from "../../../components/Toaster/toastBus";
+import { useSpeechStatusQuery } from "../queries";
+import { useDictationRecorder } from "./useDictationRecorder";
 import { type SpeechRecognitionErrorKind, useSpeechRecognition } from "./useSpeechRecognition";
 
 /** App locale → BCP-47 recognition tag. Only `cs`/`en` catalogs exist; anything
@@ -27,14 +29,16 @@ export interface UseVoiceModeOptions {
 }
 
 export interface VoiceMode {
-  /** Whether this browser supports STT — the toggle is only rendered when true. */
+  /** Whether any STT path is usable (local recorder or Web Speech) — the toggle is only rendered when true. */
   supported: boolean;
   /** Whether voice mode is switched on (the toggle's state). */
   active: boolean;
   /** Whether the mic is actually live right now (drives `SceneMode` `listening`). */
   listening: boolean;
-  /** In-progress transcript for the status strip. */
+  /** In-progress transcript for the status strip (Web Speech path only). */
   interim: string;
+  /** A recording is being transcribed by the backend (recorder path only). */
+  transcribing: boolean;
   toggle: () => void;
   /** Switches voice mode off (no-op when already off) — e.g. the dock closing. */
   off: () => void;
@@ -79,21 +83,30 @@ export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions
     [t],
   );
 
-  const { supported, listening, interim, start, stop } = useSpeechRecognition({
-    lang: localeToLang(locale),
-    onFinal: handleFinal,
-    onError: handleError,
-  });
+  const lang = localeToLang(locale);
+  const speech = useSpeechRecognition({ lang, onFinal: handleFinal, onError: handleError });
+  // Local whisper dictation wins when the backend has it; Web Speech is the fallback
+  // for a plain browser / a machine without whisper installed.
+  const { data: speechStatus, isPending: statusPending } = useSpeechStatusQuery();
+  const recorder = useDictationRecorder({ lang, onFinal: handleFinal, onError: handleError });
+  const useRecorder = speechStatus?.stt.available === true && recorder.supported;
+  const engine = useRecorder ? recorder : speech;
+  const { start, stop } = engine;
+  const supported = useRecorder || speech.supported;
+  const listening = useRecorder ? recorder.state === "recording" : speech.listening;
+  const interim = useRecorder ? "" : speech.interim;
+  const transcribing = useRecorder && recorder.state === "transcribing";
 
   // Arm the mic only when voice mode is on AND not suspended (idle turn-taking
   // window). The cleanup disarms it on every transition — toggling off, unmount,
   // or `suspended` flipping true — and the effect re-arms once it flips back
   // false. One effect, complete condition: no competing-effect ping-pong.
   useEffect(() => {
-    if (!active || suspended) return;
+    // Don't arm before /speech/status is known — Web Speech would start (and fail in Electron).
+    if (!active || suspended || statusPending) return;
     start();
     return () => stop();
-  }, [active, suspended, start, stop]);
+  }, [active, suspended, statusPending, start, stop]);
 
   const toggle = useCallback(() => {
     setActive((v) => !v);
@@ -101,5 +114,5 @@ export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions
 
   const off = useCallback(() => setActive(false), []);
 
-  return { supported, active, listening, interim, toggle, off };
+  return { supported, active, listening, interim, transcribing, toggle, off };
 }

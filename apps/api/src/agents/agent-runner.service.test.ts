@@ -409,6 +409,7 @@ describe("AgentRunnerService.rerun — note and fresh (D-RESUME)", () => {
     Object.assign(runner, {
       log: { info: () => {} },
       agents: { get: async () => agentFixture },
+      claude: { resolveEngine: () => ({ engine: "claude" }) },
       get: () => ({ runId: "a_1", agentId: "koder", prompt: "build X", files: [], sessionId }),
       launch,
     });
@@ -437,5 +438,63 @@ describe("AgentRunnerService.rerun — note and fresh (D-RESUME)", () => {
     await runner.rerun("a_1", { note: "use pnpm", fresh: true });
     expect(promptOf(launch)).toBe("build X\n\nOperator note: use pnpm");
     expect(sessionOf(launch)).toBeUndefined();
+  });
+
+  it("a session from another engine is not resumed — the re-run starts fresh", async () => {
+    const { runner, launch } = rerunHarness("claude-sid");
+    Object.assign(runner, {
+      claude: { resolveEngine: () => ({ engine: "opencode", model: "m" }) },
+    });
+    await runner.rerun("a_1", { note: "again" });
+    expect(sessionOf(launch)).toBeUndefined();
+    expect(promptOf(launch)).toBe("build X\n\nOperator note: again");
+  });
+});
+
+describe("AgentRunnerService opencode preflight (A7)", () => {
+  it("refuses an opencode run without a model before anything is created — no Claude fallback", async () => {
+    const runner = Object.create(AgentRunnerService.prototype) as AgentRunnerService;
+    const assertAvailable = vi.fn();
+    Object.assign(runner, {
+      claude: { resolveEngine: () => ({ engine: "opencode", model: "" }) },
+      preflight: { assertAvailable },
+    });
+    const launch = (
+      runner as unknown as {
+        launch(a: Agent, p: string, pr: string, f: string[], t: string): Promise<unknown>;
+      }
+    ).launch.bind(runner);
+    await expect(launch({ ...agentFixture, id: "oc" }, "x", "", [], "")).rejects.toThrow(
+      /opencode unavailable: no model chosen/,
+    );
+    expect(assertAvailable).not.toHaveBeenCalled();
+  });
+});
+
+describe("AgentRunnerService limit reclassification is Claude-only", () => {
+  it("an errored opencode run is never relabelled paused-limit; a claude run is", async () => {
+    const runner = Object.create(AgentRunnerService.prototype) as AgentRunnerService;
+    let onStatus: ((rec: Partial<AgentRunRecord>) => void) | undefined;
+    const reclassify = vi.fn(async () => {});
+    const windowExhausted = vi.fn(async () => ({ exhausted: true, resumeAt: 1 }));
+    Object.assign(runner, {
+      log: { debug: () => {} },
+      approvals: { register: () => {}, cancelPendingForRun: async () => {} },
+      limits: { windowExhausted },
+      core: {
+        onStatus: (l: typeof onStatus) => (onStatus = l),
+        init: async () => {},
+        reclassifyErrorAsPausedLimit: reclassify,
+      },
+    });
+    await runner.onModuleInit();
+
+    onStatus?.({ runId: "oc", status: "error", engine: "opencode" });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(windowExhausted).not.toHaveBeenCalled();
+    expect(reclassify).not.toHaveBeenCalled();
+
+    onStatus?.({ runId: "cl", status: "error" });
+    await vi.waitFor(() => expect(reclassify).toHaveBeenCalledWith("cl", 1));
   });
 });

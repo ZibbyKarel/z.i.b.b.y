@@ -17,6 +17,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
+import { formatEngine } from "../../../utils/engine";
 import { formatCostUsd } from "../../../utils/cost";
 import { useAgentsQuery } from "../../agents";
 import { useWorkflowsQuery } from "../../workflows";
@@ -49,6 +50,7 @@ export enum WorkflowStageTimelineTestId {
   ChildRunLink = "workflow-stage-child-link",
   Connector = "workflow-stage-connector",
   RowToggle = "workflow-stage-row-toggle",
+  Engine = "workflow-stage-engine",
 }
 
 /**
@@ -342,6 +344,17 @@ export function WorkflowStageTimeline({
                             </Stack>
                           </Container>
                           <Stack align="center" direction="row" gap="100" shrink={false}>
+                            {node.main?.engine && (
+                              <Typography
+                                mono
+                                data-testid={WorkflowStageTimelineTestId.Engine}
+                                size="2xs"
+                                type="note"
+                                variant="tertiary"
+                              >
+                                {formatEngine(node.main.engine, node.main.engineModel)}
+                              </Typography>
+                            )}
                             {totalCost != null && (
                               <Typography mono size="2xs" type="note" variant="tertiary">
                                 {formatCostUsd(totalCost)}

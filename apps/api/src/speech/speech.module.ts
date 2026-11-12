@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { SpeechController } from "./speech.controller";
 import { SpeechService } from "./speech.service";
+import { SttService } from "./stt.service";
 
 /**
  * Thin HTTP proxy to the local `speakd` TTS daemon (ARCHITECTURE §6 in
@@ -10,6 +11,6 @@ import { SpeechService } from "./speech.service";
  */
 @Module({
   controllers: [SpeechController],
-  providers: [SpeechService],
+  providers: [SpeechService, SttService],
 })
 export class SpeechModule {}

@@ -1,6 +1,8 @@
 import { Controller } from "@nestjs/common";
 import { TsRestHandler, tsRestHandler } from "@ts-rest/nest";
-import { type UpdateAgentInput, agentsContract } from "@zibby/contracts";
+import { type Agent, type UpdateAgentInput, agentsContract } from "@zibby/contracts";
+import { requireOperatorTokenIf } from "../approvals/operator-token.guard";
+import { OperatorTokenService } from "../approvals/operator-token.service";
 import { unknownDepartment422 } from "../departments/departments.errors";
 import { DepartmentsStorageService } from "../departments/departments.storage.service";
 import { makeErrorMapper } from "../shared/http/error-mapping";
@@ -24,7 +26,27 @@ export class AgentsController {
   constructor(
     private readonly storage: AgentsStorageService,
     private readonly departments: DepartmentsStorageService,
+    private readonly tokens: OperatorTokenService,
   ) {}
+
+  /** Setting / changing an agent's engine or model is operator-only (throws 401). */
+  async engineGuard(
+    id: string | null,
+    body: { engine?: string | null; engineModel?: string | null },
+    headers: Record<string, unknown>,
+  ): Promise<void> {
+    if (body.engine === undefined && body.engineModel === undefined) return;
+    const cur: Partial<Agent> = id ? await this.storage.get(id) : {};
+    // `null` clears the override — the same as an absent stored value.
+    const differs = (next: string | null | undefined, stored: string | undefined) =>
+      next !== undefined && (next ?? undefined) !== stored;
+    requireOperatorTokenIf(
+      differs(body.engine, cur.engine) || differs(body.engineModel, cur.engineModel),
+      this.tokens,
+      headers,
+      "Changing an agent's AI engine or model",
+    );
+  }
 
   /**
    * Department guard for an update, mirroring create: an update that would leave an
@@ -50,7 +72,8 @@ export class AgentsController {
   @TsRestHandler(agentsContract)
   handler() {
     return tsRestHandler(agentsContract, {
-      createAgent: async ({ body }) => {
+      createAgent: async ({ body, headers }) => {
+        await this.engineGuard(null, body, headers);
         // NS2 F1b: every new agent must be attributed to a department — pre-F1
         // agents are exempt (tagged by the owner-backfill sweep instead), so
         // this is a create-only guard, not a schema-level requirement.
@@ -71,8 +94,9 @@ export class AgentsController {
 
       getAgent: ({ params: { id } }) => errors.or404(id, () => this.storage.get(id)),
 
-      updateAgent: async ({ params: { id }, body }) => {
+      updateAgent: async ({ params: { id }, body, headers }) => {
         try {
+          await this.engineGuard(id, body, headers);
           const refused = await this.departmentUpdateGuard(id, body);
           if (refused) return refused;
         } catch (error) {

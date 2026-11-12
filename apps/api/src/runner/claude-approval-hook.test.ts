@@ -1142,6 +1142,28 @@ describe("claude approval hook — free zone (repo + temp dirs)", () => {
     expect(JSON.parse(res.stdout).hookSpecificOutput.permissionDecision).toBe("allow");
   });
 
+  it("asks before any write to an opencode run's gate config (outside the run's sandbox)", async () => {
+    // RunnerCore keeps it at <runsDir>/.opencode/<hash>.json; the run's free zone is its
+    // own sandbox <runsDir>/<runId>, so the config is outside it.
+    const sandbox = path.join(outside, "agent_1");
+    const config = path.join(outside, ".opencode", "abc.json");
+    await fs.mkdir(sandbox);
+    await fs.mkdir(path.dirname(config));
+    await fs.writeFile(config, "{}");
+    const free = [sandbox];
+    expect(
+      analyzeOwnership(`echo '{}' > ${config}`, { cwd: sandbox, ledger: [], intentDir, free })
+        .exempt,
+    ).toBe(false);
+    await preApprove();
+    await runHook(
+      sandbox,
+      { tool_name: "Edit", tool_input: { file_path: config, new_string: "x" }, cwd: sandbox },
+      { ZIBBY_INTENT_DIR: intentDir, ZIBBY_FREE_DIRS: free.join(path.delimiter) },
+    );
+    expect(await requestRaised()).toBe(true);
+  });
+
   it("does not raise a request for a temp-dir overwrite end to end", async () => {
     const res = await runHook(repo, bashEvent(`cd ${tmp}/pr1 && echo x > src.ts`, repo), env());
     expect(res.stdout).toBe("");

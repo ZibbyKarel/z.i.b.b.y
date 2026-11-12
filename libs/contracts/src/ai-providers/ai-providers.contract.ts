@@ -1,8 +1,11 @@
 import { initContract } from "@ts-rest/core";
 import { ErrorSchema } from "../common.schema";
 import {
+  AiEnginesSchema,
   AiProvidersSpendSchema,
   AiProvidersStatusSchema,
+  AiProvidersUsageQuerySchema,
+  AiProvidersUsageSchema,
   SetOpenAiKeyInputSchema,
 } from "./ai-providers.schema";
 
@@ -25,6 +28,21 @@ export const aiProvidersContract = c.router(
       path: "/ai-providers/spend",
       responses: { 200: AiProvidersSpendSchema },
       summary: "ZIBBY's own spend through each provider's API this month",
+    },
+    getAiEngines: {
+      method: "GET",
+      path: "/ai-providers/engines",
+      responses: { 200: AiEnginesSchema },
+      summary:
+        "Which run engines (claude / opencode) are installed, with opencode's providers and models",
+    },
+    getAiProvidersUsage: {
+      method: "GET",
+      path: "/ai-providers/usage",
+      query: AiProvidersUsageQuerySchema,
+      responses: { 200: AiProvidersUsageSchema },
+      summary:
+        "opencode's recorded usage (tokens, cost, steps) per provider/model over the last N days",
     },
     setOpenAiKey: {
       method: "PUT",

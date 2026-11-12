@@ -75,6 +75,14 @@ describe("AgentProposalFlowService", () => {
   });
 
   describe("propose", () => {
+    it("drops an LLM-proposed engine / engineModel — the candidate inherits the global engine", async () => {
+      const { svc, agents } = makeService({});
+      await svc.propose({ ...CANDIDATE, engine: "opencode", engineModel: "opencode/big-pickle" });
+      const written = agents.create.mock.calls[0]![0];
+      expect(written).not.toHaveProperty("engine");
+      expect(written).not.toHaveProperty("engineModel");
+    });
+
     it("writes the candidate as status: proposed, then parks a pending approval with enrichment JSON detail", async () => {
       const { svc, agents, approvals } = makeService({});
       const parked = await svc.propose(CANDIDATE);

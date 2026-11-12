@@ -8,6 +8,7 @@ let openai: { configured: boolean; keyHint?: string } = { configured: false };
 const set = vi.fn();
 const clear = vi.fn();
 
+vi.mock("./AiEngineSection", () => ({ AiEngineSection: () => null }));
 vi.mock("../../ai-providers", () => ({
   useAiProvidersQuery: () => ({ data: { openai } }),
   useSetOpenAiKeyMutation: () => ({ mutate: set, isPending: false, isError: false }),

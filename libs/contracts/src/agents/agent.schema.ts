@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
 import { AvatarSchema, RiskSchema } from "../common.schema";
 import { GateRuleInputSchema } from "../gates/gate.schema";
 import { DepartmentIdSchema } from "../departments/department.schema";
@@ -59,6 +60,13 @@ export const AgentSchema = z.object({
   avatar: AvatarSchema.optional(),
   model: AgentModelSchema.optional(),
   thinking: AgentThinkingSchema.optional(),
+  /** Per-agent run engine override; absent = the global `SystemConfig.aiEngine`. */
+  engine: AiEngineSchema.optional(),
+  /**
+   * opencode `provider/model` for this agent; absent = `SystemConfig.opencodeModel`.
+   * Ignored on the claude engine (that one uses `model`).
+   */
+  engineModel: z.string().min(1).optional(),
   tools: z.array(z.string()).optional(),
   /** The ceiling of tool/MCP ids grantable per-run (see docblock above). */
   optionalTools: z.array(z.string()).optional(),
@@ -123,5 +131,10 @@ export type CreateAgentInput = z.infer<typeof CreateAgentSchema>;
  */
 export const UpdateAgentSchema = AgentSchema.omit({ id: true })
   .partial()
-  .extend({ avatar: AvatarSchema.nullable().optional() });
+  .extend({
+    avatar: AvatarSchema.nullable().optional(),
+    // `null` clears the per-agent engine override (back to the global engine).
+    engine: AiEngineSchema.nullable().optional(),
+    engineModel: z.string().min(1).nullable().optional(),
+  });
 export type UpdateAgentInput = z.infer<typeof UpdateAgentSchema>;

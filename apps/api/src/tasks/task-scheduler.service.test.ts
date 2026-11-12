@@ -881,6 +881,49 @@ describe("TaskSchedulerService — task → run → outcome linkage", () => {
     expect(agentRunner.start).not.toHaveBeenCalled();
   });
 
+  it("never defers a task whose target runs on opencode — the window is Claude's", async () => {
+    fakeLimits.windowExhausted.mockResolvedValue({ exhausted: true, resumeAt: RESET_AT });
+    agentsStore.listActive.mockResolvedValue([
+      { id: "oc", name: "OC", engine: "opencode", engineModel: "opencode/big-pickle" },
+      { id: "cl", name: "CL" },
+    ]);
+    const oc = await service.createTask({
+      text: "do",
+      target: { kind: "agent", id: "oc", name: "OC" },
+    });
+    expect(oc.outcome).toBe("dispatched");
+    // A claude-bound target in the same state still defers.
+    const cl = await service.createTask({
+      text: "do",
+      target: { kind: "agent", id: "cl", name: "CL" },
+    });
+    expect(cl.outcome).toBe("scheduled");
+  });
+
+  it("treats a workflow as all-opencode only without sub-workflow phases", async () => {
+    agentsStore.listActive.mockResolvedValue([
+      { id: "oc", name: "OC", engine: "opencode", engineModel: "opencode/big-pickle" },
+    ]);
+    workflowsStore.list.mockResolvedValue([
+      { id: "flat", phases: [{ id: "a", type: "agent", agent: "oc" }] },
+      {
+        id: "nested",
+        phases: [
+          { id: "a", type: "agent", agent: "oc" },
+          { id: "s", type: "workflow", workflow: "claude-flow" },
+        ],
+      },
+    ]);
+    const onOpencode = (id: string) =>
+      (service as unknown as { targetOnOpencode(t: unknown): Promise<boolean> }).targetOnOpencode({
+        kind: "workflow",
+        id,
+        name: id,
+      });
+    expect(await onOpencode("flat")).toBe(true);
+    expect(await onOpencode("nested")).toBe(false);
+  });
+
   it("a stale/headroom reading does NOT defer — the dispatch proceeds (fail-open)", async () => {
     fakeLimits.windowExhausted.mockResolvedValue({ exhausted: false, resumeAt: null });
     const result = await service.createTask({ text: "do the thing" });

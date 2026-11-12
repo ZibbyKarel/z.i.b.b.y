@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AiEngineSchema } from "../ai-providers/ai-providers.schema";
 import { ChatPersonaSchema } from "../chat/chat.schema";
 import { ProjectIdSchema } from "../projects/project.schema";
 import { TeamIdSchema } from "../teams/team.schema";
@@ -231,6 +232,14 @@ export const SystemConfigSchema = z
      * shows. Editable from `/settings` (runtime section); default 20.
      */
     dockDoneTasksLimit: z.number().int().min(1).max(100).default(20),
+    /**
+     * Which CLI runs agent runs and workflow agent stages by default (an agent's own
+     * `engine` overrides it). Chat and the one-shot helpers stay on Claude. See
+     * docs/api/ai-engines.md.
+     */
+    aiEngine: AiEngineSchema.default("claude"),
+    /** The opencode `provider/model` used when the engine is `opencode` ("" = not chosen). */
+    opencodeModel: z.string().default(""),
     /**
      * O-21: the ZibbyOS header's "CEO" identity and brand name. Both additive and
      * optional (no default here — an absent value reads as `undefined`, not a

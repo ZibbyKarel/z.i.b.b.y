@@ -11,3 +11,6 @@ export { useSendChatMessageMutation } from "./mutations";
 export { useChatTranscriptQuery, getChatTranscriptQueryKey } from "./queries";
 export { useChatStream } from "./hooks/useChatStream";
 export type { ChatStreamState, CompletedTurn, ChatStreamHandlers } from "./hooks/useChatStream";
+export { useVoiceMode } from "./hooks/useVoiceMode";
+export { VoiceToggleButton } from "./components/VoiceToggleButton";
+export { VoiceStatusStrip } from "./components/VoiceStatusStrip";

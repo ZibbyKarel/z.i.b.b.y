@@ -360,6 +360,23 @@ stages, loop iterations or sub-workflows it runs. See [tasks.md](./tasks.md) →
 slots_. There is no per-stage employee lease, no `no-employee` park, and stage runs carry
 no `employeeId` / `employeeName`.
 
+### Agent phase engine (claude / opencode)
+
+A claude-mode agent phase resolves its engine from the phase's agent: `agent.engine ??
+SystemConfig.aiEngine`, and on opencode `agent.engineModel ?? SystemConfig.opencodeModel`.
+A run's start preflights each engine its agent phases resolve to (claude once, each
+distinct opencode model once). An opencode stage is preflighted again while it is built.
+If opencode is missing, has no model, or the model is unknown, the stage fails as a
+`StageBuildError` and never runs on claude. The stage gets the same system prompt, MCP
+servers and approval gate. The phase's `model`/`thinking`, escalation rungs and the
+`--agents` catalog apply only to claude; an opencode stage logs one
+`ℹ opencode stage on <model>: ignoring the phase/escalation model settings (…)` line
+instead. The boundary pause on an exhausted Claude window is skipped before an opencode
+stage. The resulting
+`StageRun` carries `engine` / `engineModel`. The phase advisor never receives an opencode
+stage's session id. The text-only `openaiModel` stage below is unchanged and takes
+precedence. See [ai-engines.md](./ai-engines.md).
+
 ### Agent phase on OpenAI (`openaiModel`)
 
 An agent phase with `openaiModel` (one of `OPENAI_TEXT_MODELS` in

@@ -23,6 +23,8 @@ import { PageContainer } from "../../components/PageContainer/PageContainer";
 import { RuleModal } from "../gates/components/RuleModal";
 import { useWorkflowsQuery } from "../workflows";
 import { useNewTask } from "../tasks";
+import { isOperatorTokenError } from "../../state/operatorToken";
+import { OperatorTokenNotice } from "../ai-providers";
 import { agentFile } from "./agentDraft";
 import { AgentEditBasics } from "./components/AgentEditBasics";
 import { AgentRulesSection } from "./components/AgentRulesSection";
@@ -73,6 +75,8 @@ function AgentEditor({ agent }: { agent: Agent }) {
   const { open: openNewTask } = useNewTask();
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** The API refused the save with 401 (engine writes need the operator token). */
+  const [tokenRefused, setTokenRefused] = useState(false);
   /** The own-rule being edited: an index, "new", or null when the editor is closed. */
   const [editingRule, setEditingRule] = useState<number | "new" | null>(null);
 
@@ -83,7 +87,23 @@ function AgentEditor({ agent }: { agent: Agent }) {
     defaultValues: toFormValues(agent),
     onSubmit: (values) => {
       const { id, ...body } = applyFormValues(agent, values);
-      updateAgent.mutate({ params: { id }, body });
+      setTokenRefused(false);
+      // `null` (not absent) is what clears the override back to the global engine.
+      updateAgent.mutate(
+        {
+          params: { id },
+          body: { ...body, engine: body.engine ?? null, engineModel: body.engineModel ?? null },
+        },
+        {
+          // A refused write must not leave the form showing an engine the server never took.
+          onError: (error) => {
+            if (!isOperatorTokenError(error)) return;
+            setTokenRefused(true);
+            form.setValue("engine", agent.engine ?? "");
+            form.setValue("engineModel", agent.engineModel ?? "");
+          },
+        },
+      );
     },
   });
 
@@ -155,6 +175,8 @@ function AgentEditor({ agent }: { agent: Agent }) {
               </Button>
             </Stack>
           </Stack>
+
+          {tokenRefused && <OperatorTokenNotice />}
 
           <Panel header={t("tabBasics")} padding="200">
             <AgentEditBasics categories={categories} control={form.control} />

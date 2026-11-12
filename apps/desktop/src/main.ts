@@ -1,12 +1,13 @@
 import type { ChildProcess } from "node:child_process";
 import { createWriteStream, mkdirSync } from "node:fs";
 import path from "node:path";
-import { BrowserWindow, Menu, app, dialog, ipcMain } from "electron";
+import { BrowserWindow, Menu, app, dialog, ipcMain, session } from "electron";
 import { API_BASE_URL, API_HEALTH_URL, API_PORT, WEB_HEALTH_URL, WEB_PORT } from "./config";
 import { routeExternalLinks } from "./externalLinks";
 import { attachFindBar } from "./findBar";
 import { findForeignOwner, isPidAlive, readLockFile } from "./instanceLock";
 import { type FindCommand, buildMenuTemplate } from "./menu";
+import { installPermissionHandlers } from "./permissions";
 import { apiEntry, instanceLockFile, logDir, readBuildInfo, webServerEntry } from "./paths";
 import {
   isPortTaken,
@@ -144,6 +145,7 @@ function navigate(direction: "back" | "forward"): void {
 }
 
 function createWindow(): void {
+  installPermissionHandlers(session.defaultSession, WEB_ORIGIN);
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,

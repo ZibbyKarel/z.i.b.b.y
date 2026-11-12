@@ -17,6 +17,8 @@ const DEFAULTS: SystemConfig = {
   dockDoneTasksLimit: 20,
   goalAutoResume: false,
   chatPersona: "jarvis",
+  aiEngine: "claude",
+  opencodeModel: "",
   powerSaver: false,
   ttsVoice: null,
   ui: UiSettingsSchema.parse({}),

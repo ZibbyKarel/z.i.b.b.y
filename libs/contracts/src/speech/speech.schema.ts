@@ -58,6 +58,12 @@ export type SpeechDaemonState = z.infer<typeof SpeechDaemonStateSchema>;
  * always render a status line (mirrors `healthContract`'s "never fail silently").
  */
 export const SpeechStatusSchema = z.object({
+  /** Local speech-to-text (whisper.cpp) readiness — independent of the TTS daemon. */
+  stt: z.object({
+    available: z.boolean(),
+    /** Why STT is unavailable (missing binary/model/ffmpeg); absent when available. */
+    reason: z.string().optional(),
+  }),
   reachable: z.boolean(),
   state: SpeechDaemonStateSchema,
   engine: z.string().nullable(),
@@ -68,3 +74,22 @@ export const SpeechStatusSchema = z.object({
   uptimeS: z.number().nullable(),
 });
 export type SpeechStatus = z.infer<typeof SpeechStatusSchema>;
+
+/**
+ * `transcribe` request body — one recorded dictation clip as base64 (the same
+ * transport `synthesize` uses for audio). `mimeType` is what `MediaRecorder`
+ * produced (webm/opus in Chromium/Electron, mp4/aac in Safari); the server
+ * converts via ffmpeg. The 4 MB cap on the base64 string keeps the JSON body
+ * under the API's 5 MB limit (a 60 s webm/opus clip is ~0.5-1 MB). `language`
+ * defaults server-side to Czech.
+ */
+export const SpeechTranscribeInputSchema = z.object({
+  audioBase64: z.string().min(1).max(4_000_000),
+  mimeType: z.string().min(1),
+  language: z.string().min(1).optional(),
+});
+export type SpeechTranscribeInput = z.infer<typeof SpeechTranscribeInputSchema>;
+
+/** `transcribe` result — the cleaned transcript; empty string when no speech was heard. */
+export const SpeechTranscribeResultSchema = z.object({ text: z.string() });
+export type SpeechTranscribeResult = z.infer<typeof SpeechTranscribeResultSchema>;

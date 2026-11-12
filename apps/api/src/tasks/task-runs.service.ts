@@ -938,7 +938,18 @@ function agentRunToView(r: AgentRun, projectNames: ProjectNameMaps): TaskRun {
     // Phase 49: surface the captured session id so the detail's re-run button knows
     // whether it can continue the session (`--resume`) or must start fresh.
     sessionId: r.sessionId,
+    ...(r.engine ? { engine: r.engine } : {}),
+    ...(r.engineModel ? { engineModel: r.engineModel } : {}),
   };
+}
+
+/** A workflow run's engine, as its latest stage that recorded one ran on it. */
+function engineOfStages(
+  stageRuns: readonly { engine?: TaskRun["engine"]; engineModel?: string }[],
+): Pick<TaskRun, "engine" | "engineModel"> {
+  const last = [...stageRuns].reverse().find((s) => s.engine);
+  if (!last?.engine) return {};
+  return { engine: last.engine, ...(last.engineModel ? { engineModel: last.engineModel } : {}) };
 }
 
 /**
@@ -1013,6 +1024,7 @@ function workflowRunToView(
     limitResumeCycles: r.limitResumeCycles,
     checkpoints: r.checkpoints,
     stageRuns: r.stageRuns,
+    ...engineOfStages(r.stageRuns),
     currentStage: r.currentStage,
     currentStageStartedAt: r.currentStageStartedAt,
     ...(r.pauseRequested ? { pauseRequested: true } : {}),

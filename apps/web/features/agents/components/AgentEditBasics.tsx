@@ -2,7 +2,15 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { Container, IconTile, Pressable, Stack, Tag, Typography } from "@zibby/design-system";
+import {
+  ButtonGroup,
+  Container,
+  IconTile,
+  Pressable,
+  Stack,
+  Tag,
+  Typography,
+} from "@zibby/design-system";
 import { type Category } from "@zibby/contracts";
 import {
   type Control,
@@ -11,7 +19,9 @@ import {
   FormSegmentPicker,
   FormSelect,
   FormTextInput,
+  useWatch,
 } from "@zibby/forms";
+import { AiEngineModelPicker, useAiEnginesQuery } from "../../ai-providers";
 import { useDepartmentLookup } from "../../departments/useDepartmentLookup";
 import { AGENT_GLYPHS, AGENT_TOOLS, MODEL_OPTIONS, THINKING_OPTIONS } from "../../../state/config";
 import type { AgentEditValues } from "./agentEditValues";
@@ -46,6 +56,10 @@ export interface AgentEditBasicsProps {
 export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
   const t = useTranslations("agents");
   const departments = useDepartmentLookup();
+  const engine = useWatch({ control, name: "engine" });
+  const tEngine = useTranslations("aiEngine");
+  const { data: engines } = useAiEnginesQuery();
+  const opencodeModels = engines?.engines.find((e) => e.id === "opencode")?.models ?? [];
 
   return (
     <Container padding={["200", "0", "0", "0"]}>
@@ -106,6 +120,42 @@ export function AgentEditBasics({ control, categories }: AgentEditBasicsProps) {
                 />
               </Container>
             </Stack>
+
+            <Controller<AgentEditValues, "engine">
+              control={control}
+              name="engine"
+              render={({ field }) => (
+                <Stack gap="75">
+                  <Typography mono size="sm" type="note" variant="secondary">
+                    {tEngine("agentField")}
+                  </Typography>
+                  <ButtonGroup
+                    ariaLabel={tEngine("agentField")}
+                    onChange={(v) => field.onChange(v === "global" ? "" : v)}
+                    options={[
+                      { id: "global", label: tEngine("useGlobal") },
+                      { id: "claude", label: tEngine("engine.claude") },
+                      { id: "opencode", label: tEngine("engine.opencode") },
+                    ]}
+                    value={field.value || "global"}
+                  />
+                </Stack>
+              )}
+            />
+            {engine === "opencode" && (
+              <Controller<AgentEditValues, "engineModel">
+                control={control}
+                name="engineModel"
+                render={({ field }) => (
+                  <AiEngineModelPicker
+                    loaded={engines !== undefined}
+                    models={opencodeModels}
+                    onChange={field.onChange}
+                    value={field.value}
+                  />
+                )}
+              />
+            )}
 
             <Controller<AgentEditValues, "glyph">
               control={control}

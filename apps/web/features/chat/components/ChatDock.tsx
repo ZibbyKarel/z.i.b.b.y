@@ -183,8 +183,12 @@ export function ChatDock() {
 
   const composer = (
     <Stack align="stretch" direction="col" gap="100">
-      {voice.active && voice.interim && (
-        <VoiceStatusStrip interim={voice.interim} listening={voice.listening} />
+      {(voice.active || voice.transcribing) && (voice.interim || voice.transcribing) && (
+        <VoiceStatusStrip
+          interim={voice.interim}
+          listening={voice.listening}
+          transcribing={voice.transcribing}
+        />
       )}
       <CommandLine
         allowSkillMentions

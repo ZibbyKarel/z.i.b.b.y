@@ -2209,9 +2209,10 @@
       "start": "Zapnout hlasový režim",
       "stop": "Vypnout hlasový režim",
       "listening": "Poslouchám",
+      "transcribing": "Přepisuji…",
       "paused": "Hlasový režim",
       "error": "Rozpoznávání řeči selhalo, hlasový režim je vypnutý.",
-      "errorMicDenied": "Prohlížeč zablokoval přístup k mikrofonu — povolte ho v nastavení stránky."
+      "errorMicDenied": "Přístup k mikrofonu je zablokovaný — povolte ho v nastavení stránky, případně v macOS v Nastavení systému → Soukromí a zabezpečení → Mikrofon."
     },
     "composer": {
       "label": "Zpráva",
@@ -3507,6 +3508,19 @@
           "cancelled": "Zrušeno",
           "error": "CI nedostupné"
         }
+      },
+      "aiUsage": {
+        "claude": "Claude",
+        "opencode": "opencode",
+        "global": "globální",
+        "limitsUnknown": "Limity zatím nejsou k dispozici.",
+        "unavailable": "opencode není nainstalovaný.",
+        "noModel": "Není vybrán model",
+        "activeModel": "Aktivní model: {model}",
+        "empty": "Za posledních {days} dní nic nepoužito.",
+        "free": "zdarma",
+        "line": "{steps} kroků · {input} vstup / {output} výstup",
+        "totals": "Celkem, {days} dní"
       }
     },
     "you": "{n} ty",
@@ -3825,5 +3839,32 @@
       "conversations": "Konverzace",
       "updated": "Změna"
     }
+  },
+  "aiEngine": {
+    "title": "AI engine",
+    "hint": "Které CLI spouští agenty a kroky workflow: předplatné Claude, nebo opencode s modelem, který vybereš. Vše na opencode má zůstat zdarma.",
+    "engine": {
+      "claude": "Claude",
+      "opencode": "opencode"
+    },
+    "available": "{name}: nainstalováno ({version})",
+    "notInstalled": "{name}: není nainstalováno",
+    "providers": "Připojení poskytovatelé opencode: {list}",
+    "noProviders": "Není připojen žádný poskytovatel — použitelné jsou jen zdarma dostupné modely opencode/*. Připojení uděláš ty v terminálu: opencode auth login. ZibbyOS nikdy nežádá přihlašovací údaje.",
+    "model": "Model opencode",
+    "modelPlaceholder": "Vyber model…",
+    "free": "zdarma",
+    "paidNotice": "Tento model není ověřený jako zdarma a může stát peníze.",
+    "modelMissing": "Vybraný model už není v seznamu opencode.",
+    "blockedUnavailable": "opencode není nainstalovaný",
+    "blockedNoModel": "není vybrán model",
+    "blockedPrefix": "opencode nelze zapnout: {reason}.",
+    "saveFailed": "Uložení AI enginu selhalo.",
+    "agentField": "AI engine",
+    "useGlobal": "Použít globální nastavení",
+    "operatorTokenRequired": "Změna AI enginu vyžaduje operátorský token.",
+    "operatorTokenLink": "Nastav ho v Nastavení → Obecné",
+    "noModels": "Nepodařilo se načíst žádné modely opencode (katalog modelů není dostupný). Zkontroluj, že opencode funguje v terminálu.",
+    "noFreeModels": "Žádný z nabízených modelů není ověřený jako zdarma; jeho výběr může stát peníze."
   }
 }

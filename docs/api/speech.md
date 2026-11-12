@@ -76,6 +76,39 @@ non-2xx, malformed body) and resolves to a fixed `reachable: false` object with
 every other field `null`/`"degraded"`, so the endpoint always answers `200`
 and callers can always render a status line.
 
+## Dictation (`POST /api/speech/transcribe`, local STT)
+
+Separate from `speakd`: `SttService` (`apps/api/src/speech/stt.service.ts`) runs
+whisper.cpp's `whisper-server` (`ggml-large-v3-turbo`, language `cs`).
+
+```
+POST /speech/transcribe   body { audioBase64, mimeType, language? } → 200 { text }
+GET  /speech/status       additionally carries stt: { available, reason? }
+```
+
+- `audioBase64` is capped at 4 MB (the API's JSON limit is 5 MB; a 60 s webm/opus clip is ~0.5-1 MB).
+  `mimeType` is whatever `MediaRecorder` produced; whisper-server converts it via ffmpeg (`--convert`).
+- `WHISPER_URL` set → that external daemon is used. Otherwise the server is spawned lazily on the
+  first call (`127.0.0.1`, free port), reused, respawned if it died, killed with the API module.
+- Statuses: `422` the clip could not be decoded, `503` STT unavailable (binary/model/ffmpeg missing,
+  server failed to start, unreachable). `stt.available=false` carries a `reason`; the web app then
+  falls back to the browser Web Speech API.
+- Output is cleaned: whitespace collapsed, bracketed tags like `[BLANK_AUDIO]` removed.
+
+Install (macOS):
+
+```bash
+brew install whisper.cpp ffmpeg
+mkdir -p ~/Library/Application\ Support/ZibbyOS/models
+curl -L -o ~/Library/Application\ Support/ZibbyOS/models/ggml-large-v3-turbo.bin \
+  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
+```
+
+Env: `WHISPER_URL`, `WHISPER_BIN`, `WHISPER_MODEL` (see `docs/ops/environment.md`).
+The desktop app grants the microphone only to its own origin (`apps/desktop/src/permissions.ts`,
+`NSMicrophoneUsageDescription` via electron-builder `mac.extendInfo`; no entitlement is needed
+while `hardenedRuntime` is false).
+
 ## Wired into the rest of the system
 
 Nothing in `apps/api/src` beyond `SpeechModule` itself calls into

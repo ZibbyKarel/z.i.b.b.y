@@ -13,7 +13,11 @@ import { ProjectLocalService } from "../projects/project-local.service";
 import { ProjectSecretsStore } from "../projects/project-secrets.store";
 import { ProjectsStorageService } from "../projects/projects.storage.service";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
-import { ClaudeRunCommandService } from "../runner/claude-run-command.service";
+import { type ResolvedAiEngine, assertOpencodeReady } from "../runner/ai-engine";
+import {
+  ClaudeRunCommandService,
+  type ClaudeRunOptions,
+} from "../runner/claude-run-command.service";
 import { CommandMaterializerService } from "../runner/command-materializer.service";
 import { formatClaudeStreamLine } from "../runner/claude-stream-format";
 import { RunNotFoundError, RunnerCore } from "../runner/runner-core";
@@ -135,7 +139,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // usage window exhausted (a fresh, non-stale snapshot at ≥ 100 %) is a pause,
       // not a failure — even if no limit line was printed. Reclassify before the
       // error is treated as terminal anywhere downstream.
-      if (rec.status === "error") void this.maybePauseOnExhaustedWindow(rec.runId);
+      // The window is Claude's: an opencode run's error is never a Claude limit pause.
+      if (rec.status === "error" && rec.engine !== "opencode") {
+        void this.maybePauseOnExhaustedWindow(rec.runId);
+      }
       const terminal =
         rec.status === "done" || rec.status === "error" || rec.status === "interrupted";
       // `paused-limit` is deliberately NOT terminal: its approvals (none in practice)
@@ -259,7 +266,10 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const rec = await this.resolveRunRecord(runId);
     const agent =
       rec.agentId === ORCHESTRATOR_ID ? ORCHESTRATOR_AGENT : await this.agents.get(rec.agentId);
-    const sessionId = opts.fresh ? undefined : rec.sessionId;
+    // A captured session only resumes on the engine that created it (a claude session
+    // id means nothing to opencode and vice versa) — otherwise the re-run starts fresh.
+    const sameEngine = (rec.engine ?? "claude") === this.claude.resolveEngine(agent).engine;
+    const sessionId = opts.fresh || !sameEngine ? undefined : rec.sessionId;
     const note = opts.note?.trim();
     const prompt = !note
       ? rec.prompt
@@ -325,9 +335,11 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     // Phase 108: the FINAL grant set — the ceiling is enforced HERE, server-side,
     // never trusted from dispatch/the UI alone (see intersectToolGrants).
     const finalGrants = intersectToolGrants(toolGrants, agent);
-    // Agent runs are always claude-shaped — refuse up front when the CLI can't
-    // start a session, so no dead run record is ever created (→ 503 / failed task).
-    await this.preflight.assertAvailable();
+    // Refuse up front when the run's engine can't start a session, so no dead run
+    // record is ever created (→ 503 / failed task). opencode never falls back (A7).
+    const engine = this.claude.resolveEngine(agent);
+    if (engine.engine === "opencode") await assertOpencodeReady(engine.model);
+    else await this.preflight.assertAvailable();
     this.log.info("starting agent run", { agentId, project, files: files.length });
 
     const startedMs = Date.now();
@@ -406,7 +418,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const commandsPlugin = await this.commandMaterializer.materialize(cwd);
     // Built after the worktree block so the spawn cwd can ride `--add-dir` as the
     // run's context dir (its CLAUDE.md loads even under `--setting-sources ""`).
-    const { command, args, catalogAgentIds } = await this.buildCommand(
+    const built = await this.buildCommand(
       agent,
       prompt,
       grantDirs,
@@ -418,9 +430,13 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       runId,
       [...(resolved?.plugins ?? []), ...(commandsPlugin ? [commandsPlugin] : [])],
       spawnCwd,
+      engine,
     );
-    // Per-project env + secrets injected into this run's process (Phase D).
-    const env = await this.resolveProjectEnv(resolved);
+    const { command, args, catalogAgentIds } = built;
+    // Per-project env + secrets injected into this run's process (Phase D), then the
+    // opencode run's own config env on top.
+    const projectEnv = await this.resolveProjectEnv(resolved);
+    const env = built.env ? { ...projectEnv, ...built.env } : projectEnv;
 
     const spec = {
       kind: "agent" as const,
@@ -430,6 +446,9 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       cwd,
       ...(spawnCwd ? { spawnCwd } : {}),
       ...(env ? { env } : {}),
+      ...(engine.engine === "opencode"
+        ? { engine: engine.engine, engineModel: engine.model, opencodeConfig: built.opencodeConfig }
+        : {}),
       startedMs,
       // The originating request's traceId rides along in the persisted record, so
       // a later mid-run gate (fired from child output, outside any request — even
@@ -749,7 +768,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
    * to directories) are surfaced both in the task text — so the model knows which
    * directory to act on — and as `--add-dir` access grants.
    */
-  private buildCommand(
+  private async buildCommand(
     agent: Agent,
     prompt: string,
     grantDirs: string[],
@@ -773,7 +792,15 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     extraPluginDirs: readonly string[] = [],
     /** The run's spawn cwd, granted as the context dir (`--add-dir`). */
     contextDir?: string,
-  ): Promise<{ command: string; args: string[]; catalogAgentIds: string[] }> {
+    /** The resolved engine; opencode branches to the opencode command builder. */
+    engine: ResolvedAiEngine = { engine: "claude" },
+  ): Promise<{
+    command: string;
+    args: string[];
+    catalogAgentIds: string[];
+    env?: Record<string, string>;
+    opencodeConfig?: string;
+  }> {
     // The work directory (the run's `files`, if any) stays the "operate on" target;
     // the attachments dir is reference material, never the thing to act on.
     const operate = grantDirs.length
@@ -793,7 +820,7 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
     const task = manifest.trim();
     const grants = attachDir ? [...grantDirs, attachDir] : grantDirs;
     const pluginDirs = [...(agent.plugins ?? []), ...extraPluginDirs];
-    return this.claude.buildClaudeCommand({
+    const opts: ClaudeRunOptions = {
       instructions: agent.instructions,
       task,
       tools: agent.tools,
@@ -815,7 +842,14 @@ export class AgentRunnerService implements OnModuleInit, OnModuleDestroy {
       // standalone agent run passes no `delegates`, so its catalog folds down to
       // ZIBBY's operational core (see selectCatalogAgents) — never the whole library.
       ...(sandboxCwd ? { systemPromptDir: sandboxCwd } : {}),
-    });
+    };
+    if (engine.engine === "opencode") {
+      return {
+        ...(await this.claude.buildOpencodeCommand(opts, engine.model ?? "")),
+        catalogAgentIds: [],
+      };
+    }
+    return this.claude.buildClaudeCommand(opts);
   }
 
   /**

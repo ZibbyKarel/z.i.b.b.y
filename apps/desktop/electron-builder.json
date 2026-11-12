@@ -19,7 +19,10 @@
     "artifactName": "${productName}-${version}-${arch}.${ext}",
     "identity": null,
     "hardenedRuntime": false,
-    "gatekeeperAssess": false
+    "gatekeeperAssess": false,
+    "extendInfo": {
+      "NSMicrophoneUsageDescription": "ZibbyOS uses the microphone for voice dictation. Audio is transcribed locally on this Mac."
+    }
   },
   "dmg": {
     "title": "ZibbyOS"

@@ -1,3 +1,4 @@
+import type { AiEngine } from "@zibby/contracts";
 import type { ZodType } from "zod";
 
 /**
@@ -68,6 +69,10 @@ export interface BaseRun {
    * Absent for demo/test output and runs from before this feature.
    */
   sessionId?: string;
+  /** The engine the run executes on (absent = claude / a run from before engines). */
+  engine?: AiEngine;
+  /** opencode only: the `provider/model` the run executes on. */
+  engineModel?: string;
 }
 
 /** Everything a wrapper must hand the core to spawn one run. */
@@ -105,6 +110,17 @@ export interface RunSpec {
   startedMs?: number;
   /** Extra fields the wrapper folds into its record via {@link KindStrategy.assemble}. */
   extra: Record<string, unknown>;
+  /** The engine the command was built for; opencode switches the output parsing. */
+  engine?: AiEngine;
+  /** opencode only: the `provider/model`, recorded on the run. */
+  engineModel?: string;
+  /**
+   * opencode only: the run's config JSON (agent, gate permissions, plugin, MCP). The
+   * core writes it outside the agent's free zone (`<runs dir>/.opencode/`) right
+   * before EVERY spawn — start and resume — and points `OPENCODE_CONFIG` at it, so a
+   * file the agent tampered with is never what a respawn loads.
+   */
+  opencodeConfig?: string;
 }
 
 /** A slice of a run's log read from a byte `offset` (matches `RunLogChunkSchema`). */

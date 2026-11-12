@@ -374,6 +374,40 @@ describe("TaskRunsService", () => {
     });
   });
 
+  describe("engine projection", () => {
+    it("carries an agent run's engine and a workflow run's latest stage engine", async () => {
+      const { service, agentRunner, workflowRunner } = build();
+      agentRunner.listAll.mockResolvedValue([
+        { ...agentA, engine: "opencode", engineModel: "opencode/big-pickle" },
+        makerChild,
+      ]);
+      workflowRunner.listAll.mockResolvedValue([
+        {
+          ...pipeP,
+          stageRuns: [
+            {
+              phaseId: "a",
+              runId: "a_1",
+              attempt: 1,
+              status: "done",
+              engine: "opencode",
+              engineModel: "opencode/x",
+            },
+            { phaseId: "b", runId: "b_1", attempt: 1, status: "done" },
+          ],
+        },
+      ]);
+      expect(await service.getTaskRun(agentA.runId)).toMatchObject({
+        engine: "opencode",
+        engineModel: "opencode/big-pickle",
+      });
+      expect(await service.getTaskRun(pipeP.workflowRunId)).toMatchObject({
+        engine: "opencode",
+        engineModel: "opencode/x",
+      });
+    });
+  });
+
   describe("processor resolution", () => {
     it("resolves the human name from the definition store", async () => {
       const { service } = build();

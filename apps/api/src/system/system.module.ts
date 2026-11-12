@@ -1,4 +1,5 @@
 import { Global, Module } from "@nestjs/common";
+import { ApprovalsModule } from "../approvals/approvals.module";
 import { dataDir } from "../shared/data-dir";
 import { SYSTEM_CONFIG_FILE, SystemConfigStore } from "./system-config.store";
 import { SystemController } from "./system.controller";
@@ -20,6 +21,7 @@ export function resolveSystemConfigFile(): string {
  */
 @Global()
 @Module({
+  imports: [ApprovalsModule],
   controllers: [SystemController],
   providers: [
     { provide: SYSTEM_CONFIG_FILE, useFactory: resolveSystemConfigFile },

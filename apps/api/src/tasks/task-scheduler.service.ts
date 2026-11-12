@@ -49,6 +49,7 @@ import { normalizeSummary } from "../shared/text/normalize-summary";
 import { TraceContextService } from "../shared/logging/trace-context.service";
 import { TickingWatcherBase } from "../shared/ticking-watcher-base";
 import { SystemConfigStore } from "../system/system-config.store";
+import { resolveAiEngine } from "../runner/ai-engine";
 import { AttachmentStorageService } from "./attachment-storage.service";
 import { ClaudeCliTaskNamer, deriveTitleFallback } from "./claude-cli-task-namer";
 import { ScheduledTasksStorageService } from "./scheduled-tasks.storage.service";
@@ -930,7 +931,7 @@ export class TaskSchedulerService
     // falls through to the budget + concurrency guards exactly as before. Not part
     // of the capacity/budget race (a limit deferral never dispatches), so it stays
     // outside `project-capacity`.
-    const deferral = await this.limitDeferral(now);
+    const deferral = await this.limitDeferral(now, explicitTarget);
     if (deferral) {
       const task = await this.storage.createDeferredLimit(
         taskId,
@@ -1157,7 +1158,7 @@ export class TaskSchedulerService
     // Phase 9: limit guard first — even an operator-approved overage (`skipBudget`)
     // can't run with the window exhausted, so re-defer to the reset. The existing
     // tick re-fires the now-`scheduled` task; still exhausted → re-defer again.
-    const deferral = await this.limitDeferral(at.getTime());
+    const deferral = await this.limitDeferral(at.getTime(), task.target);
     if (deferral) {
       const deferred = await this.storage.markDeferredLimit(task.id, deferral.resumeAt);
       this.recordDeferredLimit(deferred);
@@ -1810,13 +1811,37 @@ export class TaskSchedulerService
    * `false` on a stale/unreadable snapshot, so deferring never blocks all work on a
    * lagging capture file (decision 5).
    */
-  private async limitDeferral(now: number): Promise<{ resumeAt: number } | null> {
+  private async limitDeferral(
+    now: number,
+    target: TaskTarget | undefined,
+  ): Promise<{ resumeAt: number } | null> {
+    // The window is Claude's: a task whose known target runs wholly on opencode is not
+    // deferred. An unrouted task still needs the (Claude) classifier, so it is.
+    if (target && (await this.targetOnOpencode(target).catch(() => false))) return null;
     const { exhausted, resumeAt } = await this.limits.windowExhausted().catch(() => ({
       exhausted: false,
       resumeAt: null,
     }));
     if (!exhausted) return null;
     return { resumeAt: resumeAt ?? (await this.limits.resolveResumeAt(null, now)) };
+  }
+
+  /** An agent target on opencode, or a workflow whose every agent phase is. */
+  private async targetOnOpencode(target: TaskTarget): Promise<boolean> {
+    if (target.kind !== "agent" && target.kind !== "workflow") return false;
+    const config = this.systemConfig.current();
+    const agents = await this.agentsStore.listActive().catch((): Agent[] => []);
+    const onOpencode = (id: string) => {
+      const agent = agents.find((a) => a.id === id);
+      return !!agent && resolveAiEngine(agent, config).engine === "opencode";
+    };
+    if (target.kind === "agent") return onOpencode(target.id);
+    const workflows = await this.workflowsStore.list().catch((): Workflow[] => []);
+    const phases = workflows.find((w) => w.id === target.id)?.phases ?? [];
+    // A sub-workflow's engines aren't known here — it may spend the Claude window.
+    if (phases.some((p) => p.type === "workflow")) return false;
+    const ids = phases.flatMap((p) => p.agent ?? []);
+    return ids.length > 0 && ids.every(onOpencode);
   }
 
   /** Record a window-deferred task (Tier 1 — silent, recorded; the briefing reads it). */

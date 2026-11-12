@@ -2209,9 +2209,10 @@
       "start": "Turn on voice mode",
       "stop": "Turn off voice mode",
       "listening": "Listening",
+      "transcribing": "Transcribing…",
       "paused": "Voice mode",
       "error": "Voice recognition failed, voice mode is off.",
-      "errorMicDenied": "The browser blocked microphone access — allow it in the site settings."
+      "errorMicDenied": "Microphone access is blocked — allow it in the site settings or, on macOS, in System Settings → Privacy & Security → Microphone."
     },
     "composer": {
       "label": "Message",
@@ -3507,6 +3508,19 @@
           "cancelled": "Cancelled",
           "error": "CI unavailable"
         }
+      },
+      "aiUsage": {
+        "claude": "Claude",
+        "opencode": "opencode",
+        "global": "global",
+        "limitsUnknown": "Limits not reported yet.",
+        "unavailable": "opencode is not installed.",
+        "noModel": "No model chosen",
+        "activeModel": "Active model: {model}",
+        "empty": "Nothing used in the last {days} days.",
+        "free": "free",
+        "line": "{steps} steps · {input} in / {output} out",
+        "totals": "Total, {days} days"
       }
     },
     "you": "{n} you",
@@ -3825,5 +3839,32 @@
       "conversations": "Threads",
       "updated": "Updated"
     }
+  },
+  "aiEngine": {
+    "title": "AI engine",
+    "hint": "Which CLI runs agents and workflow stages: the Claude subscription or opencode with a model you pick. Everything on opencode should stay free.",
+    "engine": {
+      "claude": "Claude",
+      "opencode": "opencode"
+    },
+    "available": "{name}: installed ({version})",
+    "notInstalled": "{name}: not installed",
+    "providers": "opencode providers connected: {list}",
+    "noProviders": "No provider connected — only the free opencode/* models are usable. Connecting one is up to you, in a terminal: opencode auth login. ZibbyOS never asks for credentials.",
+    "model": "opencode model",
+    "modelPlaceholder": "Choose a model…",
+    "free": "free",
+    "paidNotice": "This model is not confirmed free and may cost money.",
+    "modelMissing": "The chosen model is no longer in the opencode list.",
+    "blockedUnavailable": "the opencode binary is not installed",
+    "blockedNoModel": "no model is chosen",
+    "blockedPrefix": "opencode cannot be switched on: {reason}.",
+    "saveFailed": "Saving the AI engine failed.",
+    "agentField": "AI engine",
+    "useGlobal": "Use global setting",
+    "operatorTokenRequired": "Changing the AI engine needs the operator token.",
+    "operatorTokenLink": "Set it in Settings → General",
+    "noModels": "No opencode models could be listed (model catalog unavailable). Check that opencode works in a terminal.",
+    "noFreeModels": "None of the listed models is confirmed free; picking one may cost money."
   }
 }

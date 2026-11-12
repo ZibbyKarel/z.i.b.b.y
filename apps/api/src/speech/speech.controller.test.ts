@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import { SpeakdDaemonError, SpeakdTimeoutError, SpeakdUnreachableError } from "./speech.errors";
 import { SpeechController } from "./speech.controller";
 import { SpeechService } from "./speech.service";
+import { SttService, SttTranscriptionError, SttUnavailableError } from "./stt.service";
 
 /**
  * Controller-level error mapping for `speechContract` (see its doc comment for the
@@ -16,11 +17,16 @@ describe("SpeechController", () => {
   const synthesize = vi.fn();
   const listVoices = vi.fn();
   const status = vi.fn();
+  const transcribe = vi.fn();
+  const sttStatus = vi.fn();
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [SpeechController],
-      providers: [{ provide: SpeechService, useValue: { synthesize, listVoices, status } }],
+      providers: [
+        { provide: SpeechService, useValue: { synthesize, listVoices, status } },
+        { provide: SttService, useValue: { transcribe, status: sttStatus } },
+      ],
     }).compile();
     app = moduleRef.createNestApplication();
     await app.init();
@@ -34,6 +40,8 @@ describe("SpeechController", () => {
     synthesize.mockReset();
     listVoices.mockReset();
     status.mockReset();
+    transcribe.mockReset();
+    sttStatus.mockReset();
   });
 
   it("200s a successful synthesize with the service's result verbatim", async () => {
@@ -83,7 +91,9 @@ describe("SpeechController", () => {
   });
 
   it("passes through a daemon 422 (invalid request) as 422", async () => {
-    synthesize.mockRejectedValue(new SpeakdDaemonError(422, "invalid_request", "speed must be > 0"));
+    synthesize.mockRejectedValue(
+      new SpeakdDaemonError(422, "invalid_request", "speed must be > 0"),
+    );
     const res = await request(app.getHttpServer())
       .post("/api/speech/synthesize")
       .send({ text: "ahoj", language: "cs" });
@@ -116,7 +126,14 @@ describe("SpeechController", () => {
 
   it("200s listVoices with the service's array", async () => {
     listVoices.mockResolvedValue([
-      { id: "cs-male-01", label: "Czech male", language: "cs", gender: "male", source: "x", license: "CC0-1.0" },
+      {
+        id: "cs-male-01",
+        label: "Czech male",
+        language: "cs",
+        gender: "male",
+        source: "x",
+        license: "CC0-1.0",
+      },
     ]);
     const res = await request(app.getHttpServer()).get("/api/speech/voices");
     expect(res.status).toBe(200);
@@ -142,6 +159,46 @@ describe("SpeechController", () => {
     });
     const res = await request(app.getHttpServer()).get("/api/speech/status");
     expect(res.status).toBe(200);
+    expect(res.body.reachable).toBe(false);
+  });
+
+  const clip = { audioBase64: "AAAA", mimeType: "audio/webm" };
+
+  it("200s a transcription", async () => {
+    transcribe.mockResolvedValue({ text: "ahoj" });
+    const res = await request(app.getHttpServer()).post("/api/speech/transcribe").send(clip);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ text: "ahoj" });
+  });
+
+  it("maps SttUnavailableError to 503 and SttTranscriptionError to 422", async () => {
+    transcribe.mockRejectedValueOnce(new SttUnavailableError("no model"));
+    const unavailable = await request(app.getHttpServer())
+      .post("/api/speech/transcribe")
+      .send(clip);
+    expect(unavailable.status).toBe(503);
+    expect(unavailable.body.message).toContain("no model");
+
+    transcribe.mockRejectedValueOnce(new SttTranscriptionError("bad audio"));
+    const bad = await request(app.getHttpServer()).post("/api/speech/transcribe").send(clip);
+    expect(bad.status).toBe(422);
+  });
+
+  it("merges the stt block into /speech/status", async () => {
+    status.mockResolvedValue({
+      reachable: false,
+      state: "degraded",
+      engine: null,
+      model: null,
+      device: null,
+      defaultVoice: null,
+      queueDepth: null,
+      uptimeS: null,
+    });
+    sttStatus.mockResolvedValue({ available: false, reason: "no model" });
+    const res = await request(app.getHttpServer()).get("/api/speech/status");
+    expect(res.status).toBe(200);
+    expect(res.body.stt).toEqual({ available: false, reason: "no model" });
     expect(res.body.reachable).toBe(false);
   });
 });

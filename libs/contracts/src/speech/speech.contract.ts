@@ -5,6 +5,8 @@ import {
   SpeechStatusSchema,
   SpeechSynthesizeInputSchema,
   SpeechSynthesizeResultSchema,
+  SpeechTranscribeInputSchema,
+  SpeechTranscribeResultSchema,
   SpeechVoiceSchema,
 } from "./speech.schema";
 
@@ -41,6 +43,18 @@ export const speechContract = c.router(
         503: ErrorSchema,
       },
       summary: "Synthesize speech via the local speakd daemon",
+    },
+    transcribe: {
+      method: "POST",
+      path: "/speech/transcribe",
+      body: SpeechTranscribeInputSchema,
+      responses: {
+        200: SpeechTranscribeResultSchema,
+        422: ErrorSchema,
+        503: ErrorSchema,
+      },
+      summary:
+        "Transcribe a dictation clip with local whisper.cpp — 503 when STT is unavailable, 422 when the audio could not be decoded",
     },
     listVoices: {
       method: "GET",

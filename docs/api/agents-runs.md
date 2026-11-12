@@ -30,7 +30,19 @@ gateRuleIds: # references into the global catalog
   - push-to-main
 plugins: # Claude Code plugin dirs (optional), one --plugin-dir each
   - /abs/path/to/pinned-plugin
+engine: opencode # claude | opencode (optional; absent = global SystemConfig.aiEngine)
+engineModel: opencode/big-pickle # opencode provider/model (optional; absent = SystemConfig.opencodeModel)
 ```
+
+`engine` / `engineModel` pick the run engine per agent. The claude engine ignores
+`engineModel` (it keeps using `model`). In `PUT /api/agents/:id`, `engine: null` /
+`engineModel: null` clears the override. Setting or changing either (on create or
+update) needs the operator token (401 without it). The resolved engine is recorded on every run:
+`AgentRun.engine` and, for opencode, `AgentRun.engineModel` (both absent on claude runs
+and on runs from before engines). A re-run resumes the captured session only when the
+engine is the same; otherwise it starts fresh. An opencode run that can't start (no
+binary, no model, model not in `opencode models`) is refused with a 503 before any run
+record exists. It never falls back to claude. See [ai-engines.md](./ai-engines.md).
 
 `plugins` is how a run gets a plugin at all: runs spawn with
 `--setting-sources ""`, so nothing from `~/.claude/plugins` loads ambiently

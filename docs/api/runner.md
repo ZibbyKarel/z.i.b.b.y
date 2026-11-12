@@ -421,6 +421,60 @@ content containing a decision URL (`touchesOperatorOnly`). Spawned children (age
 strips `ZIBBY_OPERATOR_TOKEN` and `ZIBBY_OPERATOR_TOKEN_FILE`. This is an early denial, not a
 hard boundary — see _Known ceiling_ in `docs/api/approvals.md`.
 
+## Two engines: claude and opencode
+
+Agent runs and workflow agent stages run on `claude -p` (unchanged) or on
+`opencode run`. The engine is `agent.engine ?? SystemConfig.aiEngine`
+(`resolveAiEngine` in `runner/ai-engine.ts`, exposed as
+`ClaudeRunCommandService.resolveEngine`). The full picture is in
+[ai-engines.md](./ai-engines.md).
+
+- **Command.** `ClaudeRunCommandService.buildOpencodeCommand(opts, model)` builds
+  `opencode run --standalone --format json -m <model> --agent zibby [--session <id>] -- <task>`.
+  There is never an `--auto`. The binary is `OPENCODE_BIN ?? "opencode"`, the test seam
+  that mirrors `CLAUDE_BIN`.
+- **Config.** The system prompt (as agent `zibby`), the MCP servers (`mcp.servers`, local or
+  remote, `codemode: false`), `permissions` (`ask *`, plus `deny` for `question`, `execute`,
+  `skill` and every tool the agent's `tools` list lacks) and the gate plugin go in one config. The
+  builder returns it as a string (`RunSpec.opencodeConfig`, persisted with the pending
+  spec); RunnerCore writes it to `<runsDir>/.opencode/<hash>.json` (0600, dir 0700),
+  outside every run's free zone, before every spawn (start and resume), and passes it via
+  `OPENCODE_CONFIG`. It is never written to `~/.config/opencode` or put in the env
+  (`OPENCODE_CONFIG_CONTENT` would leak MCP secrets to every shell command). Inherited
+  `OPENCODE_*` vars are stripped from the child env; `OPENCODE_DISABLE_PROJECT_CONFIG=1`
+  keeps a repo's `opencode.json` from loading. `--standalone` is required, because the
+  background service ignores per-run config.
+- **Gate.** `opencode-gate-plugin/index.mjs` runs `tool.hook("execute.before")` on every
+  tool call, default deny. It maps a known call to a Claude PreToolUse event (shell→Bash,
+  write/edit/read/grep/glob, list→Glob, patch→per-file Write/Edit/`rm`, task→Task,
+  `*ask_operator`, `<server>_<tool>` of the run's MCP servers) and spawns the existing
+  `claude-approval-hook.mjs` on it, with paths judged against `ZIBBY_GATE_CWD` (the real
+  spawn dir) and a tool input's `workdir`/`directory`. The hook applies the same
+  classifier, ledger, free zone and intent-request/decision files. `webfetch`,
+  `websearch` and the todo tools pass without the hook; everything else
+  (`execute`, `skill`, `opencode_*`, `browser_*`, unknown) throws, as does a deny, a hook
+  error, an unparsable patch, a shell command that starts a nested `opencode` / `claude`,
+  and, under a `git` prefix, `git -c` / `--config-env` / `--exec-path` / `!` (see
+  [ai-engines.md](ai-engines.md)). MCP server ids `opencode` and `browser` are never mounted. Calls are serialised, and every decision is appended to
+  `ZIBBY_GATE_LOG`, which RunnerCore copies into the run log (subagent calls included).
+  `permission.hook("evaluate")` then grants the call, never upgrading a config `deny`.
+  Fail-closed: without the plugin, `ask *` auto-rejects every tool. Grants ride
+  `ZIBBY_GRANT_DIRS` (there is no `--add-dir`); `freeDirs()` reads it only for
+  `engine === "opencode"`.
+- **RunnerCore.** `RunSpec.engine` / `engineModel` are copied onto the run. In `wire()`,
+  `run.engine === "opencode"` swaps in `formatOpencodeStreamLine`, sums the cost over
+  `step_finish.part.cost`, and takes the session id from `sessionID`. Every other run keeps
+  the core's `formatLine` and the claude extractors. An opencode run is never scanned for
+  Claude limit lines, and has an idle watchdog: no output byte, gate log line or gate log
+  mtime change for `ZIBBY_OPENCODE_IDLE_MINUTES` (default 10) kills the group and ends it
+  as `error`. The plugin touches the gate log every 30 s while an allowed tool runs, so a
+  long silent tool is not idle. The watchdog is suspended while the run awaits an
+  approval. When the run ends (and when it is deleted) the config and gate log are removed.
+- **Preflight.** `assertOpencodeReady(model)` refuses the run when there is no model, the
+  `opencode models` call fails, or the model is not listed. It throws
+  `OpencodeUnavailableError`, a `ClaudeUnavailableError` subclass, so the same 503 and
+  failed-task mapping applies. It never falls back to claude.
+
 ## `ClaudePreflightService`
 
 Answers "can this machine run `claude -p` right now?" by spawning

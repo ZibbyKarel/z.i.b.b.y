@@ -63,6 +63,18 @@ describe("RunDetailHeader", () => {
     projectsRef.current = [];
   });
 
+  it("shows engine and model for an opencode run, nothing for a Claude run", () => {
+    renderHeader({ engine: "opencode", engineModel: "opencode/big-pickle" });
+    expect(screen.getByTestId(RunDetailHeaderTestId.Engine)).toHaveTextContent(
+      "opencode · opencode/big-pickle",
+    );
+  });
+
+  it("renders no engine for a run without the field", () => {
+    renderHeader();
+    expect(screen.queryByTestId(RunDetailHeaderTestId.Engine)).not.toBeInTheDocument();
+  });
+
   it("renders title, state, actions slot and 6 metrics", () => {
     renderHeader();
     expect(screen.getByTestId(RunDetailHeaderTestId.Title)).toHaveTextContent("Fix login");
