@@ -28,6 +28,12 @@ export const Overview: Story = {
           ]}
         />
         <UsagePanel items={[{ label: "5H", value: 12 }]} />
+        <UsagePanel
+          items={[
+            { label: "30 DNÍ", stat: "$1.24" },
+            { label: "TOKENY", stat: "412k" },
+          ]}
+        />
       </Stack>
     </div>
   ),

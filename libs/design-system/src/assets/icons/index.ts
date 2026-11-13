@@ -69,6 +69,9 @@ import { upgrade } from "./upgrade";
 import { github } from "./github";
 import { gitlab } from "./gitlab";
 import { jira } from "./jira";
+import { claude } from "./claude";
+import { openai } from "./openai";
+import { opencode } from "./opencode";
 
 /** Every glyph available in the dashboard icon set. */
 export const iconNames = [
@@ -141,6 +144,9 @@ export const iconNames = [
   "github",
   "gitlab",
   "jira",
+  "claude",
+  "openai",
+  "opencode",
 ] as const;
 
 export type IconName = (typeof iconNames)[number];
@@ -216,4 +222,7 @@ export const paths: Record<IconName, ReactNode> = {
   github,
   gitlab,
   jira,
+  claude,
+  openai,
+  opencode,
 };

@@ -11,15 +11,18 @@ export enum UsagePanelTestId {
   Label = "usage-panel-label",
   Reset = "usage-panel-reset",
   Divider = "usage-panel-divider",
+  Stat = "usage-panel-stat",
 }
 
 export interface UsagePanelItem {
   /** Short window label, e.g. `"5H"` or `"WEEK"` (rendered uppercase). */
   label: string;
   /** Used share of the window, 0–100. */
-  value: number;
+  value?: number;
   /** Pre-formatted time until the window resets, e.g. `"2h 22m"`; omitted → no line. */
   resetsIn?: string;
+  /** Text readout shown instead of the ring (a family without session windows), e.g. `"$1.24"`. `value`/`resetsIn` are ignored when set. */
+  stat?: string;
 }
 
 export interface UsagePanelProps {
@@ -54,7 +57,7 @@ export function UsagePanel({ items, ref }: UsagePanelProps) {
       ref={ref}
     >
       {items.map((item, index) => {
-        const pct = Math.max(0, Math.min(100, item.value));
+        const pct = Math.max(0, Math.min(100, item.value ?? 0));
         return (
           <div className="contents" key={item.label}>
             {index > 0 ? (
@@ -68,68 +71,87 @@ export function UsagePanel({ items, ref }: UsagePanelProps) {
               className="flex items-center gap-2"
               data-testid={`${UsagePanelTestId.Item}-${index}`}
             >
-              <span
-                aria-label={item.label}
-                aria-valuemax={100}
-                aria-valuemin={0}
-                aria-valuenow={Math.round(pct)}
-                className="relative inline-flex size-[34px] shrink-0 items-center justify-center"
-                data-testid={UsagePanelTestId.Ring}
-                role="meter"
-              >
-                <svg
-                  aria-hidden
-                  className="absolute inset-0 -rotate-90"
-                  height={RING_SIZE}
-                  viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
-                  width={RING_SIZE}
-                >
-                  <circle
-                    className="stroke-line-2"
-                    cx={RING_SIZE / 2}
-                    cy={RING_SIZE / 2}
-                    fill="none"
-                    r={r}
-                    strokeWidth={RING_STROKE}
-                  />
-                  <circle
-                    className={cn(
-                      "transition-[stroke-dasharray] duration-400 ease-out",
-                      ringTone(pct),
-                    )}
-                    cx={RING_SIZE / 2}
-                    cy={RING_SIZE / 2}
-                    data-testid={UsagePanelTestId.Fill}
-                    fill="none"
-                    r={r}
-                    strokeDasharray={`${(pct / 100) * circumference} ${circumference}`}
-                    strokeLinecap="round"
-                    strokeWidth={RING_STROKE}
-                  />
-                </svg>
-                <span
-                  className="relative font-mono text-[10px] font-semibold tabular-nums text-ink"
-                  data-testid={UsagePanelTestId.Value}
-                >
-                  {Math.round(pct)}%
-                </span>
-              </span>
-              <span className="flex flex-col gap-px">
-                <span
-                  className="font-sans text-[9px] font-semibold uppercase tracking-[.14em] text-ink-3"
-                  data-testid={UsagePanelTestId.Label}
-                >
-                  {item.label}
-                </span>
-                {item.resetsIn ? (
+              {item.stat !== undefined ? (
+                <span className="flex h-[34px] flex-col justify-center gap-px">
                   <span
-                    className="font-mono text-[10px] tabular-nums text-ink-2"
-                    data-testid={UsagePanelTestId.Reset}
+                    className="font-sans text-[9px] font-semibold uppercase tracking-[.14em] text-ink-3"
+                    data-testid={UsagePanelTestId.Label}
                   >
-                    −{item.resetsIn}
+                    {item.label}
                   </span>
-                ) : null}
-              </span>
+                  <span
+                    className="font-mono text-[13px] font-semibold tabular-nums leading-none text-ink"
+                    data-testid={UsagePanelTestId.Stat}
+                  >
+                    {item.stat}
+                  </span>
+                </span>
+              ) : (
+                <>
+                  <span
+                    aria-label={item.label}
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={Math.round(pct)}
+                    className="relative inline-flex size-[34px] shrink-0 items-center justify-center"
+                    data-testid={UsagePanelTestId.Ring}
+                    role="meter"
+                  >
+                    <svg
+                      aria-hidden
+                      className="absolute inset-0 -rotate-90"
+                      height={RING_SIZE}
+                      viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+                      width={RING_SIZE}
+                    >
+                      <circle
+                        className="stroke-line-2"
+                        cx={RING_SIZE / 2}
+                        cy={RING_SIZE / 2}
+                        fill="none"
+                        r={r}
+                        strokeWidth={RING_STROKE}
+                      />
+                      <circle
+                        className={cn(
+                          "transition-[stroke-dasharray] duration-400 ease-out",
+                          ringTone(pct),
+                        )}
+                        cx={RING_SIZE / 2}
+                        cy={RING_SIZE / 2}
+                        data-testid={UsagePanelTestId.Fill}
+                        fill="none"
+                        r={r}
+                        strokeDasharray={`${(pct / 100) * circumference} ${circumference}`}
+                        strokeLinecap="round"
+                        strokeWidth={RING_STROKE}
+                      />
+                    </svg>
+                    <span
+                      className="relative font-mono text-[10px] font-semibold tabular-nums text-ink"
+                      data-testid={UsagePanelTestId.Value}
+                    >
+                      {Math.round(pct)}%
+                    </span>
+                  </span>
+                  <span className="flex flex-col gap-px">
+                    <span
+                      className="font-sans text-[9px] font-semibold uppercase tracking-[.14em] text-ink-3"
+                      data-testid={UsagePanelTestId.Label}
+                    >
+                      {item.label}
+                    </span>
+                    {item.resetsIn ? (
+                      <span
+                        className="font-mono text-[10px] tabular-nums text-ink-2"
+                        data-testid={UsagePanelTestId.Reset}
+                      >
+                        −{item.resetsIn}
+                      </span>
+                    ) : null}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         );
