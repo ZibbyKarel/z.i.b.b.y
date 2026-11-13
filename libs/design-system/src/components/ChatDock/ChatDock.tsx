@@ -118,7 +118,9 @@ export function ChatDock({
     if (!isOpen) return;
     const active = document.activeElement;
     if (active && active !== document.body) return;
-    composerRef.current?.querySelector<HTMLElement>("textarea, input")?.focus();
+    composerRef.current
+      ?.querySelector<HTMLElement>("textarea, input:not([type=file]):not([type=hidden])")
+      ?.focus();
   }, [isOpen]);
 
   // Esc closes an open dock from anywhere. A nested control that consumes Esc

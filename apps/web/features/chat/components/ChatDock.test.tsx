@@ -393,6 +393,12 @@ describe("ChatDock (ZB-12)", () => {
     expect(screen.getAllByTestId(TypingDotsTestId.Dot)).toHaveLength(3);
   });
 
+  it("focuses the message box (not the hidden file input) after opening from the bubble", async () => {
+    renderDock({ open: false });
+    await userEvent.setup().click(screen.getByTestId(DockFrameTestId.Launcher));
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveFocus();
+  });
+
   it("sends after opening from the bubble when the server has no active thread (mints after hydration settles)", async () => {
     transcriptState.isError = true;
     renderDock({ open: false });
