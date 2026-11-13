@@ -59,3 +59,11 @@ export const Playground: Story = {
     );
   },
 };
+
+export const FillReadOnly: Story = {
+  render: () => (
+    <div className="flex h-[320px] flex-col">
+      <MarkdownEditor fill readOnly label="note.md" onChange={() => {}} value={SAMPLE} />
+    </div>
+  ),
+};

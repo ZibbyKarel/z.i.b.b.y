@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { render } from "../../utils/testRender";
@@ -101,6 +101,17 @@ describe("ChatDock", () => {
     );
     expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveClass("grow", "basis-[440px]");
     expect(screen.queryByTestId("chat-dock-expand-button")).toBeNull();
+  });
+
+  it("renders headerStart in the header", () => {
+    const { rerender } = render(
+      <ChatDock defaultOpen composer={composer} headerStart={<span>pick</span>} />,
+    );
+    expect(
+      within(screen.getByTestId(ChatDockTestId.Header)).getByTestId(ChatDockTestId.HeaderStart),
+    ).toHaveTextContent("pick");
+    rerender(<ChatDock defaultOpen composer={composer} />);
+    expect(screen.queryByTestId(ChatDockTestId.HeaderStart)).toBeNull();
   });
 
   it("renders the target chip slot when provided", () => {

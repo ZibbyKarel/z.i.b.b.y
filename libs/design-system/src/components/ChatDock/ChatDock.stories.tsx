@@ -86,3 +86,12 @@ export const Playground: Story = {
     return <Controlled />;
   },
 };
+
+export const WithHeaderStart: Story = {
+  args: { composer, defaultOpen: true, headerStart: <Chip>Project: zibby</Chip> },
+  render: (args) => (
+    <div className="flex h-[640px] items-end">
+      <ChatDock {...args} transcript={transcript} />
+    </div>
+  ),
+};
