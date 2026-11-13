@@ -7,7 +7,7 @@ export interface MetricStripItem {
   value: ReactNode;
   /** Small caption beneath the value (e.g. a delta or a unit note). */
   hint?: string;
-  /** An action under the value (e.g. a small button acting on this metric). */
+  /** An action on the value's row (e.g. a small button acting on this metric). */
   action?: ReactNode;
   /** Stable id: the column's test id becomes `metric-strip-item-<id>` instead of its index. */
   id?: string;
@@ -18,6 +18,7 @@ export enum MetricStripTestId {
   /** Each column is suffixed with its `id` or index, e.g. `metric-strip-item-0`. */
   Item = "metric-strip-item",
   Label = "metric-strip-label",
+  ValueRow = "metric-strip-value-row",
   Value = "metric-strip-value",
   Hint = "metric-strip-hint",
   Action = "metric-strip-action",
@@ -60,19 +61,24 @@ export function MetricStrip({ items, columns, ref, ...rest }: MetricStripProps) 
           <Typography data-testid={MetricStripTestId.Label} tracking="wider" type="labelSm">
             {item.label}
           </Typography>
-          <Typography as="div" data-testid={MetricStripTestId.Value} type="metric">
-            {item.value}
-          </Typography>
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid={MetricStripTestId.ValueRow}
+          >
+            <Typography as="div" data-testid={MetricStripTestId.Value} type="metric">
+              {item.value}
+            </Typography>
+            {item.action ? (
+              <div className="flex flex-wrap gap-1" data-testid={MetricStripTestId.Action}>
+                {item.action}
+              </div>
+            ) : null}
+          </div>
           {item.hint && (
             <Typography data-testid={MetricStripTestId.Hint} type="caption" variant="secondary">
               {item.hint}
             </Typography>
           )}
-          {item.action ? (
-            <div className="flex flex-wrap gap-1 pt-1" data-testid={MetricStripTestId.Action}>
-              {item.action}
-            </div>
-          ) : null}
         </div>
       ))}
     </div>

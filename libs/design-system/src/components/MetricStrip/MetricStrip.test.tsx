@@ -58,6 +58,10 @@ describe("MetricStrip", () => {
     const item = screen.getByTestId(`${MetricStripTestId.Item}-state`);
     expect(item).toHaveTextContent("Draft");
     expect(screen.getByTestId(MetricStripTestId.Action)).toHaveTextContent("Ready");
+    const row = screen.getByTestId(MetricStripTestId.ValueRow);
+    expect(row).toContainElement(screen.getByTestId(MetricStripTestId.Value));
+    expect(row).toContainElement(screen.getByTestId(MetricStripTestId.Action));
+    expect(row.className).toContain("flex-wrap");
   });
 
   it("renders no action slot when an item has none", () => {

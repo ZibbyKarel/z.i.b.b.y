@@ -9,6 +9,7 @@ import {
   CopyableText,
   Icon,
   type IconName,
+  IconTile,
   type IconTone,
   Markdown,
   MenuButton,
@@ -37,7 +38,15 @@ import { ConfirmDeleteDialog } from "../../../../components/ConfirmDeleteDialog/
 import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { PrActionButtons, PrFixCiButton } from "../../../inbox/components/PrActionButtons";
 import { PrReviewButton } from "../../../inbox/components/PrReviewButton";
-import { chainKey, itemKey, linkedPrOf, prBaseLabel, prChildren } from "../../../inbox/inbox";
+import {
+  chainKey,
+  itemKey,
+  linkedPrOf,
+  prBaseLabel,
+  prChildren,
+  prListHref,
+} from "../../../inbox/inbox";
+import { sourceIcon } from "../../../integrations/kindIcon";
 import { issueHref } from "../../../inbox/components/IssueRow";
 import { isFixCi, isMine } from "../../../inbox/state/prActions";
 import { EntityRunList, prRunTone } from "../../../runs/components/EntityRunList";
@@ -86,6 +95,7 @@ export enum PrSheetTestId {
   Overview = "pr-sheet-overview",
   Changes = "pr-sheet-changes",
   IssueLink = "pr-sheet-issue-link",
+  IssueSource = "pr-sheet-issue-source",
   DescriptionTruncated = "pr-sheet-description-truncated",
 }
 
@@ -201,9 +211,10 @@ function errorReason(err: unknown): string {
 /**
  * PR detail. Header: `PULL REQUEST · #n` (copyable), the title (links to GitHub), then
  * `head → base` (each copyable) with the diffstat; actions top-right with a ⋯ menu holding
- * "Close pull request" (confirmed). Summary strip (the run detail's look): State (draft toggle on
- * my PR) | Checks (Fix CI when red) | Issue (only when linked) | Author | Project. Then runs +
- * reviewers, the stack, the conversation, and Overview (description) / Changes (diff) tabs.
+ * "Close pull request" (confirmed); the header ends with the stack row (crumbs open that PR).
+ * Summary strip (the run detail's look): State (draft toggle on my PR) | Checks (Fix CI when red)
+ * | Issue (source icon + key, only when linked) | Author | Project, with the Reviewers tree beside
+ * it. Then runs, the conversation, and Overview (description) / Changes (diff) tabs.
  */
 export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
   const t = useTranslations();
@@ -305,21 +316,38 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
             label: t("bridge.sheet.pr.issue"),
             value: (
               <Stack wrap direction="row" gap="100">
-                {issues.map((i) => (
-                  <Pressable
-                    data-testid={PrSheetTestId.IssueLink}
-                    key={chainKey(i)}
-                    onClick={() =>
-                      onOpen
-                        ? onOpen(selectionFor("issue", chainKey(i)))
-                        : router.push(issueHref(i) as Route)
-                    }
-                  >
-                    <Typography as="span" type="code">
-                      {`${itemKey(i)} →`}
-                    </Typography>
-                  </Pressable>
-                ))}
+                {issues.map((i) => {
+                  const label = t(`inboxPage.source.${i.source.kind}`);
+                  return (
+                    <Pressable
+                      data-testid={PrSheetTestId.IssueLink}
+                      key={chainKey(i)}
+                      onClick={() =>
+                        onOpen
+                          ? onOpen(selectionFor("issue", chainKey(i)))
+                          : router.push(issueHref(i) as Route)
+                      }
+                    >
+                      <Stack inline align="center" direction="row" gap="75">
+                        <IconTile
+                          {...sourceIcon(i.source.kind)}
+                          alt={label}
+                          aria-label={label}
+                          data-testid={PrSheetTestId.IssueSource}
+                          filled={false}
+                          radius="sm"
+                          role="img"
+                          size="xs"
+                          title={label}
+                          tone="neutral"
+                        />
+                        <Typography as="span" type="code">
+                          {itemKey(i)}
+                        </Typography>
+                      </Stack>
+                    </Pressable>
+                  );
+                })}
               </Stack>
             ),
           },
@@ -416,42 +444,47 @@ export function PrSheet({ id, anchor, onClose, onOpen }: SheetProps) {
       title={pr.title}
       titleHref={pr.url}
       tone={tone}
+      trail={
+        path.length > 1 ? (
+          <StackCrumbs
+            crumbs={path.map((p) => ({
+              id: p.url,
+              label: `#${p.number}`,
+              tone: TONE[prStatus(p).tone],
+              current: p.url === pr.url,
+              ...(p.url !== pr.url && {
+                onSelect: () =>
+                  onOpen
+                    ? onOpen(selectionFor("pr", p.url))
+                    : router.push(prListHref(p.url) as Route),
+              }),
+            }))}
+            label={t("bridge.sheet.pr.stack")}
+          />
+        ) : undefined
+      }
     >
       <Container data-testid={PrSheetTestId.Summary} padding={["150", "300", "0", "300"]}>
-        <MetricStrip columns={summary.length === 5 ? 5 : 4} items={summary} />
+        <Row wrap align="start" gap="300">
+          <Container grow minW0>
+            <MetricStrip columns={summary.length === 5 ? 5 : 4} items={summary} />
+          </Container>
+          {hasReviewers ? <PrReviewers number={pr.number} projectId={pr.projectId} /> : null}
+        </Row>
       </Container>
-      {runRows.length > 0 || hasReviewers ? (
+      {runRows.length > 0 ? (
         <SheetSection>
-          {/* Runs on the left, the Reviewers tree on the same row at the far right (todo-5). */}
-          <Row wrap align="start" gap="300" justify={runRows.length > 0 ? "between" : "end"}>
-            {runRows.length > 0 ? (
-              <Container grow minW0>
-                <SheetBlock label={t("runs.entity.title")}>
-                  <EntityRunList
-                    onOpen={(runId) =>
-                      onOpen
-                        ? onOpen(selectionFor("run", runId))
-                        : router.push(`/activity/runs/${runId}` as Route)
-                    }
-                    rows={runRows}
-                  />
-                </SheetBlock>
-              </Container>
-            ) : null}
-            {hasReviewers ? <PrReviewers number={pr.number} projectId={pr.projectId} /> : null}
-          </Row>
+          <SheetBlock label={t("runs.entity.title")}>
+            <EntityRunList
+              onOpen={(runId) =>
+                onOpen
+                  ? onOpen(selectionFor("run", runId))
+                  : router.push(`/activity/runs/${runId}` as Route)
+              }
+              rows={runRows}
+            />
+          </SheetBlock>
         </SheetSection>
-      ) : null}
-      {path.length > 1 ? (
-        <StackCrumbs
-          crumbs={path.map((p) => ({
-            id: p.url,
-            label: `#${p.number}`,
-            tone: TONE[prStatus(p).tone],
-            current: p.url === pr.url,
-          }))}
-          label={t("bridge.sheet.pr.stack")}
-        />
       ) : null}
       {threads?.length ? (
         <SheetSection>
