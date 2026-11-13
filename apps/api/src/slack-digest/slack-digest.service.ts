@@ -8,6 +8,7 @@ import {
 } from "../chat/chat-session.service";
 import { DuplicateNoteError, VaultService } from "../memory/vault.service";
 import { TodoStore } from "../todo/todo.store";
+import { MarketplacesService } from "../marketplaces/marketplaces.service";
 import { SkillsStorageService } from "../skills/skills.storage.service";
 import { LoggerService, type ScopedLogger } from "../shared/logging/logger.service";
 import { spawnClaudeCli } from "../shared/spawn-claude-cli";
@@ -115,6 +116,7 @@ export class SlackDigestService {
     private readonly skills: SkillsStorageService,
     private readonly vault: VaultService,
     private readonly todos: TodoStore,
+    private readonly marketplaces: MarketplacesService,
   ) {
     this.log = logger.child(SlackDigestService.name);
   }
@@ -122,14 +124,18 @@ export class SlackDigestService {
   /** Never throws; returns the scheduler ref. */
   async run(date: string = pragueDate()): Promise<string> {
     try {
-      const skill = await this.skills.get(SLACK_DIGEST_SKILL_ID).catch(() => null);
-      if (!skill) {
+      // The skill ships in the operator's marketplace plugin (`zibby:slack-daily-digest`);
+      // a same-id own/external skill is the fallback.
+      const instructions =
+        (await this.marketplaces.skillInstructions(SLACK_DIGEST_SKILL_ID).catch(() => null)) ??
+        (await this.skills.get(SLACK_DIGEST_SKILL_ID).catch(() => null))?.instructions;
+      if (!instructions) {
         this.log.warn("slack digest skill missing", { skill: SLACK_DIGEST_SKILL_ID });
         return "slack-digest:error";
       }
       let out: string;
       try {
-        out = (await this.spawn(buildArgs(`${skill.instructions}\n\nDate: ${date}`))).trim();
+        out = (await this.spawn(buildArgs(`${instructions}\n\nDate: ${date}`))).trim();
       } catch (error) {
         this.log.warn("slack digest turn failed", { error: String(error) });
         return "slack-digest:error";

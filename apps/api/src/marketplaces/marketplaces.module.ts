@@ -24,5 +24,6 @@ import {
     MarketplaceCli,
     MarketplacesService,
   ],
+  exports: [MarketplacesService],
 })
 export class MarketplacesModule {}

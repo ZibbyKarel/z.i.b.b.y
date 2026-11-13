@@ -238,6 +238,12 @@ describe("MarketplacesService", () => {
         plugin: "zibby",
       },
     ]);
+    // The body (frontmatter stripped) of an installed skill, by bare name; unknown → null.
+    const body = await svc.skillInstructions("standup-post");
+    expect(body).toEqual(expect.any(String));
+    expect(body).not.toContain("description:");
+    expect(await svc.skillInstructions("nope")).toBeNull();
+    expect(await svc.skillInstructions("../standup-post")).toBeNull();
   });
 
   it("refuses to replace an installPath outside the plugins cache — and rolls the add back", async () => {

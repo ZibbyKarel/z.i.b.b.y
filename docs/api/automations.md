@@ -333,7 +333,7 @@ note left untouched when the pass fails. See _Slack digests_ in `docs/api/memory
 
 Default cron `0 22 * * *` (Europe/Prague), on by default.
 `SlackDigestService.run(date = today)` (`apps/api/src/slack-digest/slack-digest.service.ts`)
-loads the `slack-daily-digest` skill (a recipe in `recipes/skills/`) and spawns one headless
+loads the `slack-daily-digest` skill — from an installed managed-marketplace plugin (`zibby:slack-daily-digest`, via `MarketplacesService.skillInstructions`), falling back to an own/external skill with that id — and spawns one headless
 `claude -p` turn (model `sonnet`) that reads the operator's Slack for the day and returns a
 Czech digest. **Requires the operator to be logged into claude.ai with the Slack
 connector** — the turn loads the user settings (`--setting-sources user`, hooks, CLAUDE.md

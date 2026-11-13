@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { TodoStore } from "../todo/todo.store";
+import type { MarketplacesService } from "../marketplaces/marketplaces.service";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import { VaultService } from "../memory/vault.service";
 import {
@@ -50,13 +51,19 @@ describe("SlackDigestService", () => {
     },
   } as unknown as SkillsStorageService;
 
+  let marketSkill: string | null = null;
+  const marketplaces = {
+    skillInstructions: async () => marketSkill,
+  } as unknown as MarketplacesService;
+
   beforeEach(async () => {
+    marketSkill = null;
     dir = await fs.mkdtemp(path.join(os.tmpdir(), "slack-digest-"));
     vault = new VaultService(dir);
     await vault.onModuleInit();
     created = [];
     todoFail = false;
-    svc = new FakeSpawnService(logger as never, skills, vault, todos);
+    svc = new FakeSpawnService(logger as never, skills, vault, todos, marketplaces);
   });
   afterEach(async () => {
     await fs.rm(dir, { recursive: true, force: true });
@@ -115,12 +122,20 @@ describe("SlackDigestService", () => {
     await expect(vault.note("slack-index")).rejects.toThrow();
   });
 
+  it("prefers the marketplace skill over a same-id own skill", async () => {
+    marketSkill = "MARKET SKILL";
+    svc.next = "NO_ACTIVITY";
+    await svc.run("2026-11-12");
+    expect(svc.calls[0]?.[1]).toBe("MARKET SKILL\n\nDate: 2026-11-12");
+  });
+
   it("a missing skill returns an error ref without spawning", async () => {
     const noSkill = new FakeSpawnService(
       logger as never,
       { get: async () => Promise.reject(new Error("nf")) } as unknown as SkillsStorageService,
       vault,
       todos,
+      marketplaces,
     );
     expect(await noSkill.run("2026-11-12")).toBe("slack-digest:error");
     expect(noSkill.calls).toEqual([]);

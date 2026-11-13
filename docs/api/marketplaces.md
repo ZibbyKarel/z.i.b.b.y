@@ -39,6 +39,9 @@ ZIBBY run. Design: `docs/plans/2026-10-26-marketplaces.md`.
   mutation and skips the CLI for a marketplace already removed in the terminal.
 - Installing an already-installed plugin makes no CLI call (dev: relink; normal: 409).
   The list stays up (counts read 0) when the CLI is unavailable.
+- `MarketplacesService.skillInstructions(name)` returns the `SKILL.md` body of an
+  installed managed-marketplace skill by its bare name (null when absent) — how the
+  `slack-digest` automation reads `zibby:slack-daily-digest`.
 - Runs: `ClaudeRunCommandService` appends `--plugin-dir` for every installed plugin of
   every managed marketplace plus their plugin.json `dependencies` (transitively, any
   marketplace — under `--setting-sources ""` an unloaded dependency makes the CLI drop

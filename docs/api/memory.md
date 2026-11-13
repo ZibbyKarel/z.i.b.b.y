@@ -213,7 +213,8 @@ The lint edits no note, with one exception — Slack digest compaction (below).
 The `slack-digest` system automation (22:00, see `docs/api/automations.md`) stores one
 note per day, id `slack-YYYY-MM-DD` (tag `slack`): a Czech digest of the operator's
 Slack day — per conversation who, where, when, the Slack permalink, what was agreed,
-next steps and deadlines. `slack-index` is the MOC, one line per day.
+next steps and deadlines. `slack-index` is the MOC, one line per day. The digest prompt is the
+`zibby:slack-daily-digest` marketplace skill.
 
 Retention is two-stage:
 

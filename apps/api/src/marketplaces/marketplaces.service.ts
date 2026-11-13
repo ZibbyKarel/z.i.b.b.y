@@ -11,6 +11,7 @@ import type {
 } from "@zibby/contracts";
 import { z } from "zod";
 import { safeJson, withPathLock } from "../shared/file-storage";
+import { parseSkillMd } from "../external-skills/skill-repo";
 import { isValidGitRemote } from "../shared/git-exec";
 import {
   type Catalog,
@@ -230,6 +231,19 @@ export class MarketplacesService {
       }
     }
     return out;
+  }
+
+  /** SKILL.md body of an installed managed-marketplace skill, by its bare name; null when absent. */
+  async skillInstructions(name: string): Promise<string | null> {
+    if (!PLUGIN_NAME_RE.test(name)) return null;
+    const ids = new Set((await this.store.list()).map((r) => r.id));
+    for (const [key, install] of await readInstalledPlugins(this.pluginsDir)) {
+      if (!ids.has(splitPluginKey(key).marketplace)) continue;
+      const file = path.join(install.installPath, "skills", name, "SKILL.md");
+      const text = await fs.readFile(file, "utf8").catch(() => null);
+      if (text !== null) return parseSkillMd(text, name).instructions;
+    }
+    return null;
   }
 
   // --- adding ---------------------------------------------------------------
