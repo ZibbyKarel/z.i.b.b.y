@@ -3717,6 +3717,7 @@
         "fixRefused": "Oprava CI odmítnuta: {reason}",
         "fixFailed": "Opravu CI se nepodařilo spustit.",
         "openTask": "Otevřít úkol",
+        "openRepo": "Repozitář ↗",
         "noRuns": "Na základní větvi zatím neběželo žádné CI.",
         "gitlabDeferred": "GitLab CI se zatím nenačítá.",
         "fixRunning": "Oprava běží",

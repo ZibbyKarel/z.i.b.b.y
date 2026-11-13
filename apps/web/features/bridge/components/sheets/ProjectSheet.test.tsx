@@ -1,5 +1,6 @@
 import type { ProjectCi } from "@zibby/contracts";
 import { AnchoredSheetTestId } from "@zibby/design-system";
+import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
@@ -11,9 +12,10 @@ const h = vi.hoisted(() => ({
   ci: undefined as unknown,
   mutate: vi.fn(),
   fix: {} as Record<string, unknown>,
+  push: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: h.push, replace: vi.fn() }),
   usePathname: () => "/dashboard",
   useSearchParams: () => new URLSearchParams(""),
 }));
@@ -74,22 +76,37 @@ const render = () =>
 
 beforeEach(() => {
   h.mutate.mockReset();
+  h.push.mockReset();
   h.fix = {};
 });
 
 describe("ProjectSheet", () => {
-  it("title links to the repo root and lists workflow → job → steps with the failed one", () => {
+  it("title opens the project page, repo link under it, workflow → job → steps with the failed one", async () => {
     h.ci = ci("failing");
     render();
-    expect(screen.getByTestId(AnchoredSheetTestId.TitleLink)).toHaveAttribute(
-      "href",
-      "https://github.com/acme/app",
+    await userEvent.click(
+      within(screen.getByTestId(AnchoredSheetTestId.Title)).getByRole("button"),
     );
+    expect(h.push).toHaveBeenCalledWith("/projects/acme");
+    expect(screen.queryByTestId(AnchoredSheetTestId.TitleLink)).not.toBeInTheDocument();
+    const repo = screen.getByTestId(ProjectSheetTestId.RepoLink);
+    expect(repo).toHaveAttribute("href", "https://github.com/acme/app");
+    expect(repo).toHaveAttribute("target", "_blank");
     expect(screen.getAllByTestId(ProjectSheetTestId.Workflow)).toHaveLength(1);
     expect(screen.getByTestId(ProjectSheetTestId.Job)).toHaveTextContent("test");
     const steps = screen.getAllByTestId(ProjectSheetTestId.Step);
     expect(steps.map((s) => s.getAttribute("data-state"))).toEqual(["passing", "failing"]);
     expect(steps[1]).toHaveTextContent("2. Run tests");
+  });
+
+  it("no CI yet: title still navigates, no repo link", async () => {
+    h.ci = undefined;
+    render();
+    await userEvent.click(
+      within(screen.getByTestId(AnchoredSheetTestId.Title)).getByRole("button"),
+    );
+    expect(h.push).toHaveBeenCalledWith("/projects/acme");
+    expect(screen.queryByTestId(ProjectSheetTestId.RepoLink)).not.toBeInTheDocument();
   });
 
   it("red CI: discuss in chat + Opravit CI, which calls the fix endpoint", async () => {

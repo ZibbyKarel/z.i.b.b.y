@@ -3717,6 +3717,7 @@
         "fixRefused": "CI fix refused: {reason}",
         "fixFailed": "Could not start the CI fix.",
         "openTask": "Open task",
+        "openRepo": "Repository ↗",
         "noRuns": "No CI has run on the base branch yet.",
         "gitlabDeferred": "GitLab CI is not read yet.",
         "fixRunning": "Fix in progress",
