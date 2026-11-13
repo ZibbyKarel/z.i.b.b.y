@@ -159,6 +159,32 @@ describe("SttService", () => {
     await expect(new SttService().transcribe(clip)).rejects.toBeInstanceOf(SttUnavailableError);
   });
 
+  it("transcribePcm posts a WAV built from the PCM straight to Hex — no ffmpeg", async () => {
+    writeDiscovery();
+    const fetchMock = stubFetch(async () => ok("Ahoj [BLANK_AUDIO]"));
+    const pcm = Buffer.alloc(3200, 1);
+    expect(await new SttService().transcribePcm(pcm, "en")).toBe("Ahoj");
+    expect(mocks.execFile).not.toHaveBeenCalled();
+
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("http://127.0.0.1:4321/transcriptions?model=parakeet_v3&language=en");
+    const body = Buffer.from(init.body as Uint8Array);
+    expect(body.subarray(0, 4).toString("ascii")).toBe("RIFF");
+    expect(body.readUInt32LE(40)).toBe(pcm.length);
+    expect(body.length).toBe(44 + pcm.length);
+  });
+
+  it("transcribePcm shares the error mapping and needs only Hex", async () => {
+    await expect(new SttService().transcribePcm(Buffer.alloc(2))).rejects.toBeInstanceOf(
+      SttUnavailableError,
+    );
+    writeDiscovery();
+    stubFetch(async () => new Response("{}", { status: 400 }));
+    await expect(new SttService().transcribePcm(Buffer.alloc(2))).rejects.toBeInstanceOf(
+      SttTranscriptionError,
+    );
+  });
+
   it("turns an ffmpeg failure into SttTranscriptionError without calling Hex", async () => {
     writeDiscovery();
     const fetchMock = stubFetch(async () => ok());
