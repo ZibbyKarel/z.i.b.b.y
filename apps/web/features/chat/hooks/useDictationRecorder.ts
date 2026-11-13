@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranscribeSpeechMutation } from "../mutations";
+import { OPERATOR_TOKEN_HEADER } from "@zibby/contracts";
+import { API_URL } from "../../../state/api";
+import { readOperatorToken } from "../../../state/operatorToken";
+import {
+  useFinishDictationMutation,
+  useStartDictationMutation,
+  useTranscribeSpeechMutation,
+} from "../mutations";
 import type { SpeechRecognitionErrorKind } from "./useSpeechRecognition";
 
 export type DictationRecorderState = "idle" | "recording" | "transcribing";
@@ -34,8 +41,8 @@ export interface DictationRecorder {
 const AUDIO_BITS_PER_SECOND = 32_000;
 /** Auto-stop (and transcribe) a recording that runs this long. */
 const MAX_RECORDING_MS = 180_000;
-/** MediaRecorder timeslice: a chunk (and so an interim transcription) every 2 s. */
-const INTERIM_SLICE_MS = 2_000;
+/** MediaRecorder timeslice: a chunk streams to the dictation session every 250 ms. */
+const CHUNK_SLICE_MS = 250;
 
 const MIME_CANDIDATES = [
   "audio/webm;codecs=opus",
@@ -65,12 +72,97 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+interface DictationStream {
+  /** Queue one recorded chunk; uploads run strictly one at a time, in order. */
+  push: (chunk: Blob) => void;
+  /** Drain the uploads and finish the session: the full transcript, or `null` when the stream failed. */
+  finish: () => Promise<string | null>;
+  close: () => void;
+}
+
+interface DictationStreamDeps {
+  mimeType: string;
+  language: string;
+  startSession: (body: { mimeType: string; language: string }) => Promise<string>;
+  finishSession: (id: string) => Promise<string>;
+  onInterim: (text: string) => void;
+}
+
+async function uploadChunk(id: string, chunk: Blob): Promise<void> {
+  const res = await fetch(`${API_URL}/api/speech/dictation/${id}/audio`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/octet-stream",
+      [OPERATOR_TOKEN_HEADER]: readOperatorToken(),
+    },
+    body: chunk,
+  });
+  if (!res.ok) throw new Error(`upload ${res.status}`);
+}
+
+/**
+ * One streaming dictation session. Any failure (start, upload, SSE drop) marks the
+ * stream `failed`: it stops uploading and `finish()` resolves `null` so the caller
+ * falls back to a one-shot transcription of the locally kept chunks. Chunks pushed
+ * before the session id arrives wait in the same promise chain.
+ */
+function openDictationStream(deps: DictationStreamDeps): DictationStream {
+  let failed = false;
+  let closed = false;
+  let source: EventSource | undefined;
+  const fail = () => {
+    failed = true;
+    source?.close();
+  };
+  const idPromise = deps.startSession({ mimeType: deps.mimeType, language: deps.language });
+  let queue: Promise<void> = idPromise.then((id) => {
+    if (closed || typeof EventSource === "undefined") return;
+    source = new EventSource(`${API_URL}/api/speech/dictation/${id}/events`);
+    source.onmessage = (event) => {
+      try {
+        const update = JSON.parse(event.data) as { text: string; final: boolean };
+        if (!update.final) deps.onInterim(update.text.trim());
+        else source?.close();
+      } catch {
+        // a malformed frame is ignored; the finish call carries the real transcript
+      }
+    };
+    // The stream ended (or broke) before finish: the session is gone or unreachable.
+    source.onerror = fail;
+  }, fail);
+  return {
+    push: (chunk) => {
+      queue = queue
+        .then(async () => {
+          if (!failed) await uploadChunk(await idPromise, chunk);
+        })
+        .catch(fail);
+    },
+    finish: async () => {
+      await queue;
+      if (failed) return null;
+      try {
+        return await deps.finishSession(await idPromise);
+      } catch {
+        return null;
+      } finally {
+        source?.close();
+      }
+    },
+    close: () => {
+      closed = true;
+      source?.close();
+    },
+  };
+}
+
 /**
  * Dictation by recording (Decision B4): `start` opens the mic and collects chunks
- * with `MediaRecorder`; `stop` builds the blob, base64-encodes it and sends it to
- * `POST /api/speech/transcribe`, then hands the text to `onFinal`. While
- * recording, the cumulative clip is re-transcribed (one request at a time, failures
- * silent) to expose a progressive `interim`. A transcript is always delivered while
+ * with `MediaRecorder`. Chunks stream to a dictation session
+ * (`docs/api/speech.md`), whose SSE updates drive `interim`; `stop` finishes the
+ * session and hands the full text to `onFinal`. If the stream fails at any point the
+ * locally kept chunks are sent to `POST /api/speech/transcribe` in one shot instead
+ * (no live text, but the final transcript still arrives). A transcript is always delivered while
  * the hook is mounted — even if recording was restarted meanwhile
  * (several transcriptions may overlap).
  * Unmounting discards a recording in progress and any pending result.
@@ -85,37 +177,63 @@ export function useDictationRecorder({
   const [interim, setInterim] = useState("");
   const [supported] = useState(isSupported);
   const transcribe = useTranscribeSpeechMutation();
+  const startDictation = useStartDictationMutation();
+  const finishDictation = useFinishDictationMutation();
   // `recId` guards a stale getUserMedia (stop/unmount before the mic opened);
   // it is deliberately NOT consulted when delivering transcripts.
   const recId = useRef(0);
   const starting = useRef(false);
   const mounted = useRef(true);
   const recorder = useRef<MediaRecorder | null>(null);
-  const callbacks = useRef({ lang, onFinal, onError, mutateAsync: transcribe.mutateAsync });
+  const streams = useRef(new Set<DictationStream>());
+  const callbacks = useRef({
+    lang,
+    onFinal,
+    onError,
+    mutateAsync: transcribe.mutateAsync,
+    startAsync: startDictation.mutateAsync,
+    finishAsync: finishDictation.mutateAsync,
+  });
   useEffect(() => {
-    callbacks.current = { lang, onFinal, onError, mutateAsync: transcribe.mutateAsync };
+    callbacks.current = {
+      lang,
+      onFinal,
+      onError,
+      mutateAsync: transcribe.mutateAsync,
+      startAsync: startDictation.mutateAsync,
+      finishAsync: finishDictation.mutateAsync,
+    };
   });
 
-  const transcribeClip = useCallback(async (chunks: Blob[], type: string, id: number) => {
-    setPending((n) => n + 1);
-    try {
-      const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
-      const { lang: language, mutateAsync } = callbacks.current;
-      const res = await mutateAsync({
-        body: { audioBase64, mimeType: type, language: language.split("-")[0] },
-      });
-      const text = res.status === 200 ? res.body.text.trim() : "";
-      if (text && mounted.current) callbacks.current.onFinal(text);
-    } catch {
-      if (mounted.current) callbacks.current.onError("network");
-    } finally {
-      if (mounted.current) {
-        setPending((n) => n - 1);
-        // Drop the last interim with the final text (same batch); a newer recording owns it.
-        if (recId.current === id) setInterim("");
+  const transcribeClip = useCallback(
+    async (chunks: Blob[], type: string, id: number, stream: DictationStream) => {
+      setPending((n) => n + 1);
+      try {
+        let text = (await stream.finish())?.trim();
+        if (text === undefined) {
+          // Stream failed: one-shot transcription of everything recorded locally.
+          const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
+          const { lang: language, mutateAsync } = callbacks.current;
+          const res = await mutateAsync({
+            body: { audioBase64, mimeType: type, language: language.split("-")[0] },
+          });
+          text = res.status === 200 ? res.body.text.trim() : "";
+        }
+        if (text && mounted.current) callbacks.current.onFinal(text);
+      } catch {
+        if (mounted.current) callbacks.current.onError("network");
+      } finally {
+        stream.close();
+        streams.current.delete(stream);
+        if (mounted.current) {
+          setPending((n) => n - 1);
+          // Drop the last interim with the final text (same batch); a newer recording owns it.
+          if (recId.current === id) setInterim("");
+        }
       }
-    }
-  }, []);
+    },
+    [],
+  );
 
   const start = useCallback(() => {
     if (!isSupported() || recorder.current || starting.current) return;
@@ -131,35 +249,37 @@ export function useDictationRecorder({
         starting.current = false;
         try {
           const mimeType = pickMimeType();
+          const chunks: Blob[] = [];
           const rec = new MediaRecorder(stream, {
             audioBitsPerSecond: AUDIO_BITS_PER_SECOND,
             ...(mimeType ? { mimeType } : {}),
           });
-          const chunks: Blob[] = [];
-          let interimBusy = false; // per recording: one interim request in flight
+          const type = rec.mimeType || mimeType || "audio/webm";
+          const dictation = openDictationStream({
+            mimeType: type,
+            language: callbacks.current.lang.split("-")[0] ?? "cs",
+            startSession: async (body) => {
+              const res = await callbacks.current.startAsync({ body });
+              if (res.status !== 201) throw new Error(`start ${res.status}`);
+              return res.body.id;
+            },
+            finishSession: async (sessionId) => {
+              const res = await callbacks.current.finishAsync({
+                params: { id: sessionId },
+              });
+              if (res.status !== 200) throw new Error(`finish ${res.status}`);
+              return res.body.text;
+            },
+            onInterim: (text) => {
+              if (recId.current === id && mounted.current) setInterim(text);
+            },
+          });
+          streams.current.add(dictation);
           const cap: { id?: ReturnType<typeof setTimeout> } = {};
           rec.ondataavailable = (e) => {
-            if (e.data.size > 0) chunks.push(e.data);
-            if (recorder.current !== rec || rec.state !== "recording" || interimBusy) return;
-            interimBusy = true;
-            const type = rec.mimeType || mimeType || "audio/webm";
-            // Cumulative from the first chunk: the webm header lives only there.
-            // ponytail: re-sends the whole clip every slice; cap the interim window if backend load matters.
-            void (async () => {
-              try {
-                const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
-                const { lang: language, mutateAsync } = callbacks.current;
-                const res = await mutateAsync({
-                  body: { audioBase64, mimeType: type, language: language.split("-")[0] },
-                });
-                if (res.status === 200 && recorder.current === rec && mounted.current)
-                  setInterim(res.body.text.trim());
-              } catch {
-                // Interim is best-effort; the final transcription reports real failures.
-              } finally {
-                interimBusy = false;
-              }
-            })();
+            if (e.data.size === 0) return;
+            chunks.push(e.data);
+            dictation.push(e.data);
           };
           rec.onstop = () => {
             clearTimeout(cap.id);
@@ -167,12 +287,15 @@ export function useDictationRecorder({
             if (recorder.current === rec) recorder.current = null;
             if (!mounted.current) return;
             setRecording(false);
-            if (chunks.length > 0)
-              void transcribeClip(chunks, rec.mimeType || mimeType || "audio/webm", id);
-            else setInterim("");
+            if (chunks.length > 0) void transcribeClip(chunks, type, id, dictation);
+            else {
+              dictation.close();
+              streams.current.delete(dictation);
+              setInterim("");
+            }
           };
           recorder.current = rec;
-          rec.start(INTERIM_SLICE_MS);
+          rec.start(CHUNK_SLICE_MS);
           cap.id = setTimeout(() => rec.state !== "inactive" && rec.stop(), MAX_RECORDING_MS);
         } catch {
           // MediaRecorder rejected the stream/options — don't leave the mic indicator on.
@@ -209,9 +332,11 @@ export function useDictationRecorder({
   }, []);
 
   useEffect(() => {
+    const openStreams = streams.current;
     mounted.current = true;
     return () => {
       mounted.current = false;
+      openStreams.forEach((s) => s.close());
       const rec = recorder.current;
       if (rec && rec.state !== "inactive") rec.stop();
     };

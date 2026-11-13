@@ -171,6 +171,12 @@ Chat UI section, alongside a compact daemon status line from
 per-message UI. STT goes through the backend (local Hex, `docs/api/speech.md`
 _Dictation_) with the browser Web Speech API as fallback; there is no
 command-grammar bridge — a spoken utterance is just a chat message.
+`useDictationRecorder` streams the recording (250 ms `MediaRecorder` chunks,
+uploaded strictly in order) to a dictation session (`docs/api/speech.md`
+_Streaming dictation sessions_): SSE updates feed the live `interim`, `stop`
+finishes the session for the final text. If any stream step fails it falls back
+to one `POST /api/speech/transcribe` of the locally kept chunks (no live text,
+same final transcript).
 
 **ZB-13 — the old immersive chat UI is deleted; `/chat` has no page of its own.**
 `ChatScreen`, `ChatTopBar`, `ChatToolDock`, `DepartmentOrbMap`, `StatusPill` +
