@@ -129,7 +129,8 @@ POST /api/speech/dictation/:id/finish  no body → 200 { text }                 
   unavailable; the session is gone either way, so keep the recording and fall back to
   `POST /speech/transcribe`.
 - Limits: a session with no `audio` upload for 30 s, or older than 4 min, is destroyed (ffmpeg
-  killed, stream completed, later calls `404`). Shutdown (`onModuleDestroy`) kills every ffmpeg.
+  killed, stream completed, later calls `404`). At most 8 sessions are live at once — a further `POST /speech/dictation`
+  answers `503`. Shutdown (`onModuleDestroy`) kills every ffmpeg.
 
 Requirements (macOS): Hex running, and `brew install ffmpeg`.
 

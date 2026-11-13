@@ -41,6 +41,7 @@ vi.mock("./stt.service", async (importOriginal) => ({
 
 import {
   DICTATION_IDLE_MS,
+  DICTATION_MAX_SESSIONS,
   DictationSessionNotFoundError,
   DictationStreamService,
 } from "./dictation-stream.service";
@@ -84,6 +85,16 @@ describe("DictationStreamService", () => {
       SttUnavailableError,
     );
     expect(mocks.spawn).not.toHaveBeenCalled();
+  });
+
+  it("refuses a session past the live-session cap", async () => {
+    for (let i = 0; i < DICTATION_MAX_SESSIONS; i++) {
+      await service.create({ mimeType: "audio/webm" });
+    }
+    await expect(service.create({ mimeType: "audio/webm" })).rejects.toBeInstanceOf(
+      SttUnavailableError,
+    );
+    expect(mocks.spawn).toHaveBeenCalledTimes(DICTATION_MAX_SESSIONS);
   });
 
   it("create → write → finish: chunks reach ffmpeg in order, PCM is transcribed, the stream completes with the final update", async () => {

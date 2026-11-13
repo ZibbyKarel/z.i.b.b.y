@@ -18,6 +18,8 @@ export class DictationSessionNotFoundError extends Error {
 export const DICTATION_IDLE_MS = 30_000;
 /** Hard ceiling on one session, finished or not — bounds a runaway client. */
 export const DICTATION_MAX_MS = 4 * 60_000;
+/** Each live session owns an ffmpeg process — one operator never needs more than a few. */
+export const DICTATION_MAX_SESSIONS = 8;
 
 /**
  * Decode the MediaRecorder stream (webm/opus, mp4/aac) to 16 kHz mono s16le on
@@ -67,6 +69,9 @@ export class DictationStreamService implements OnModuleDestroy {
   constructor(private readonly stt: SttService) {}
 
   async create(input: SpeechDictationStartInput): Promise<{ id: string }> {
+    if (this.sessions.size >= DICTATION_MAX_SESSIONS) {
+      throw new SttUnavailableError("too many live dictations — finish one first");
+    }
     const status = await this.stt.status();
     if (!status.available) throw new SttUnavailableError(status.reason ?? "unknown reason");
     const bin = await findFfmpeg();
