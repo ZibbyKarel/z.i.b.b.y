@@ -31,6 +31,7 @@ import {
   type ResolvedAiEngine,
   opencodeBin,
   resolveAiEngine,
+  resolveRunEngine,
 } from "./ai-engine";
 import { mapTools, toSubagentTools } from "./claude-tools";
 import { GRANT_DIRS_ENV } from "./runner-core";
@@ -619,6 +620,11 @@ export class ClaudeRunCommandService {
    */
   resolveEngine(target: EngineTarget): ResolvedAiEngine {
     return resolveAiEngine(target, this.systemConfig?.current());
+  }
+
+  /** {@link resolveEngine} against the live catalog — what a run and its preflight use (todo-7). */
+  resolveRunEngine(target: EngineTarget): Promise<ResolvedAiEngine> {
+    return resolveRunEngine(target, this.systemConfig?.current());
   }
 
   /**

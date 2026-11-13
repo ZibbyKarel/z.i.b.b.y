@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import type { AiEngine, ModelTier } from "@zibby/contracts";
-import { lacksThinkingVariant, tierConcreteModel } from "../../utils/engine";
+import { catalogIds, lacksThinkingVariant, tierConcreteModel } from "../../utils/engine";
 import { useSystemConfigQuery } from "../system";
 import { useAiEnginesQuery } from "./queries";
 
@@ -27,11 +27,18 @@ export function useThinkingHint({
 }: ThinkingHintInput): string | undefined {
   const t = useTranslations("aiEngine");
   const config = useSystemConfigQuery().data;
-  const models = useAiEnginesQuery().data?.engines.find((e) => e.id === "opencode")?.models;
+  const engines = useAiEnginesQuery().data?.engines;
+  const models = engines?.find((e) => e.id === "opencode")?.models;
   if ((engine || config?.aiEngine) !== "opencode" || !models) return undefined;
   const model =
     engineModel ||
-    tierConcreteModel(tier, "opencode", config?.opencodeTierModels, config?.opencodeModel ?? "");
+    tierConcreteModel(
+      tier,
+      "opencode",
+      config?.opencodeTierModels,
+      config?.opencodeModel ?? "",
+      catalogIds(engines),
+    );
   return lacksThinkingVariant(models, model, thinking)
     ? t("noThinkingVariant", { level: thinking })
     : undefined;

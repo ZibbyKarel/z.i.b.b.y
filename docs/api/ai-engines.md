@@ -81,6 +81,11 @@ else the nearest mapped **higher** tier, else `opencodeModel`. An engine with fe
 models than tiers therefore never fails; with nothing mapped and no `opencodeModel` the
 run is refused as before.
 
+On every run path the mapping is checked against the live catalog (`opencode models`,
+cached ~1 min): a mapped tier whose model is not listed counts as unmapped, so a family
+without that tier falls back (lower first). An empty or unreadable catalog trusts the mapping; an
+explicit `engineModel` is never replaced.
+
 `thinking` becomes a model **variant** on opencode (A26): when the resolved model has no
 explicit `#variant` and opencode's catalog (`opencode api GET /api/model`, cached ~1 min)
 lists a variant whose id equals the effective level (`escalation?.thinking ??
@@ -104,7 +109,11 @@ An agent run passes the agent. A workflow stage passes
 `stageEngineTarget(phase, agent, escalationRung)`: `phase.engine ?? agent.engine`,
 `phase.engineModel ?? agent.engineModel`, tier = `rung.model ?? phase.model ??
 agent.model`. `phase.engine: "claude"` forces the native CLI with the tier alias.
-Both runners go through `ClaudeRunCommandService.resolveEngine`. The run records what it ran on:
+Every run path (agent run, workflow stage and its `preflightEngines` check, chat,
+one-shot) resolves through `resolveRunEngine(target, config)` (agent and workflow via
+`ClaudeRunCommandService.resolveRunEngine`): `resolveAiEngine` with the `opencode models`
+list passed to `resolveTierModel`, skipped for claude and an explicit `engineModel`
+(todo-7). The sync `resolveEngine` stays for engine-only checks, including the Claude-window checks (`stageSpendsClaude`, the scheduler's `targetOffClaude`); they read the mapping without the catalog, so a fallback that crosses providers (a hand-mixed mapping) can disagree with the run there. The run records what it ran on:
 `AgentRun.engine` / `engineModel` and `StageRun.engine` / `engineModel`. Claude runs
 leave both fields absent.
 
@@ -361,7 +370,7 @@ opencode run --standalone --archived --format json -m <model> --agent zibby-ones
   [--session <id> --fork] -- <prompt>
 ```
 
-with the tier mapped like a run (`resolveAiEngine` → `resolveTierModel`, A20; the engine
+with the tier mapped like a run (`resolveRunEngine` → `resolveTierModel` with the live catalog, A20 + todo-7; the engine
 is `SystemConfig.aiEngine`, the advisor's is its stage's). The output is turned into the
 claude CLI's envelope `{ result, total_cost_usd, session_id }`, so every caller's parser is
 unchanged: `result` = the last assistant step's text (a "let me look…" step before a tool

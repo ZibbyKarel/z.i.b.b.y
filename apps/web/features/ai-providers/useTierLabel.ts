@@ -2,8 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import type { AiEngine, ModelTier } from "@zibby/contracts";
-import { tierConcreteModel } from "../../utils/engine";
+import { catalogIds, tierConcreteModel } from "../../utils/engine";
 import { useSystemConfigQuery } from "../system";
+import { useAiEnginesQuery } from "./queries";
 
 /**
  * Returns `(tier, engine?) => "Sonnet"` — the concrete model name of a tier, with no tier label
@@ -14,12 +15,14 @@ import { useSystemConfigQuery } from "../system";
 export function useTierLabel(): (tier: ModelTier, engine?: AiEngine, short?: boolean) => string {
   const t = useTranslations("aiEngine");
   const config = useSystemConfigQuery().data;
+  const listed = catalogIds(useAiEnginesQuery().data?.engines);
   return (tier, engine, short = false) => {
     const model = tierConcreteModel(
       tier,
       engine ?? config?.aiEngine ?? "claude",
       config?.opencodeTierModels,
       config?.opencodeModel ?? "",
+      listed,
     );
     return (short ? model.split("/").pop() : model) || t("notSet");
   };

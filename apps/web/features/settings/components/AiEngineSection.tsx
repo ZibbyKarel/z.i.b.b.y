@@ -10,6 +10,7 @@ import {
   type ModelFamily,
   type ModelTier,
   type SystemConfig,
+  resolveTierModel,
 } from "@zibby/contracts";
 import {
   AiEngineModelPicker,
@@ -17,6 +18,7 @@ import {
   modelFamilyChoice,
   useAiEnginesQuery,
 } from "../../ai-providers";
+import { catalogIds } from "../../../utils/engine";
 import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
@@ -33,6 +35,8 @@ export enum AiEngineSectionTestId {
   Levels = "ai-engine-levels",
   /** Suffixed with the tier, e.g. `ai-engine-level-haiku`. */
   Level = "ai-engine-level",
+  /** Suffixed with the tier; shown on a level that does not run its own mapped model. */
+  LevelFallback = "ai-engine-level-fallback",
 }
 
 /**
@@ -59,6 +63,7 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
   const opencode = engines?.find((e) => e.id === "opencode");
   const models = opencode?.models ?? [];
   const model = config.opencodeModel;
+  const listed = catalogIds(engines);
 
   const { catalogReadable, disconnected, choose } = modelFamilyChoice(
     config,
@@ -164,19 +169,33 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
               <Typography mono size="sm" type="note" variant="secondary">
                 {t("levelsTitle")}
               </Typography>
-              {MODEL_TIERS.map((tier, i) => (
-                <span data-testid={`${AiEngineSectionTestId.Level}-${tier}`} key={tier}>
-                  <AiEngineModelPicker
-                    clearable
-                    quiet
-                    label={t("levelRow", { n: i + 1, name: tier })}
-                    loaded={engines !== undefined}
-                    models={models}
-                    onChange={(id) => chooseTierModel(tier, id)}
-                    value={config.opencodeTierModels[tier] ?? ""}
-                  />
-                </span>
-              ))}
+              {MODEL_TIERS.map((tier, i) => {
+                const runs = resolveTierModel(tier, config.opencodeTierModels, model, listed);
+                return (
+                  <span data-testid={`${AiEngineSectionTestId.Level}-${tier}`} key={tier}>
+                    <AiEngineModelPicker
+                      clearable
+                      quiet
+                      label={t("levelRow", { n: i + 1, name: tier })}
+                      loaded={engines !== undefined}
+                      models={models}
+                      onChange={(id) => chooseTierModel(tier, id)}
+                      value={config.opencodeTierModels[tier] ?? ""}
+                    />
+                    {runs && runs !== config.opencodeTierModels[tier] && (
+                      <Typography
+                        mono
+                        data-testid={`${AiEngineSectionTestId.LevelFallback}-${tier}`}
+                        size="2xs"
+                        type="note"
+                        variant="tertiary"
+                      >
+                        {t("levelFallback", { model: runs })}
+                      </Typography>
+                    )}
+                  </span>
+                );
+              })}
             </Stack>
           </>
         )}

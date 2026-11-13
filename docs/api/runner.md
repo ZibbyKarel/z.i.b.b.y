@@ -514,7 +514,11 @@ Agent runs and workflow agent stages run on `claude -p` (unchanged) or on
 (`resolveAiEngine` in `runner/ai-engine.ts`, exposed as
 `ClaudeRunCommandService.resolveEngine`). On opencode the model is the explicit
 `engineModel`, else the model tier mapped through `SystemConfig.opencodeTierModels`
-(`resolveTierModel` in `@zibby/contracts`), else `opencodeModel`. A workflow stage
+(`resolveTierModel` in `@zibby/contracts`), else `opencodeModel`. A tier whose mapped
+model is unset or missing from the live `opencode models` catalog falls back to the
+nearest lower tier, then the nearest higher one, then `opencodeModel`; an empty or
+unreadable catalog trusts the mapping, and an explicit `engineModel` is never replaced
+(todo-7). The preflight resolves through the same lookup. A workflow stage
 passes `stageEngineTarget(phase, agent, rung)` (phase `engine`/`engineModel` over the
 agent's, tier = rung ?? phase ?? agent); `stageSpendsClaude` checks every attempt. Both
 runners then pass the resolved engine through `applyThinkingVariant(engine, thinking)`

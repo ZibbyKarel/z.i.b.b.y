@@ -21,6 +21,11 @@ import {
   opencodeThinkingNote,
 } from "./workflow-runner.service";
 
+/** A fake ClaudeRunCommandService whose async run lookup follows its (swappable) `resolveEngine`. */
+function withRunEngine(claude: { resolveEngine: (t: never) => unknown; [k: string]: unknown }) {
+  return Object.assign(claude, { resolveRunEngine: async (t: never) => claude.resolveEngine(t) });
+}
+
 /** Minimal logger double matching the LoggerService surface the service uses. */
 const fakeLogger = {
   child: () => ({ info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }),
@@ -111,7 +116,10 @@ async function makeHarness(dir: string): Promise<Harness> {
     dir,
     workflows as never,
     agents as never,
-    { buildClaudeCommand: vi.fn(), resolveEngine: () => ({ engine: "claude" }) } as never,
+    withRunEngine({
+      buildClaudeCommand: vi.fn(),
+      resolveEngine: () => ({ engine: "claude" }),
+    }) as never,
     { materialize: vi.fn(async () => {}) } as never,
     { assertAvailable: vi.fn(), probe: vi.fn() } as never,
     approvals as never,
@@ -712,11 +720,11 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       }));
       const buildClaude = vi.fn();
       let model = "opencode/big-pickle";
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: buildClaude,
         buildOpencodeCommand: buildOpencode,
         resolveEngine: () => ({ engine: "opencode", model }),
-      };
+      });
       try {
         const cmd = await build(agentPhase(), PROJECT);
         expect(cmd).toMatchObject({
@@ -745,11 +753,11 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       process.env.OPENCODE_BIN = bin;
       clearOpencodeCache();
       const resolveEngine = vi.fn(() => ({ engine: "opencode", model: "opencode/big-pickle" }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: vi.fn(),
         buildOpencodeCommand: vi.fn(async () => ({ command: "opencode", args: ["run"] })),
         resolveEngine,
-      };
+      });
       try {
         const cmd = await (
           h.service as unknown as {
@@ -794,11 +802,11 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
       process.env.OPENCODE_BIN = bin;
       clearOpencodeCache();
       const buildOpencode = vi.fn(async () => ({ command: "opencode", args: ["run"] }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: vi.fn(),
         buildOpencodeCommand: buildOpencode,
         resolveEngine: () => ({ engine: "opencode", model: "claude-agent/haiku" }),
-      };
+      });
       try {
         const cmd = await build(agentPhase({ thinking: "high" }), PROJECT);
         expect(buildOpencode).toHaveBeenCalledWith(expect.anything(), "claude-agent/haiku#high");
@@ -837,10 +845,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: buildClaude,
         resolveEngine: () => ({ engine: "claude" }),
-      };
+      });
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write", model: "opus" })),
       };
@@ -937,10 +945,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: buildClaude,
         resolveEngine: () => ({ engine: "claude" }),
-      };
+      });
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
       };
@@ -957,10 +965,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
     it("claude: plugin dirs are agent, project, then ZIBBY's commands plugin; the checkout is the context dir", async () => {
       process.env.AGENT_RUNNER_MODE = "claude";
       const buildClaude = vi.fn(async () => ({ command: "claude", args: [] as string[] }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: buildClaude,
         resolveEngine: () => ({ engine: "claude" }),
-      };
+      });
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write", plugins: ["/p/agent"] })),
       };
@@ -995,10 +1003,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
         command: "claude",
         args: ["-p", opts.task],
       }));
-      (h.service as unknown as { claude: unknown }).claude = {
+      (h.service as unknown as { claude: unknown }).claude = withRunEngine({
         buildClaudeCommand: buildClaude,
         resolveEngine: () => ({ engine: "claude" }),
-      };
+      });
       (h.service as unknown as { agents: unknown }).agents = {
         get: vi.fn(async () => ({ id: "writer", instructions: "write" })),
       };
@@ -1028,10 +1036,10 @@ describe("WorkflowRunnerService — stage gates & resume", () => {
           args: ["-p", opts.task],
         }));
         const svc = h.service as unknown as Record<string, unknown>;
-        svc.claude = {
+        svc.claude = withRunEngine({
           buildClaudeCommand: buildClaude,
           resolveEngine: () => ({ engine: "claude" }),
-        };
+        });
         svc.agents = { get: vi.fn(async () => ({ id: "writer", instructions: "write" })) };
         svc.skills = {
           get: vi.fn(async (id: string) => {

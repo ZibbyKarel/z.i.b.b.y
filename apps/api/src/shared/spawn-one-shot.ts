@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { Agent, AiEngine, ModelTier, SystemConfig } from "@zibby/contracts";
 import { bluecodeConfigPart } from "../ai-providers/bluecode-provider";
-import { applyThinkingVariant, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
+import { applyThinkingVariant, opencodeBin, resolveRunEngine } from "../runner/ai-engine";
 import {
   APPROVAL_HOOK,
   GATE_DEADLINE_S,
@@ -62,7 +62,7 @@ export interface SpawnOneShotOptions {
  * unchanged. Rejects on an `error` event, a non-zero exit, the timeout or empty text.
  */
 export async function spawnOneShot(opts: SpawnOneShotOptions): Promise<string> {
-  const engine = resolveAiEngine({ engine: opts.engine, model: opts.tier }, opts.config);
+  const engine = await resolveRunEngine({ engine: opts.engine, model: opts.tier }, opts.config);
   if (engine.engine === "claude") {
     return spawnClaudeCli({
       args: [

@@ -2970,8 +2970,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
                 .get(p.agent)
                 // Every attempt: an escalation rung may map to another opencode model.
                 .then((agent) =>
-                  [null, ...(p.loop?.escalation ?? [])].map((rung) =>
-                    this.claude.resolveEngine(stageEngineTarget(p, agent, rung)),
+                  Promise.all(
+                    [null, ...(p.loop?.escalation ?? [])].map((rung) =>
+                      this.claude.resolveRunEngine(stageEngineTarget(p, agent, rung)),
+                    ),
                   ),
                 )
                 .catch(() => null),
@@ -3348,7 +3350,10 @@ export class WorkflowRunnerService implements OnModuleInit, OnModuleDestroy {
       // opencode model (A20) or rides `--model` on claude.
       const target = stageEngineTarget(phase, agent, escalation);
       // A26: on opencode the thinking level picks the model's matching variant.
-      const engine = await applyThinkingVariant(this.claude.resolveEngine(target), opts.thinking);
+      const engine = await applyThinkingVariant(
+        await this.claude.resolveRunEngine(target),
+        opts.thinking,
+      );
       if (engine.engine === "opencode") {
         // A7: refused when opencode or the model is unavailable — never run on claude.
         await assertOpencodeReady(engine.model);

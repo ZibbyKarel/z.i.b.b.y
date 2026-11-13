@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { formatEngine, lacksThinkingVariant, stepEngineChoice, tierConcreteModel } from "./engine";
+import {
+  catalogIds,
+  formatEngine,
+  lacksThinkingVariant,
+  stepEngineChoice,
+  tierConcreteModel,
+} from "./engine";
 
 describe("tier helpers", () => {
   it("claude: the tier is the Claude model, mapping ignored", () => {
@@ -13,6 +19,35 @@ describe("tier helpers", () => {
     expect(tierConcreteModel("haiku", "opencode", { fable: "a/fable" }, "d/m")).toBe("a/fable");
     expect(tierConcreteModel("haiku", "opencode", {}, "d/m")).toBe("d/m");
     expect(tierConcreteModel("haiku", "opencode", {}, "")).toBe("");
+  });
+
+  it("tierConcreteModel falls back past a tier the catalog lacks", () => {
+    const map = { opus: "a/o", fable: "a/f" };
+    expect(tierConcreteModel("fable", "opencode", map, "g", ["a/o"])).toBe("a/o");
+    expect(tierConcreteModel("fable", "claude", { opus: "a/o" }, "g", [])).toBe("Fable");
+  });
+
+  it("catalogIds is undefined for a missing or empty opencode catalog", () => {
+    expect(catalogIds(undefined)).toBeUndefined();
+    expect(catalogIds([{ id: "opencode", available: true, models: [] }])).toBeUndefined();
+    expect(
+      catalogIds([
+        {
+          id: "opencode",
+          available: false,
+          models: [{ id: "a/o", free: false, subscription: false, variants: [] }],
+        },
+      ]),
+    ).toBeUndefined();
+    expect(
+      catalogIds([
+        {
+          id: "opencode",
+          available: true,
+          models: [{ id: "a/o", free: false, subscription: false, variants: [] }],
+        },
+      ]),
+    ).toEqual(["a/o"]);
   });
 
   it("formatEngine is untouched", () => {
