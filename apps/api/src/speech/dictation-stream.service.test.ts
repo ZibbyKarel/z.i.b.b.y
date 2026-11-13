@@ -102,7 +102,11 @@ describe("DictationStreamService", () => {
     await expect(service.finish(id)).resolves.toBe("ahoj");
     expect(Buffer.concat(proc().written).toString()).toBe("aabb");
     expect(transcribePcm).toHaveBeenCalledWith(expect.any(Buffer), "en");
-    expect((await updates).at(-1)).toEqual({ text: "ahoj", final: true });
+    const seen = await updates;
+    expect(seen.at(-1)).toEqual({ text: "ahoj", final: true });
+    // Unchanged interims are not re-sent: every non-final update differs from the one before.
+    const interims = seen.filter((u) => !u.final).map((u) => u.text);
+    expect(interims).toEqual([...new Set(interims)]);
     // Gone afterwards.
     await expect(service.write(id, Buffer.from("x"))).rejects.toBeInstanceOf(
       DictationSessionNotFoundError,

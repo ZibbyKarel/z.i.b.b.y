@@ -75,9 +75,14 @@ export class DictationStreamService implements OnModuleDestroy {
     const id = randomUUID();
     const ffmpeg = spawn(bin, FFMPEG_ARGS, { stdio: ["pipe", "pipe", "pipe"] });
     const updates = new ReplaySubject<DictationStreamUpdate>(1);
+    let lastText = "";
     const session = new DictationStreamSession(
       (pcm) => this.stt.transcribePcm(pcm, input.language),
-      (update) => updates.next(update),
+      // A re-transcription often yields the same text — don't push a no-op update.
+      (update) => {
+        if (update.final || update.text !== lastText) updates.next(update);
+        lastText = update.text;
+      },
     );
     const exited = new Promise<number | null>((resolve) => {
       ffmpeg.once("close", (code) => resolve(code));
