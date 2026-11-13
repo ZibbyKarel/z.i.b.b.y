@@ -168,9 +168,9 @@ singleton as the phase-120 manual read-aloud button — one speaks at a time).
 The voice used for synthesis is a `SystemConfig` knob, `ttsVoice` (settings →
 Chat UI section, alongside a compact daemon status line from
 `features/speech`'s `useSpeechVoicesQuery`/`useSpeechStatusQuery`), not
-per-message UI. STT is entirely client-side (Web Speech API); there is still
-no backend STT and no command-grammar bridge — a spoken utterance is just a
-chat message.
+per-message UI. STT goes through the backend (local Hex, `docs/api/speech.md`
+_Dictation_) with the browser Web Speech API as fallback; there is no
+command-grammar bridge — a spoken utterance is just a chat message.
 
 **ZB-13 — the old immersive chat UI is deleted; `/chat` has no page of its own.**
 `ChatScreen`, `ChatTopBar`, `ChatToolDock`, `DepartmentOrbMap`, `StatusPill` +
