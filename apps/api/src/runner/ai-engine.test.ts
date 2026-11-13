@@ -8,6 +8,7 @@ import {
   assertOpencodeReady,
   clearOpencodeCache,
   resolveAiEngine,
+  resolveRunEngine,
   spendsClaudeSubscription,
   stageEngineTarget,
   stageSpendsClaude,
@@ -260,5 +261,66 @@ describe("assertOpencodeReady", () => {
         oc("claude-agent/haiku"),
       );
     });
+  });
+});
+
+describe("resolveRunEngine (todo-7)", () => {
+  const config = {
+    aiEngine: "opencode" as const,
+    opencodeModel: "b/default",
+    opencodeTierModels: { haiku: "b/h", sonnet: "b/s", opus: "b/o", fable: "b/missing" },
+  };
+  let dir: string;
+  const saved = process.env.OPENCODE_BIN;
+  beforeEach(async () => {
+    dir = await fs.mkdtemp(path.join(os.tmpdir(), "oc-run-"));
+    clearOpencodeCache();
+  });
+  afterEach(async () => {
+    if (saved === undefined) delete process.env.OPENCODE_BIN;
+    else process.env.OPENCODE_BIN = saved;
+    clearOpencodeCache();
+    await fs.rm(dir, { recursive: true, force: true });
+  });
+
+  /** A fake `opencode` that records each call in `calls` and lists `ids`. */
+  async function fakeModels(ids: string[]): Promise<void> {
+    const bin = path.join(dir, "opencode");
+    const lines = ids.map((id) => `echo "${id}"`).join("\n");
+    await fs.writeFile(bin, `#!/bin/sh\necho x >> "${dir}/calls"\n${lines}\n`, { mode: 0o755 });
+    process.env.OPENCODE_BIN = bin;
+    clearOpencodeCache();
+  }
+  function fakeModelsFail(): void {
+    process.env.OPENCODE_BIN = path.join(dir, "missing");
+    clearOpencodeCache();
+  }
+
+  it("falls back one tier when the family lacks the asked tier's model", async () => {
+    await fakeModels(["b/h", "b/s", "b/o", "b/default"]);
+    expect(await resolveRunEngine({ model: "fable" }, config)).toEqual({
+      engine: "opencode",
+      model: "b/o",
+    });
+  });
+
+  it("keeps an explicit engineModel even when unlisted", async () => {
+    await fakeModels(["b/h"]);
+    expect((await resolveRunEngine({ model: "fable", engineModel: "x/pin" }, config)).model).toBe(
+      "x/pin",
+    );
+  });
+
+  it("trusts the mapping when the catalog is unreadable", async () => {
+    fakeModelsFail();
+    expect((await resolveRunEngine({ model: "fable" }, config)).model).toBe("b/missing");
+  });
+
+  it("never probes opencode for a claude run", async () => {
+    await fakeModels(["b/h"]);
+    expect(await resolveRunEngine({ model: "fable" }, { ...config, aiEngine: "claude" })).toEqual({
+      engine: "claude",
+    });
+    await expect(fs.access(path.join(dir, "calls"))).rejects.toThrow();
   });
 });

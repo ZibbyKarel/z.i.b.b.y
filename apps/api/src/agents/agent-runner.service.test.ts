@@ -456,7 +456,10 @@ describe("AgentRunnerService opencode preflight (A7)", () => {
     const runner = Object.create(AgentRunnerService.prototype) as AgentRunnerService;
     const assertAvailable = vi.fn();
     Object.assign(runner, {
-      claude: { resolveEngine: () => ({ engine: "opencode", model: "" }) },
+      claude: {
+        resolveEngine: () => ({ engine: "opencode", model: "" }),
+        resolveRunEngine: async () => ({ engine: "opencode", model: "" }),
+      },
       preflight: { assertAvailable },
     });
     const launch = (

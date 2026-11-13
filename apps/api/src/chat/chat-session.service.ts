@@ -28,7 +28,7 @@ import {
   repoFromGitRemote,
 } from "@zibby/contracts";
 import { AgentsStorageService } from "../agents/agents.storage.service";
-import { assertOpencodeReady, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
+import { assertOpencodeReady, opencodeBin, resolveRunEngine } from "../runner/ai-engine";
 import { CompaniesStorageService } from "../companies/companies.storage.service";
 import { resolveClaudeLocations } from "../inventory/claude-locations";
 import { type OperatorMcpServer, readOperatorMcpServers } from "../inventory/operator-mcp-servers";
@@ -765,7 +765,7 @@ export class ChatSessionService implements OnModuleInit, OnModuleDestroy {
     const defaultTier = ChatModelSchema.safeParse(this.model);
     const tier =
       tags?.model ?? agent?.model ?? (defaultTier.success ? defaultTier.data : undefined);
-    const engine = resolveAiEngine(
+    const engine = await resolveRunEngine(
       { engine: agent?.engine, engineModel: agent?.engineModel, model: tier },
       this.systemConfig.current(),
     );

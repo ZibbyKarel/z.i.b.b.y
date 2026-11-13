@@ -81,6 +81,11 @@ else the nearest mapped **higher** tier, else `opencodeModel`. An engine with fe
 models than tiers therefore never fails; with nothing mapped and no `opencodeModel` the
 run is refused as before.
 
+On every run path the mapping is checked against the live catalog (`opencode models`,
+cached ~1 min): a mapped tier whose model is not listed counts as unmapped, so a family
+without that tier falls back (lower first). An unreadable catalog trusts the mapping; an
+explicit `engineModel` is never replaced.
+
 `thinking` becomes a model **variant** on opencode (A26): when the resolved model has no
 explicit `#variant` and opencode's catalog (`opencode api GET /api/model`, cached ~1 min)
 lists a variant whose id equals the effective level (`escalation?.thinking ??
@@ -104,7 +109,11 @@ An agent run passes the agent. A workflow stage passes
 `stageEngineTarget(phase, agent, escalationRung)`: `phase.engine ?? agent.engine`,
 `phase.engineModel ?? agent.engineModel`, tier = `rung.model ?? phase.model ??
 agent.model`. `phase.engine: "claude"` forces the native CLI with the tier alias.
-Both runners go through `ClaudeRunCommandService.resolveEngine`. The run records what it ran on:
+Every run path (agent run, workflow stage and its `preflightEngines` check, chat,
+one-shot) resolves through `resolveRunEngine(target, config)` (agent and workflow via
+`ClaudeRunCommandService.resolveRunEngine`): `resolveAiEngine` with the `opencode models`
+list passed to `resolveTierModel`, skipped for claude and an explicit `engineModel`
+(todo-7). The sync `resolveEngine` stays for engine-only checks. The run records what it ran on:
 `AgentRun.engine` / `engineModel` and `StageRun.engine` / `engineModel`. Claude runs
 leave both fields absent.
 

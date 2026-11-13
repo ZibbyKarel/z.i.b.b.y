@@ -25,7 +25,8 @@ export type EngineTarget = Pick<Agent, "engine" | "engineModel" | "model">;
  * Effective engine for a run: the target's own override ?? the global setting. On
  * opencode the model is the explicit `engineModel` ?? the tier mapped through
  * `opencodeTierModels` (A20, nearest lower, then higher tier) ?? `opencodeModel`. The
- * claude engine ignores `engineModel`; it passes the tier as `--model`.
+ * claude engine ignores `engineModel`; it passes the tier as `--model`. With `listed`
+ * (the live catalog) a tier whose model is not listed counts as unmapped (todo-7).
  */
 export function resolveAiEngine(
   target: EngineTarget,
@@ -33,6 +34,7 @@ export function resolveAiEngine(
     | (Pick<SystemConfig, "aiEngine" | "opencodeModel"> &
         Partial<Pick<SystemConfig, "opencodeTierModels">>)
     | undefined,
+  listed?: readonly string[],
 ): ResolvedAiEngine {
   const engine = target.engine ?? config?.aiEngine ?? "claude";
   if (engine === "claude") return { engine };
@@ -40,8 +42,28 @@ export function resolveAiEngine(
     engine,
     model:
       target.engineModel ??
-      resolveTierModel(target.model, config?.opencodeTierModels, config?.opencodeModel ?? ""),
+      resolveTierModel(
+        target.model,
+        config?.opencodeTierModels,
+        config?.opencodeModel ?? "",
+        listed,
+      ),
   };
+}
+
+/**
+ * The engine a run really executes on (todo-7): {@link resolveAiEngine} checked against
+ * the live `opencode models` catalog, so a tier the model family lacks falls back
+ * (lower first). claude and an explicit `engineModel` never probe the catalog; an
+ * unreadable catalog trusts the mapping. Every run path and its preflight call this.
+ */
+export async function resolveRunEngine(
+  target: EngineTarget,
+  config: Parameters<typeof resolveAiEngine>[1],
+): Promise<ResolvedAiEngine> {
+  const engine = resolveAiEngine(target, config);
+  if (engine.engine === "claude" || target.engineModel) return engine;
+  return resolveAiEngine(target, config, (await opencodeModels()) ?? undefined);
 }
 
 /**
