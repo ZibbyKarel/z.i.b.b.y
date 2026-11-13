@@ -78,8 +78,9 @@ and callers can always render a status line.
 
 ## Dictation (`POST /api/speech/transcribe`, local STT)
 
-Separate from `speakd`: `SttService` (`apps/api/src/speech/stt.service.ts`) runs
-whisper.cpp's `whisper-server` (`ggml-large-v3-turbo`, language `cs`).
+Separate from `speakd`: `SttService` (`apps/api/src/speech/stt.service.ts`) uses the
+locally running Hex app over its loopback HTTP API (language `cs` by default). Nothing is
+spawned or kept alive by the API; Hex owns the model.
 
 ```
 POST /speech/transcribe   body { audioBase64, mimeType, language? } → 200 { text }
@@ -87,24 +88,19 @@ GET  /speech/status       additionally carries stt: { available, reason? }
 ```
 
 - `audioBase64` is capped at 4 MB (the API's JSON limit is 5 MB; a 60 s webm/opus clip is ~0.5-1 MB).
-  `mimeType` is whatever `MediaRecorder` produced; whisper-server converts it via ffmpeg (`--convert`).
-- `WHISPER_URL` set → that external daemon is used. Otherwise the server is spawned lazily on the
-  first call (`127.0.0.1`, free port), reused, respawned if it died, killed with the API module.
-- Statuses: `422` the clip could not be decoded, `503` STT unavailable (binary/model/ffmpeg missing,
-  server failed to start, unreachable). `stt.available=false` carries a `reason`; the web app then
-  falls back to the browser Web Speech API.
+  `mimeType` is whatever `MediaRecorder` produced; ffmpeg converts it to a 16 kHz mono WAV
+  (file-to-file in a temp dir, Hex rejects a piped WAV).
+- Flow: the API reads Hex's discovery file `<hexDir>/local-api.json` (`port` + bearer `token`, removed
+  when Hex quits) and posts the WAV to `http://127.0.0.1:<port>/transcriptions?model=<id>&language=<lang>`.
+- Model: `HEX_MODEL`, else `transcription.model` in Hex's `settings.json`, else `parakeet_v3`.
+- Statuses: `422` the clip could not be decoded by ffmpeg or Hex rejected it (4xx), `503` STT unavailable
+  (Hex not running, ffmpeg missing, Hex unreachable, HTTP 401 or 5xx). `stt.available=false` carries a
+  `reason`; the web app then falls back to the browser Web Speech API.
 - Output is cleaned: whitespace collapsed, bracketed tags like `[BLANK_AUDIO]` removed.
 
-Install (macOS):
+Requirements (macOS): Hex running, and `brew install ffmpeg`.
 
-```bash
-brew install whisper.cpp ffmpeg
-mkdir -p ~/Library/Application\ Support/ZibbyOS/models
-curl -L -o ~/Library/Application\ Support/ZibbyOS/models/ggml-large-v3-turbo.bin \
-  https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo.bin
-```
-
-Env: `WHISPER_URL`, `WHISPER_BIN`, `WHISPER_MODEL` (see `docs/ops/environment.md`).
+Env: `HEX_MODEL`, `HEX_APPLICATION_SUPPORT_DIR` (see `docs/ops/environment.md`).
 The desktop app grants the microphone only to its own origin (`apps/desktop/src/permissions.ts`,
 `NSMicrophoneUsageDescription` via electron-builder `mac.extendInfo`; no entitlement is needed
 while `hardenedRuntime` is false).

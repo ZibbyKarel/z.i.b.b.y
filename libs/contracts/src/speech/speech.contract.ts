@@ -54,7 +54,7 @@ export const speechContract = c.router(
         503: ErrorSchema,
       },
       summary:
-        "Transcribe a dictation clip with local whisper.cpp — 503 when STT is unavailable, 422 when the audio could not be decoded",
+        "Transcribe a dictation clip with the local Hex app — 503 when STT is unavailable, 422 when the audio could not be decoded",
     },
     listVoices: {
       method: "GET",

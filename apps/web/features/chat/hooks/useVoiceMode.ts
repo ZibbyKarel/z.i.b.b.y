@@ -85,8 +85,8 @@ export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions
 
   const lang = localeToLang(locale);
   const speech = useSpeechRecognition({ lang, onFinal: handleFinal, onError: handleError });
-  // Local whisper dictation wins when the backend has it; Web Speech is the fallback
-  // for a plain browser / a machine without whisper installed.
+  // Local Hex dictation wins when the backend has it; Web Speech is the fallback
+  // for a plain browser / a machine without Hex running.
   const { data: speechStatus, isPending: statusPending } = useSpeechStatusQuery();
   const recorder = useDictationRecorder({ lang, onFinal: handleFinal, onError: handleError });
   const useRecorder = speechStatus?.stt.available === true && recorder.supported;

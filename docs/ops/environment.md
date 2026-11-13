@@ -76,13 +76,12 @@ text-to-speech daemon over HTTP, not an in-process library:
 | `SPEAKD_TIMEOUT_MS` | `30000`                 | Request timeout before `SpeakdTimeoutError`         |
 | `SPEAKD_TOKEN`      | _(unset)_               | Bearer token sent to the daemon, if it requires one |
 
-Local dictation (speech-to-text, whisper.cpp — see `docs/api/speech.md`):
+Local dictation (speech-to-text via the running Hex app — see `docs/api/speech.md`):
 
-| Variable        | Default                                                                | Purpose                                                                   |
-| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `WHISPER_URL`   | _(unset)_                                                              | External `whisper-server` base URL; when set, nothing is spawned          |
-| `WHISPER_BIN`   | `whisper-server` (PATH + `/opt/homebrew/bin`)                          | Binary the API spawns lazily on the first transcription                   |
-| `WHISPER_MODEL` | `~/Library/Application Support/ZibbyOS/models/ggml-large-v3-turbo.bin` | ggml model file; missing → `GET /api/speech/status` `stt.available=false` |
+| Variable                      | Default                                       | Purpose                                                   |
+| ----------------------------- | --------------------------------------------- | --------------------------------------------------------- |
+| `HEX_MODEL`                   | the model selected in Hex, else `parakeet_v3` | Hex model id sent with each transcription                 |
+| `HEX_APPLICATION_SUPPORT_DIR` | `~/Library/Application Support/hex`           | Hex data dir holding `local-api.json` and `settings.json` |
 
 ### Test/demo-only variables
 

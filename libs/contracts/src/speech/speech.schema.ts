@@ -58,7 +58,7 @@ export type SpeechDaemonState = z.infer<typeof SpeechDaemonStateSchema>;
  * always render a status line (mirrors `healthContract`'s "never fail silently").
  */
 export const SpeechStatusSchema = z.object({
-  /** Local speech-to-text (whisper.cpp) readiness — independent of the TTS daemon. */
+  /** Local speech-to-text (the local Hex app) readiness — independent of the TTS daemon. */
   stt: z.object({
     available: z.boolean(),
     /** Why STT is unavailable (missing binary/model/ffmpeg); absent when available. */
