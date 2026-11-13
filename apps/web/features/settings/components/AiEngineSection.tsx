@@ -10,9 +10,13 @@ import {
   type ModelFamily,
   type ModelTier,
   type SystemConfig,
-  applyModelFamily,
 } from "@zibby/contracts";
-import { AiEngineModelPicker, OperatorTokenNotice, useAiEnginesQuery } from "../../ai-providers";
+import {
+  AiEngineModelPicker,
+  OperatorTokenNotice,
+  modelFamilyChoice,
+  useAiEnginesQuery,
+} from "../../ai-providers";
 import { isOperatorTokenError } from "../../../state/operatorToken";
 import { useSetSystemConfigMutation, useSystemConfigQuery } from "../../system";
 
@@ -56,22 +60,11 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
   const models = opencode?.models ?? [];
   const model = config.opencodeModel;
 
-  // An unreadable catalog (binary missing / empty list) cannot filter a preset: it is written as is.
-  const catalogReadable = !!opencode?.available && models.length > 0;
-  const connected = (family: ModelFamily) =>
-    models.some((m) => m.id.startsWith(`${MODEL_FAMILY_PROVIDER[family]}/`));
-  const disconnected = catalogReadable ? MODEL_FAMILIES.filter((f) => !connected(f)) : [];
-
-  const chooseFamily = (next: string) => {
-    const family = next as ModelFamily;
-    if (family === config.modelFamily || disconnected.includes(family)) return;
-    setConfig.mutate({
-      body: {
-        ...config,
-        ...applyModelFamily(family, catalogReadable ? models.map((m) => m.id) : undefined),
-      },
-    });
-  };
+  const { catalogReadable, disconnected, choose } = modelFamilyChoice(
+    config,
+    engines,
+    setConfig.mutate,
+  );
   const chooseModel = (id: string) => setConfig.mutate({ body: { ...config, opencodeModel: id } });
 
   const chooseTierModel = (tier: ModelTier, id: string) => {
@@ -106,7 +99,7 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
         <span data-testid={AiEngineSectionTestId.Family}>
           <ButtonGroup
             ariaLabel={t("familyTitle")}
-            onChange={chooseFamily}
+            onChange={(f) => choose(f as ModelFamily)}
             options={MODEL_FAMILIES.map((f) => ({ id: f, label: t(`family.${f}`) }))}
             value={config.modelFamily}
           />
