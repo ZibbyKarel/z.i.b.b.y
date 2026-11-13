@@ -12,7 +12,9 @@ import {
   TextLink,
   Typography,
 } from "@zibby/design-system";
+import type { Route } from "next";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChatAboutButton } from "../../../chat/components/ChatAboutButton";
 import { useFixProjectCiMutation } from "../../../projects/mutations";
@@ -22,6 +24,7 @@ import { type SheetProps, geometry } from "./sheetTypes";
 
 export enum ProjectSheetTestId {
   FixCi = "project-sheet-fix-ci",
+  RepoLink = "project-sheet-repo-link",
   Workflow = "project-sheet-workflow",
   Job = "project-sheet-job",
   Step = "project-sheet-step",
@@ -107,11 +110,12 @@ function JobBlock({ job, stateLabel }: { job: CiJob; stateLabel: (s: CiJob["stat
 
 /**
  * Project detail (Project status widget): the base branch's CI per workflow → job → step, like
- * GitHub's checks view. The title links to the repo root. Actions: "Discuss in chat", and on red
+ * GitHub's checks view. The title opens the project page; the repo link sits under it. Actions: "Discuss in chat", and on red
  * CI "Opravit CI" — a task whose output is a PR (ZIBBY opens it, the operator merges).
  */
 export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
   const t = useTranslations();
+  const router = useRouter();
   const ts = useTranslations("bridge.sheet.project");
   const tw = useTranslations("bridge.widgets.projectStatus");
   const { data: projects } = useProjectsQuery();
@@ -173,10 +177,22 @@ export function ProjectSheet({ id, anchor, onClose }: SheetProps) {
             : undefined
       }
       kind={t("bridge.sheet.kind.project")}
+      meta={
+        ci?.repoUrl ? (
+          <TextLink
+            data-testid={ProjectSheetTestId.RepoLink}
+            href={ci.repoUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            {ts("openRepo")}
+          </TextLink>
+        ) : undefined
+      }
       onClose={onClose}
+      onTitleClick={() => router.push(`/projects/${encodeURIComponent(id)}` as Route)}
       stateLabel={stateLabel(state)}
       title={project.name}
-      titleHref={ci?.repoUrl}
       tone={TONE[state]}
     >
       {note ? (
