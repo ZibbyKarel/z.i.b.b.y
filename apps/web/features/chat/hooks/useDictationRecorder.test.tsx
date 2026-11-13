@@ -235,5 +235,40 @@ describe("useDictationRecorder", () => {
       expect(onError).not.toHaveBeenCalled();
       expect(result.current.state).toBe("recording");
     });
+    it("stop then start: the new recording sends its own interim while the old one is pending", async () => {
+      const old = deferred<unknown>();
+      mutateAsync.mockReturnValueOnce(old.promise).mockReturnValue(new Promise(() => {}));
+      const { result } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      act(() => result.current.stop());
+      await record(result, 2);
+      const rec2 = instances[1]!;
+      act(() => {
+        rec2.ondataavailable?.(chunk(2));
+        rec2.ondataavailable?.(chunk(2));
+      });
+      // rec1's final clip (on stop) + rec2's first interim request
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(3));
+      await act(async () => old.resolve({ status: 200, body: { text: "old" } }));
+      act(() => rec2.ondataavailable?.(chunk(2)));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(mutateAsync).toHaveBeenCalledTimes(3); // still one in flight for rec2
+      expect(result.current.interim).toBe("");
+    });
+
+    it("resets interim to empty when a new recording starts", async () => {
+      mutateAsync.mockResolvedValue({ status: 200, body: { text: "ahoj" } });
+      const { result } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(result.current.interim).toBe("ahoj"));
+      mutateAsync.mockReturnValue(new Promise(() => {}));
+      act(() => result.current.stop());
+      expect(result.current.interim).toBe("");
+      await record(result, 2);
+      expect(result.current.interim).toBe("");
+    });
   });
 });

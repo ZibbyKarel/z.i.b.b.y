@@ -67,8 +67,8 @@ function blobToBase64(blob: Blob): Promise<string> {
  * with `MediaRecorder`; `stop` builds the blob, base64-encodes it and sends it to
  * `POST /api/speech/transcribe`, then hands the text to `onFinal`. While
  * recording, the cumulative clip is re-transcribed (one request at a time, failures
- * silent) to expose a progressive `interim`. A transcript is always delivered while the hook is mounted —
- * even if recording was restarted meanwhile (several transcriptions may overlap).
+ * silent) to expose a progressive `interim`. A transcript is always delivered while
+ * the hook is mounted — even if recording was restarted meanwhile (several transcriptions may overlap).
  * Unmounting discards a recording in progress and any pending result.
  */
 export function useDictationRecorder({
@@ -79,7 +79,6 @@ export function useDictationRecorder({
   const [recording, setRecording] = useState(false);
   const [pending, setPending] = useState(0);
   const [interim, setInterim] = useState("");
-  const interimBusy = useRef(false);
   const [supported] = useState(isSupported);
   const transcribe = useTranscribeSpeechMutation();
   // `recId` guards a stale getUserMedia (stop/unmount before the mic opened);
@@ -129,14 +128,15 @@ export function useDictationRecorder({
             ...(mimeType ? { mimeType } : {}),
           });
           const chunks: Blob[] = [];
+          let interimBusy = false; // per recording: one interim request in flight
           const cap: { id?: ReturnType<typeof setTimeout> } = {};
           rec.ondataavailable = (e) => {
             if (e.data.size > 0) chunks.push(e.data);
-            if (recorder.current !== rec || rec.state !== "recording" || interimBusy.current)
-              return;
-            interimBusy.current = true;
+            if (recorder.current !== rec || rec.state !== "recording" || interimBusy) return;
+            interimBusy = true;
             const type = rec.mimeType || mimeType || "audio/webm";
             // Cumulative from the first chunk: the webm header lives only there.
+            // ponytail: re-sends the whole clip every slice; cap the interim window if backend load matters.
             void (async () => {
               try {
                 const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
@@ -149,7 +149,7 @@ export function useDictationRecorder({
               } catch {
                 // Interim is best-effort; the final transcription reports real failures.
               } finally {
-                interimBusy.current = false;
+                interimBusy = false;
               }
             })();
           };
