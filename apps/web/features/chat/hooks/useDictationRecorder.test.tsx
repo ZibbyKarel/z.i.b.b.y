@@ -235,6 +235,7 @@ describe("useDictationRecorder", () => {
       expect(onError).not.toHaveBeenCalled();
       expect(result.current.state).toBe("recording");
     });
+
     it("stop then start: the new recording sends its own interim while the old one is pending", async () => {
       const old = deferred<unknown>();
       mutateAsync.mockReturnValueOnce(old.promise).mockReturnValue(new Promise(() => {}));
@@ -266,9 +267,39 @@ describe("useDictationRecorder", () => {
       await waitFor(() => expect(result.current.interim).toBe("ahoj"));
       mutateAsync.mockReturnValue(new Promise(() => {}));
       act(() => result.current.stop());
-      expect(result.current.interim).toBe("");
+      expect(result.current.interim).toBe("ahoj"); // kept until the final lands
       await record(result, 2);
       expect(result.current.interim).toBe("");
+    });
+
+    it("keeps the last interim while transcribing and clears it when the final lands", async () => {
+      const fin = deferred<unknown>();
+      mutateAsync
+        .mockResolvedValueOnce({ status: 200, body: { text: "ahoj" } })
+        .mockReturnValueOnce(fin.promise);
+      const { result, onFinal } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(result.current.interim).toBe("ahoj"));
+      act(() => result.current.stop());
+      await waitFor(() => expect(result.current.state).toBe("transcribing"));
+      expect(result.current.interim).toBe("ahoj");
+      await act(async () => fin.resolve({ status: 200, body: { text: "ahoj světe" } }));
+      expect(onFinal).toHaveBeenCalledWith("ahoj světe");
+      expect(result.current.interim).toBe("");
+    });
+
+    it("clears the interim when the final transcription fails", async () => {
+      mutateAsync
+        .mockResolvedValueOnce({ status: 200, body: { text: "ahoj" } })
+        .mockRejectedValueOnce(new Error("503"));
+      const { result, onError } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(result.current.interim).toBe("ahoj"));
+      act(() => result.current.stop());
+      await waitFor(() => expect(onError).toHaveBeenCalledWith("network"));
+      await waitFor(() => expect(result.current.interim).toBe(""));
     });
   });
 });

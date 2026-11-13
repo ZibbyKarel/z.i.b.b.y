@@ -61,6 +61,15 @@ describe("appendDictation", () => {
 });
 
 describe("NoteDock", () => {
+  beforeEach(() => {
+    voiceState.interim = "";
+    createNote.mockClear();
+    createKbNote.mockClear();
+    voiceState.off.mockClear();
+    voiceOpts.length = 0;
+    teams = [];
+  });
+
   it("puts the target picker in the dock header", () => {
     render(<NoteDock open onClose={vi.fn()} />);
     expect(
@@ -79,15 +88,6 @@ describe("NoteDock", () => {
     rerender(<NoteDock open onClose={vi.fn()} />);
     expect(control().value).toBe("Hello");
     expect(control()).not.toHaveAttribute("readonly");
-  });
-
-  beforeEach(() => {
-    voiceState.interim = "";
-    createNote.mockClear();
-    createKbNote.mockClear();
-    voiceState.off.mockClear();
-    voiceOpts.length = 0;
-    teams = [];
   });
 
   it("saves to the vault by default with no tier", async () => {

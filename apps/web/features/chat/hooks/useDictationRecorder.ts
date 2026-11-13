@@ -19,7 +19,10 @@ export interface DictationRecorder {
   /** Whether this runtime can record audio at all (`MediaRecorder` + `getUserMedia`). */
   supported: boolean;
   state: DictationRecorderState;
-  /** Transcript of the recording so far (refreshed while recording); `""` when idle. */
+  /**
+   * Transcript of the recording so far (refreshed while recording); `""` when idle. Kept
+   * through `transcribing` and cleared when the final transcript lands (or fails).
+   */
   interim: string;
   start: () => void;
   /** Ends the recording and sends it for transcription. No-op when not recording. */
@@ -68,7 +71,8 @@ function blobToBase64(blob: Blob): Promise<string> {
  * `POST /api/speech/transcribe`, then hands the text to `onFinal`. While
  * recording, the cumulative clip is re-transcribed (one request at a time, failures
  * silent) to expose a progressive `interim`. A transcript is always delivered while
- * the hook is mounted — even if recording was restarted meanwhile (several transcriptions may overlap).
+ * the hook is mounted — even if recording was restarted meanwhile
+ * (several transcriptions may overlap).
  * Unmounting discards a recording in progress and any pending result.
  */
 export function useDictationRecorder({
@@ -92,7 +96,7 @@ export function useDictationRecorder({
     callbacks.current = { lang, onFinal, onError, mutateAsync: transcribe.mutateAsync };
   });
 
-  const transcribeClip = useCallback(async (chunks: Blob[], type: string) => {
+  const transcribeClip = useCallback(async (chunks: Blob[], type: string, id: number) => {
     setPending((n) => n + 1);
     try {
       const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
@@ -105,7 +109,11 @@ export function useDictationRecorder({
     } catch {
       if (mounted.current) callbacks.current.onError("network");
     } finally {
-      if (mounted.current) setPending((n) => n - 1);
+      if (mounted.current) {
+        setPending((n) => n - 1);
+        // Drop the last interim with the final text (same batch); a newer recording owns it.
+        if (recId.current === id) setInterim("");
+      }
     }
   }, []);
 
@@ -159,9 +167,9 @@ export function useDictationRecorder({
             if (recorder.current === rec) recorder.current = null;
             if (!mounted.current) return;
             setRecording(false);
-            setInterim("");
             if (chunks.length > 0)
-              void transcribeClip(chunks, rec.mimeType || mimeType || "audio/webm");
+              void transcribeClip(chunks, rec.mimeType || mimeType || "audio/webm", id);
+            else setInterim("");
           };
           recorder.current = rec;
           rec.start(INTERIM_SLICE_MS);
