@@ -60,4 +60,11 @@ describe("MarkdownEditor", () => {
     rerender(<MarkdownEditor onChange={() => {}} value="x" />);
     expect(screen.getByTestId(MarkdownEditorTestId.Frame)).not.toHaveClass("flex-1");
   });
+
+  it("drops toolbar edits while readOnly", () => {
+    const onChange = vi.fn();
+    render(<MarkdownEditor readOnly onChange={onChange} value="x" />);
+    fireEvent.click(screen.getByRole("button", { name: /bold/i }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
 });

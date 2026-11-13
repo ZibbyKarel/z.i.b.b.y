@@ -209,7 +209,7 @@ export function ChatDock({
                 title={sidebarLabel}
               />
             )}
-            {headerStart ? (
+            {headerStart != null ? (
               <div className="min-w-0 flex-1" data-testid={ChatDockTestId.HeaderStart}>
                 {headerStart}
               </div>
