@@ -1,6 +1,6 @@
 # TODO
 
-1. [ ] vedle tlačítka "Nový úkol" vznikde tlačítko nová poznámka, která zobrazí okno podobné chatovacímu, kde bude markdown editor a dole tlačítko na zapnutí diktování. Po uložení poznámky se poznámka uloží do vaultu (nevim kam vymysli kam) v plovoucím okně budu moci také vybrat zda pujde poznámka do vaultu nebo do knowledge base týmu (musí se dostáhnout všechny KB týmů které jsou v systému a dát mi na výběr, defaultní hodnota bude do vaultu)
+1. [x] vedle tlačítka "Nový úkol" vznikde tlačítko nová poznámka, která zobrazí okno podobné chatovacímu, kde bude markdown editor a dole tlačítko na zapnutí diktování. Po uložení poznámky se poznámka uloží do vaultu (nevim kam vymysli kam) v plovoucím okně budu moci také vybrat zda pujde poznámka do vaultu nebo do knowledge base týmu (musí se dostáhnout všechny KB týmů které jsou v systému a dát mi na výběr, defaultní hodnota bude do vaultu) (main@4bb36c74c)
 2. [ ] detail PullRequestu - tlačítka v summary sekci budou na stejném řádku jako daná informace (schváleno/selhává/...). U ID issue smažeme šipu a nalevo zobrazíme ikonku zdroje issue (tedy JIRA). Stack musíme zobrazit až po "base branch" a přesuneme ho do do hlavičky na poslední řádek. Zároveň idčka Prs budou klikatelné odkazy. Sekce revieweři bude na stejné úrovni jako sekce summary
 3. [ ] u názvů modelů které zobrazujeme v rámci systému smažeme označení úrovně. úrovně zůstanou jen v nastavení -> AI -> AI Engine
 4. [ ] z chatovacího docku, na který když se klikne tak se zobrazí celé okno musíme udělat jen plovoucí ikonku chatu v bublině.
