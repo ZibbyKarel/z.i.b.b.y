@@ -14,19 +14,40 @@ describe("ChatDock", () => {
     expect(screen.getByTestId(ChatDockTestId.Root)).toBeVisible();
   });
 
-  it("renders collapsed by default: only the bar, no transcript", () => {
-    render(<ChatDock composer={composer} />);
-    expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
-    expect(screen.getByTestId(ChatDockTestId.Composer)).toContainElement(
-      screen.getByLabelText("Message"),
+  it("renders closed by default as only the round chat bubble", () => {
+    render(
+      <ChatDock
+        composer={composer}
+        launcherLabel="Otevřít chat"
+        targetChip={<span>Dept: dev</span>}
+      />,
     );
+    expect(screen.getByTestId(ChatDockTestId.Launcher)).toHaveAccessibleName("Otevřít chat");
+    expect(screen.getByTestId(ChatDockTestId.Launcher)).toHaveClass("rounded-full");
+    expect(screen.queryByTestId(ChatDockTestId.Composer)).toBeNull();
+    expect(screen.queryByTestId(ChatDockTestId.TargetChip)).toBeNull();
+    expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
   });
 
-  it("opens when anything in the footer takes focus (uncontrolled)", async () => {
+  it("the bubble opens the full-size dock (uncontrolled)", async () => {
     const user = userEvent.setup();
     render(<ChatDock composer={composer} transcript={<div>Hi there</div>} />);
-    await user.click(screen.getByLabelText("Message"));
+    await user.click(screen.getByTestId(ChatDockTestId.Launcher));
     expect(screen.getByTestId(ChatDockTestId.Transcript)).toHaveTextContent("Hi there");
+    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[max(420px,33%)]");
+    expect(screen.queryByTestId(ChatDockTestId.Launcher)).toBeNull();
+  });
+
+  it("focuses the composer when the bubble opens the dock", async () => {
+    const user = userEvent.setup();
+    render(<ChatDock composer={composer} />);
+    await user.click(screen.getByTestId(ChatDockTestId.Launcher));
+    expect(screen.getByLabelText("Message")).toHaveFocus();
+  });
+
+  it("hidden dock shows neither the panel nor the bubble", () => {
+    render(<ChatDock hidden composer={composer} />);
+    expect(screen.getByTestId(ChatDockTestId.Launcher)).not.toBeVisible();
   });
 
   it("header has new chat + close; close closes", async () => {
@@ -58,9 +79,17 @@ describe("ChatDock", () => {
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
     render(<ChatDock composer={composer} onOpenChange={onOpenChange} open={false} />);
-    await user.click(screen.getByLabelText("Message"));
+    await user.click(screen.getByTestId(ChatDockTestId.Launcher));
     expect(onOpenChange).toHaveBeenCalledWith(true);
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();
+    expect(screen.getByTestId(ChatDockTestId.Launcher)).toBeInTheDocument();
+  });
+
+  it("closing returns to the bubble", async () => {
+    const user = userEvent.setup();
+    render(<ChatDock defaultOpen composer={composer} />);
+    await user.click(screen.getByTestId(ChatDockTestId.CloseButton));
+    expect(screen.getByTestId(ChatDockTestId.Launcher)).toBeInTheDocument();
   });
 
   it("opens straight to the full-size dock — no mini state, no expand toggle", () => {
@@ -74,13 +103,8 @@ describe("ChatDock", () => {
     expect(screen.queryByTestId("chat-dock-expand-button")).toBeNull();
   });
 
-  it("is only the 420px bar while closed", () => {
-    render(<ChatDock composer={composer} />);
-    expect(screen.getByTestId(ChatDockTestId.Root)).toHaveClass("w-[420px]");
-  });
-
   it("renders the target chip slot when provided", () => {
-    render(<ChatDock composer={composer} targetChip={<span>Dept: dev</span>} />);
+    render(<ChatDock defaultOpen composer={composer} targetChip={<span>Dept: dev</span>} />);
     expect(screen.getByTestId(ChatDockTestId.TargetChip)).toHaveTextContent("Dept: dev");
   });
 

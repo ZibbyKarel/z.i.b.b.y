@@ -49,11 +49,11 @@ export interface ChatDockProps {
   onSidebarOpenChange?: (open: boolean) => void;
   sidebarLabel?: string;
   /**
-   * Phone mode: closed, the dock is only a round chat launcher; open, it is a
-   * full-screen panel (header, messages, composer — no history sidebar).
+   * Phone mode: open, the dock is a full-screen panel (header, messages,
+   * composer, no history sidebar).
    */
   compact?: boolean;
-  /** Accessible name of the compact launcher. */
+  /** Accessible name of the closed-state chat bubble. */
   launcherLabel?: string;
   /** Any change scrolls the message list to the bottom (also on open). */
   scrollKey?: unknown;
@@ -61,11 +61,11 @@ export interface ChatDockProps {
 }
 
 /**
- * DS.md §8's chat dock — a fixed-width panel `AppFrame`'s `dock` slot floats
- * bottom-right over the main content. Collapsed it is only the bottom bar
- * (target chip + composer); focusing anything in the bar opens the conversation
- * pane above it, always at full size (header with NEW CHAT / CLOSE, scrolling
- * messages) — there is no small "mini chat" state.
+ * DS.md §8's chat dock. Closed, it is a round chat bubble that `AppFrame`'s `dock`
+ * slot floats bottom-right over the main content. Clicking it opens the
+ * full-size conversation pane (header with NEW CHAT / CLOSE, scrolling messages,
+ * target chip + composer; full-screen on phones, `compact`) and focuses the
+ * composer. There is no small "mini chat" state.
  * Presentational only: transcript, composer and target chip are slots.
  */
 export function ChatDock({
@@ -99,6 +99,7 @@ export function ChatDock({
   };
   const toggleSidebar = () => setSidebar(!isSidebarOpen);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
   const setOpen = (next: boolean) => {
     setInternalOpen(next);
     onOpenChange?.(next);
@@ -111,6 +112,15 @@ export function ChatDock({
     if (el) el.scrollTop = el.scrollHeight;
   }, [scrollKey, isOpen]);
 
+  // Opened from the bubble: the click unmounted the launcher, so focus fell to body.
+  // Move it into the composer, but never steal it from another focused field.
+  useEffect(() => {
+    if (!isOpen) return;
+    const active = document.activeElement;
+    if (active && active !== document.body) return;
+    composerRef.current?.querySelector<HTMLElement>("textarea, input")?.focus();
+  }, [isOpen]);
+
   // Esc closes an open dock from anywhere. A nested control that consumes Esc
   // itself (the composer's mention picker) prevents default / stops propagation.
   useEffect(() => {
@@ -122,7 +132,7 @@ export function ChatDock({
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  if (compact && !isOpen) {
+  if (!isOpen) {
     return (
       <div data-testid={ChatDockTestId.Root} hidden={hidden} ref={ref}>
         <button
@@ -149,21 +159,19 @@ export function ChatDock({
         compact
           ? "fixed inset-0 z-50 flex flex-col overflow-hidden bg-panel"
           : "flex max-w-[calc(100vw-40px)] flex-col overflow-hidden rounded-xl border border-line-2 bg-panel shadow-modal",
-        // Open: 33% of the AppFrame dock area (never under 420px), three quarters of its height
-        // (pane basis 440px grows into the 75%), capped to the area. Closed: just the 420px bar.
+        // 33% of the AppFrame dock area (never under 420px), three quarters of its height
+        // (pane basis 440px grows into the 75%), capped to the area.
         !compact &&
-          (isOpen
-            ? isSidebarOpen
-              ? "max-h-full min-h-3/4 w-[max(660px,45%)]"
-              : "max-h-full min-h-3/4 w-[max(420px,33%)]"
-            : "w-[420px]"),
-        isOpen && isSidebarOpen && "flex-row",
+          (isSidebarOpen
+            ? "max-h-full min-h-3/4 w-[max(660px,45%)]"
+            : "max-h-full min-h-3/4 w-[max(420px,33%)]"),
+        isSidebarOpen && "flex-row",
       )}
       data-testid={ChatDockTestId.Root}
       hidden={hidden}
       ref={ref}
     >
-      {isOpen && isSidebarOpen && (
+      {isSidebarOpen && (
         <div
           className="flex w-[240px] shrink-0 flex-col gap-2.5 overflow-y-auto border-r border-line p-3.5"
           data-testid={ChatDockTestId.Sidebar}
@@ -172,78 +180,66 @@ export function ChatDock({
         </div>
       )}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {isOpen && (
-          <div
-            className={cn(
-              "flex min-h-0 grow flex-col border-b border-line",
-              compact ? "basis-0" : "basis-[440px]",
-            )}
-            data-testid={ChatDockTestId.Transcript}
-          >
-            <div
-              className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
-              data-testid={ChatDockTestId.Header}
-            >
-              {hasSidebar && (
-                <Button
-                  aria-label={sidebarLabel}
-                  aria-pressed={isSidebarOpen}
-                  data-testid={ChatDockTestId.SidebarButton}
-                  icon="clock"
-                  intent="ghost"
-                  onClick={toggleSidebar}
-                  size="sm"
-                  title={sidebarLabel}
-                />
-              )}
-              <div className="flex-1" />
-              {onNewChat && (
-                <Button
-                  data-testid={ChatDockTestId.NewChatButton}
-                  intent="primary"
-                  onClick={onNewChat}
-                  size="sm"
-                >
-                  {newChatLabel}
-                </Button>
-              )}
-              <Button
-                aria-label={closeLabel}
-                data-testid={ChatDockTestId.CloseButton}
-                icon="x"
-                intent="secondary"
-                onClick={() => setOpen(false)}
-                size="sm"
-                title={closeLabel}
-              />
-            </div>
-            <div
-              className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5"
-              data-testid={ChatDockTestId.Messages}
-              ref={messagesRef}
-            >
-              {transcript}
-            </div>
-          </div>
-        )}
-
         <div
-          className="flex flex-col p-2"
-          data-testid={ChatDockTestId.Footer}
-          // Focus opens it; so does a click into an already-focused input (after Esc).
-          onFocusCapture={() => {
-            if (!isOpen) setOpen(true);
-          }}
-          onPointerDownCapture={() => {
-            if (!isOpen) setOpen(true);
-          }}
+          className={cn(
+            "flex min-h-0 grow flex-col border-b border-line",
+            compact ? "basis-0" : "basis-[440px]",
+          )}
+          data-testid={ChatDockTestId.Transcript}
         >
+          <div
+            className="flex items-center gap-2.5 border-b border-line px-3.5 py-3"
+            data-testid={ChatDockTestId.Header}
+          >
+            {hasSidebar && (
+              <Button
+                aria-label={sidebarLabel}
+                aria-pressed={isSidebarOpen}
+                data-testid={ChatDockTestId.SidebarButton}
+                icon="clock"
+                intent="ghost"
+                onClick={toggleSidebar}
+                size="sm"
+                title={sidebarLabel}
+              />
+            )}
+            <div className="flex-1" />
+            {onNewChat && (
+              <Button
+                data-testid={ChatDockTestId.NewChatButton}
+                intent="primary"
+                onClick={onNewChat}
+                size="sm"
+              >
+                {newChatLabel}
+              </Button>
+            )}
+            <Button
+              aria-label={closeLabel}
+              data-testid={ChatDockTestId.CloseButton}
+              icon="x"
+              intent="secondary"
+              onClick={() => setOpen(false)}
+              size="sm"
+              title={closeLabel}
+            />
+          </div>
+          <div
+            className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3.5"
+            data-testid={ChatDockTestId.Messages}
+            ref={messagesRef}
+          >
+            {transcript}
+          </div>
+        </div>
+
+        <div className="flex flex-col p-2" data-testid={ChatDockTestId.Footer}>
           {targetChip && (
             <span className="pb-2" data-testid={ChatDockTestId.TargetChip}>
               {targetChip}
             </span>
           )}
-          <div className="min-w-0" data-testid={ChatDockTestId.Composer}>
+          <div className="min-w-0" data-testid={ChatDockTestId.Composer} ref={composerRef}>
             {composer}
           </div>
         </div>
