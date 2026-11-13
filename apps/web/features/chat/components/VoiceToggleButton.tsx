@@ -9,6 +9,8 @@ export interface VoiceToggleButtonProps {
   /** Whether voice mode is currently on (shows the listening bars). */
   active: boolean;
   onToggle: () => void;
+  /** Larger labelled variant (secondary when off, primary when on) for dictation-first surfaces. */
+  prominent?: boolean;
 }
 
 /**
@@ -17,7 +19,7 @@ export interface VoiceToggleButtonProps {
  * render it ONLY when STT is supported (an unlabeled dead control would break the
  * interaction grammar), so there is no disabled state here.
  */
-export function VoiceToggleButton({ active, onToggle }: VoiceToggleButtonProps) {
+export function VoiceToggleButton({ active, onToggle, prominent = false }: VoiceToggleButtonProps) {
   const t = useTranslations("chat");
   const label = t(active ? "voice.stop" : "voice.start");
 
@@ -27,12 +29,13 @@ export function VoiceToggleButton({ active, onToggle }: VoiceToggleButtonProps) 
       aria-pressed={active}
       data-testid={VoiceToggleButtonTestId.Root}
       icon={active ? undefined : "mic"}
-      intent="ghost"
+      intent={prominent ? (active ? "primary" : "secondary") : "ghost"}
       onClick={onToggle}
-      size="sm"
+      size={prominent ? "md" : "sm"}
       title={label}
     >
       {active && <VoiceBars />}
+      {prominent && label}
     </Button>
   );
 }

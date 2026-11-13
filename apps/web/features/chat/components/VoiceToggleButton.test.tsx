@@ -24,4 +24,15 @@ describe("VoiceToggleButton", () => {
     await userEvent.click(screen.getByTestId(VoiceToggleButtonTestId.Root));
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it("shows a visible label when prominent", () => {
+    const { rerender } = renderWithProviders(
+      <VoiceToggleButton active={false} onToggle={vi.fn()} />,
+    );
+    expect(screen.getByTestId(VoiceToggleButtonTestId.Root)).toHaveTextContent("");
+    rerender(<VoiceToggleButton prominent active={false} onToggle={vi.fn()} />);
+    expect(screen.getByTestId(VoiceToggleButtonTestId.Root)).toHaveTextContent(
+      "Zapnout hlasový režim",
+    );
+  });
 });

@@ -60,6 +60,10 @@ export interface MarkdownEditorProps {
   placeholder?: string;
   /** Accessible name for the textarea when no visible `label` is provided. */
   ariaLabel?: string;
+  /** Grow to the parent's height (parent must be a sized flex column) instead of a fixed 420px. */
+  fill?: boolean;
+  /** Blocks typing and drops toolbar edits; the toolbar stays visible so it does not flicker when toggled. */
+  readOnly?: boolean;
 }
 
 /**
@@ -75,6 +79,8 @@ export function MarkdownEditor({
   hint,
   placeholder,
   ariaLabel,
+  fill = false,
+  readOnly,
 }: MarkdownEditorProps) {
   const id = useId();
   const theme = useResolvedTheme();
@@ -85,21 +91,34 @@ export function MarkdownEditor({
     id,
     placeholder,
     spellCheck: false,
+    readOnly,
     "aria-label": ariaLabel ?? label,
     "data-testid": MarkdownEditorTestId.Control,
   };
   return (
-    <Stack data-testid={MarkdownEditorTestId.Root} gap="100">
+    <Stack data-testid={MarkdownEditorTestId.Root} gap="100" grow={fill} minH0={fill}>
       {label && (
         <label className={labelClass} data-testid={MarkdownEditorTestId.Label} htmlFor={id}>
           {label}
         </label>
       )}
-      <div data-color-mode={theme} data-testid={MarkdownEditorTestId.Frame}>
+      <div
+        className={fill ? "flex min-h-0 flex-1 flex-col" : undefined}
+        data-color-mode={theme}
+        data-testid={MarkdownEditorTestId.Frame}
+      >
         <MDEditor
+          className={
+            fill
+              ? "min-h-0 flex-1 [&_.w-md-editor-content]:min-h-0 [&_.w-md-editor-content]:flex-1"
+              : undefined
+          }
           extraCommands={[commands.codeEdit, commands.codePreview]}
-          height={420}
-          onChange={(next) => onChange(next ?? "")}
+          height={fill ? "100%" : 420}
+          onChange={(next) => {
+            // Toolbar commands edit via setRangeText, which ignores `readonly`.
+            if (!readOnly) onChange(next ?? "");
+          }}
           preview="edit"
           previewOptions={{ style: themeVars }}
           style={editorStyle}

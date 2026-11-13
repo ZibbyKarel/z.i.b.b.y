@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { ChatDock } from "../ChatDock/ChatDock";
 import { MarkdownEditor } from "./MarkdownEditor";
 
 const SAMPLE = `# Reviewer
@@ -56,6 +57,29 @@ export const Playground: Story = {
         placeholder="Markdown popis agenta…"
         value={value}
       />
+    );
+  },
+};
+
+export const FillReadOnly: Story = {
+  render: () => (
+    <div className="flex h-[320px] flex-col">
+      <MarkdownEditor fill readOnly label="note.md" onChange={() => {}} value={SAMPLE} />
+    </div>
+  ),
+};
+
+export const FillInChatDock: Story = {
+  render: () => {
+    const [value, setValue] = useState(SAMPLE);
+    return (
+      <div className="flex h-[640px] w-[480px] items-end">
+        <ChatDock
+          defaultOpen
+          composer={<span />}
+          transcript={<MarkdownEditor fill label="note.md" onChange={setValue} value={value} />}
+        />
+      </div>
     );
   },
 };

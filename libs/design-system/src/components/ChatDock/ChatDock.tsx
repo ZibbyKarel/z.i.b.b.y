@@ -19,6 +19,7 @@ export enum ChatDockTestId {
   SidebarButton = "chat-dock-sidebar-button",
   Sidebar = "chat-dock-sidebar",
   Launcher = "chat-dock-launcher",
+  HeaderStart = "chat-dock-header-start",
 }
 
 export interface ChatDockProps {
@@ -48,6 +49,8 @@ export interface ChatDockProps {
   sidebarOpen?: boolean;
   onSidebarOpenChange?: (open: boolean) => void;
   sidebarLabel?: string;
+  /** Content at the left of the header, after the sidebar button (e.g. a picker). */
+  headerStart?: ReactNode;
   /**
    * Phone mode: open, the dock is a full-screen panel (header, messages,
    * composer, no history sidebar).
@@ -82,6 +85,7 @@ export function ChatDock({
   sidebarOpen,
   onSidebarOpenChange,
   sidebarLabel = "History",
+  headerStart,
   compact = false,
   launcherLabel = "Open chat",
   scrollKey,
@@ -205,7 +209,13 @@ export function ChatDock({
                 title={sidebarLabel}
               />
             )}
-            <div className="flex-1" />
+            {headerStart != null ? (
+              <div className="min-w-0 flex-1" data-testid={ChatDockTestId.HeaderStart}>
+                {headerStart}
+              </div>
+            ) : (
+              <div className="flex-1" />
+            )}
             {onNewChat && (
               <Button
                 data-testid={ChatDockTestId.NewChatButton}

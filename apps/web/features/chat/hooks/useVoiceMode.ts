@@ -35,7 +35,7 @@ export interface VoiceMode {
   active: boolean;
   /** Whether the mic is actually live right now (drives `SceneMode` `listening`). */
   listening: boolean;
-  /** In-progress transcript for the status strip (Web Speech path only). */
+  /** In-progress transcript for the status strip (Web Speech: live recognition; recorder: re-transcription of the clip so far). */
   interim: string;
   /** A recording is being transcribed by the backend (recorder path only). */
   transcribing: boolean;
@@ -94,7 +94,7 @@ export function useVoiceMode({ onFinal, suspended = false }: UseVoiceModeOptions
   const { start, stop } = engine;
   const supported = useRecorder || speech.supported;
   const listening = useRecorder ? recorder.state === "recording" : speech.listening;
-  const interim = useRecorder ? "" : speech.interim;
+  const interim = useRecorder ? recorder.interim : speech.interim;
   const transcribing = useRecorder && recorder.state === "transcribing";
 
   // Arm the mic only when voice mode is on AND not suspended (idle turn-taking

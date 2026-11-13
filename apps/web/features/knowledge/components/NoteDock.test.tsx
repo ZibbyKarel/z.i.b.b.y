@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event";
 import { ChatDockTestId, DropdownTestId, MarkdownEditorTestId } from "@zibby/design-system";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderWithProviders as render, screen, within } from "../../../test/render";
-import { NoteDock, NoteDockTestId, noteTitle } from "./NoteDock";
+import { NoteDock, NoteDockTestId, appendDictation, noteTitle } from "./NoteDock";
 
 type MutateOpts = { onSuccess?: () => void };
 const createNote = vi.fn((_vars: unknown, opts?: MutateOpts) => opts?.onSuccess?.());
@@ -53,13 +53,41 @@ describe("noteTitle", () => {
   });
 });
 
+describe("appendDictation", () => {
+  it("joins with a single space", () => {
+    expect(appendDictation("", "a")).toBe("a");
+    expect(appendDictation("x  ", "a")).toBe("x a");
+  });
+});
+
 describe("NoteDock", () => {
   beforeEach(() => {
+    voiceState.interim = "";
     createNote.mockClear();
     createKbNote.mockClear();
     voiceState.off.mockClear();
     voiceOpts.length = 0;
     teams = [];
+  });
+
+  it("puts the target picker in the dock header", () => {
+    render(<NoteDock open onClose={vi.fn()} />);
+    expect(
+      within(screen.getByTestId(ChatDockTestId.Header)).getByTestId(NoteDockTestId.Target),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the live interim after the draft in the editor, read-only", async () => {
+    const { rerender } = render(<NoteDock open onClose={vi.fn()} />);
+    await type("Hello");
+    voiceState.interim = "world";
+    rerender(<NoteDock open onClose={vi.fn()} />);
+    expect(control().value).toBe("Hello world");
+    expect(control()).toHaveAttribute("readonly");
+    voiceState.interim = "";
+    rerender(<NoteDock open onClose={vi.fn()} />);
+    expect(control().value).toBe("Hello");
+    expect(control()).not.toHaveAttribute("readonly");
   });
 
   it("saves to the vault by default with no tier", async () => {
@@ -132,6 +160,17 @@ describe("NoteDock", () => {
     await type("abc");
     act(() => voiceOpts.at(-1)!.onFinal("def"));
     expect(control().value).toBe("abc def");
+  });
+
+  it("appends the final transcript once after interim clears", async () => {
+    const { rerender } = render(<NoteDock open onClose={vi.fn()} />);
+    await type("Hello");
+    voiceState.interim = "world";
+    rerender(<NoteDock open onClose={vi.fn()} />);
+    voiceState.interim = "";
+    act(() => voiceOpts.at(-1)!.onFinal("world"));
+    rerender(<NoteDock open onClose={vi.fn()} />);
+    expect(control().value).toBe("Hello world");
   });
 
   it("turns the mic off on close", () => {
