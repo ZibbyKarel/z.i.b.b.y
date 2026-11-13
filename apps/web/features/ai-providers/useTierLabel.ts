@@ -2,14 +2,14 @@
 
 import { useTranslations } from "next-intl";
 import type { AiEngine, ModelTier } from "@zibby/contracts";
-import { tierConcreteModel, tierLevel } from "../../utils/engine";
+import { tierConcreteModel } from "../../utils/engine";
 import { useSystemConfigQuery } from "../system";
 
 /**
- * Returns `(tier, engine?) => "Level 2 · Sonnet"` — the one label for a model tier. `engine`
- * defaults to the global engine; on opencode the concrete model is the tier's mapping
- * (or "not set" when nothing resolves). `short` (canvas badges) reads "L2 · beam-free": the
- * level shortened and the opencode provider prefix dropped.
+ * Returns `(tier, engine?) => "Sonnet"` — the concrete model name of a tier, with no tier label
+ * (tiers are shown only in Settings → AI Engine). `engine` defaults to the global engine; on
+ * opencode the model is the tier's mapping (or "not set" when nothing resolves). `short` (canvas
+ * badges) drops the opencode provider prefix: "beam-free".
  */
 export function useTierLabel(): (tier: ModelTier, engine?: AiEngine, short?: boolean) => string {
   const t = useTranslations("aiEngine");
@@ -21,7 +21,6 @@ export function useTierLabel(): (tier: ModelTier, engine?: AiEngine, short?: boo
       config?.opencodeTierModels,
       config?.opencodeModel ?? "",
     );
-    const name = (short ? model.split("/").pop() : model) || t("notSet");
-    return `${t(short ? "levelShort" : "level", { n: tierLevel(tier) })} · ${name}`;
+    return (short ? model.split("/").pop() : model) || t("notSet");
   };
 }

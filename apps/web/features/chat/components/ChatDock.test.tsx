@@ -197,10 +197,10 @@ describe("ChatDock (ZB-12)", () => {
       renderDock();
       await userEvent.setup().click(trigger());
       expect(screen.getAllByTestId(DropdownTestId.Option).map((o) => o.textContent)).toEqual([
-        "Úroveň 1 · Haiku",
-        "Úroveň 2 · Sonnet",
-        "Úroveň 3 · Opus",
-        "Úroveň 4 · Fable",
+        "Haiku",
+        "Sonnet",
+        "Opus",
+        "Fable",
       ]);
     });
 

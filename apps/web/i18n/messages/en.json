@@ -3908,8 +3908,6 @@
     "operatorTokenLink": "Set it in Settings → General",
     "noModels": "No opencode models could be listed (model catalog unavailable). Check that opencode works in a terminal.",
     "noFreeModels": "None of the listed models is confirmed free; picking one may cost money.",
-    "level": "Level {n}",
-    "levelShort": "L{n}",
     "notSet": "not set",
     "levelsTitle": "Model levels",
     "levelsHint": "Agents pick a level, not a model. An empty level falls back to the nearest mapped lower level, then the nearest higher one, then the default model.",

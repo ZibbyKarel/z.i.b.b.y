@@ -116,7 +116,7 @@ export function AgentNode({
 }: AgentNodeProps) {
   const t = useTranslations("forms.workflow");
   const tierLabel = useTierLabel();
-  // The step's (else its agent's) exact opencode model; otherwise the level on its effective engine.
+  // The step's (else its agent's) exact opencode model; otherwise the tier's model on its effective engine.
   const choice = stepEngineChoice(
     node,
     agents.find((a) => a.id === node.agent),

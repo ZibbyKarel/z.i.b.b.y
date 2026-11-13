@@ -135,8 +135,8 @@ describe("RunStageRail", () => {
       });
       agentsMock.mockReturnValue({ data: [{ id: "reviewer", model: "opus" }] });
       renderRail();
-      expect(model("phase1")).toHaveTextContent("Úroveň 2 · Sonnet");
-      expect(model("phase2")).toHaveTextContent("Úroveň 3 · Opus");
+      expect(model("phase1")).toHaveTextContent(/^Sonnet$/);
+      expect(model("phase2")).toHaveTextContent(/^Opus$/);
       expect(model("phase3")).toHaveTextContent("výchozí");
     });
 
@@ -169,7 +169,7 @@ describe("RunStageRail", () => {
           selectedPhaseId={null}
         />,
       );
-      expect(model("delivery_42")).toHaveTextContent("Úroveň 1 · Haiku");
+      expect(model("delivery_42")).toHaveTextContent(/^Haiku$/);
     });
   });
 });
