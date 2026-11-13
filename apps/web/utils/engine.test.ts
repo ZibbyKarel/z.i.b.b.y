@@ -1,19 +1,7 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatEngine,
-  lacksThinkingVariant,
-  stepEngineChoice,
-  tierConcreteModel,
-  tierLevel,
-} from "./engine";
+import { formatEngine, lacksThinkingVariant, stepEngineChoice, tierConcreteModel } from "./engine";
 
 describe("tier helpers", () => {
-  it("numbers tiers weakest to strongest", () => {
-    expect(["haiku", "sonnet", "opus", "fable"].map((t) => tierLevel(t as never))).toEqual([
-      1, 2, 3, 4,
-    ]);
-  });
-
   it("claude: the tier is the Claude model, mapping ignored", () => {
     expect(tierConcreteModel("opus", "claude", { opus: "x/y" }, "d/m")).toBe("Opus");
   });

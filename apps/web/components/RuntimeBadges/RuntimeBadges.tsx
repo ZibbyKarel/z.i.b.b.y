@@ -19,7 +19,7 @@ export function ModelBadge({
 }: {
   model: string;
   provider?: "openai";
-  /** Replaces the text (e.g. "Level 2 · Sonnet" or an exact engine model). */
+  /** Replaces the text (e.g. "Sonnet" or an exact engine model). */
   label?: string;
 }) {
   const t = useTranslations("phase");

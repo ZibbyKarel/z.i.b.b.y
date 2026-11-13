@@ -1,6 +1,5 @@
 import {
   type AiEngine,
-  MODEL_TIERS,
   type ModelTier,
   type OpencodeTierModels,
   resolveTierModel,
@@ -49,9 +48,6 @@ export function tierConcreteModel(
     ? CLAUDE_TIER_NAME[tier]
     : resolveTierModel(tier, tierModels, fallback);
 }
-
-/** 1-based level number of a tier (haiku = 1 … fable = 4). */
-export const tierLevel = (tier: ModelTier): number => MODEL_TIERS.indexOf(tier) + 1;
 
 /**
  * Whether an opencode model lacks the `level` thinking variant, so a run would go without it.
