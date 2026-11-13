@@ -150,6 +150,13 @@ export type ResolveTeamKbQuestionInput = z.infer<typeof ResolveTeamKbQuestionSch
 export const TeamKbAnswerSchema = z.object({ id: z.string(), title: z.string() });
 export type TeamKbAnswer = z.infer<typeof TeamKbAnswerSchema>;
 
+/** Write one operator note (`POST /teams/:id/kb/notes`) into the KB `inbox/`. */
+export const CreateTeamKbNoteSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  body: z.string().trim().min(1).max(100_000),
+});
+export type CreateTeamKbNoteInput = z.infer<typeof CreateTeamKbNoteSchema>;
+
 /**
  * Ingest status of a team KB (`GET /teams/:id/kb/ingest`): the registered project
  * whose path IS the KB repo (the `team-kb-ingest` workflow runs on it; null when none)

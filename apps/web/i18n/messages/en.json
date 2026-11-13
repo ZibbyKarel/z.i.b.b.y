@@ -104,6 +104,16 @@
     "emptyDescription": "No notes in the vault yet. Notes appear here as runs write to it — or create the first one.",
     "untriaged": "Untriaged",
     "departmentBadge": "Department shelf",
+    "noteDock": {
+      "placeholder": "Write or dictate a note (Markdown)…",
+      "editorLabel": "Note",
+      "target": "Save to",
+      "vault": "Vault",
+      "save": "Save",
+      "close": "Close",
+      "saved": "Note saved",
+      "untitled": "Note"
+    },
     "quickCapture": {
       "trigger": "Quick capture",
       "title": "Quick capture",
@@ -2563,6 +2573,7 @@
   "shell": {
     "menu": "Menu",
     "menuClose": "Close menu",
+    "newNote": "New note",
     "newTask": "New task",
     "operatorFallback": "CEO",
     "active": "active",

@@ -20,7 +20,8 @@ import {
 } from "@zibby/design-system";
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
-import { ChatDock, ChatProvider } from "../../../features/chat";
+import { NoteDock } from "../../../features/knowledge/components/NoteDock";
+import { ChatDock, ChatProvider, useChat } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSheetParam";
@@ -48,6 +49,7 @@ import { ThemeToggle } from "../ThemeToggle/ThemeToggle";
 import { SECTIONS, type SectionId, type SubTabConfig, sectionForPath } from "../../../state/config";
 
 export enum AppShellTestId {
+  NewNote = "app-shell-new-note",
   NewTask = "app-shell-new-task",
   PinToggle = "app-shell-pin-toggle",
   PageActions = "app-shell-page-actions",
@@ -178,6 +180,23 @@ function PinControl({
   );
 }
 
+/** Opens the floating note window; always shown, icon-only on the phone toolbar. */
+function NewNoteButton({ iconOnly, onClick }: { iconOnly: boolean; onClick: () => void }) {
+  const tShell = useTranslations("shell");
+  return (
+    <Button
+      aria-label={tShell("newNote")}
+      data-testid={AppShellTestId.NewNote}
+      icon="edit"
+      intent="secondary"
+      onClick={onClick}
+      size="sm"
+    >
+      {iconOnly ? null : tShell("newNote")}
+    </Button>
+  );
+}
+
 /** ZB-04b: "+ NEW TASK" opens the dedicated `/work/tasks/new` page (Option+N does
  *  the same from anywhere; the classify-driven dialog stays reachable via the `N`
  *  shortcut). Hidden on that page itself; icon-only on the phone toolbar. */
@@ -205,6 +224,7 @@ function SectionSubNav({
   pageActions,
   currentHref,
   onPinRequested,
+  onNewNote,
 }: {
   active: SectionId;
   /** The page-breadcrumb portal target, rendered after the tabs. */
@@ -213,6 +233,7 @@ function SectionSubNav({
   pageActions: ReactNode;
   currentHref: string;
   onPinRequested: () => void;
+  onNewNote: () => void;
 }) {
   const t = useTranslations("nav");
   const pathname = usePathname();
@@ -238,6 +259,7 @@ function SectionSubNav({
             onPinRequested={onPinRequested}
             pathname={pathname}
           />
+          <NewNoteButton iconOnly={false} onClick={onNewNote} />
           <NewTaskButton iconOnly={false} pathname={pathname} />
         </>
       }
@@ -323,6 +345,8 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const approvalSheet = useApprovalSheetParam();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const { setDockOpen } = useChat();
+  const [noteOpen, setNoteOpen] = useState(false);
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
   const activeTab = activeSubNavTab<SubTabConfig>(
@@ -336,6 +360,11 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
   const onPinRequested = () => setPinDialogOpen(true);
+  const openNote = () => {
+    // Close the chat so its mic turns off and its Esc listener does not also close the note.
+    setDockOpen(false);
+    setNoteOpen(true);
+  };
   // `display: contents` — the portalled controls join the actions row's own flex
   // gap; an empty slot takes no room. The slot lives in the sub-nav (desktop) or
   // the toolbar (phone).
@@ -351,7 +380,13 @@ function AppShellChrome({ children }: { children: ReactNode }) {
     <PageBreadcrumbSlotProvider activeHrefs={activeSubHrefs} element={crumbSlot}>
       <PageActionsSlotProvider element={actionsSlot}>
         <AppFrame
-          dock={<ChatDock />}
+          dock={
+            <>
+              <NoteDock onClose={() => setNoteOpen(false)} open={noteOpen} />
+              {/* Hidden, not unmounted: unmounting drops the composer draft, the in-flight stream and the open thread. */}
+              <ChatDock hidden={noteOpen} />
+            </>
+          }
           fullBleed={pathname === "/dashboard"}
           header={
             phone ? (
@@ -365,6 +400,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
                       onPinRequested={onPinRequested}
                       pathname={pathname}
                     />
+                    <NewNoteButton iconOnly onClick={openNote} />
                     <NewTaskButton iconOnly pathname={pathname} />
                     <NotificationBell />
                   </>
@@ -391,6 +427,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
               <SectionSubNav
                 active={active}
                 currentHref={currentHref}
+                onNewNote={openNote}
                 onPinRequested={onPinRequested}
                 pageActions={pageActions}
                 trail={<div ref={setCrumbSlot} />}

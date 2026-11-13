@@ -113,6 +113,9 @@ POST   /teams/:id/kb/questions/resolve  { noteId, question, answer } — writes 
                           listing that question (any note tagged `answer` with `sources` counts, even once triaged out of
                           `inbox/`; answer notes never feed the digest themselves); 201 { id: "inbox/answer-<slug>-<hash>.md", title },
                           404 no team/KB or question not in the digest, 409 already answered / `inbox/` unsafe
+POST   /teams/:id/kb/notes  { title, body } — writes ONE new note `inbox/note-<slug>-<base36 ms>.md`
+                          (frontmatter `title`/`created`, no tags); 201 { id, title, folder: "inbox" },
+                          404 no team/KB, 409 `inbox/` unsafe / file exists
 PATCH  /teams/:id         partial update
 DELETE /teams/:id         delete (allowed with linked projects — no cascade)
 ```
@@ -138,8 +141,10 @@ missing org access / SSO) before git's own text.
 write: it creates exactly one new file in the KB's gitignored `inbox/` (`wx` flag, never
 overwrites; a symlinked or non-directory `inbox/` is refused) and only for a question the
 digest really lists. The source note is never modified.
-`readOnly` means ZIBBY agents never author into the KB; the only app writes are these two
-operator-triggered ones (a ff pull and one new inbox note).
+`POST /teams/:id/kb/notes` (`KbAnswerService.capture`) is the third: one new operator note in
+the same guarded `inbox/` (same `wx` / symlink rules, no digest check).
+`readOnly` means ZIBBY agents never author into the KB; the only app writes are these three
+operator-triggered ones (a ff pull and two kinds of new inbox note).
 
 `TeamsController` mirrors `CompaniesController` in shape: `deleteTeam` reads
 the team first (`storage.get(id)`) so a 404 surfaces before any side effect,

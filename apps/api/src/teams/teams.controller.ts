@@ -126,6 +126,20 @@ export class TeamsController {
         }
       },
 
+      createTeamKbNote: async ({ params: { id }, body }) => {
+        const kb = await this.kbOf(id);
+        if (!kb)
+          return { status: 404 as const, body: { message: `Team "${id}" has no knowledge base` } };
+        try {
+          return { status: 201 as const, body: await this.kbAnswer.capture(kb, body) };
+        } catch (e) {
+          if (e instanceof KbAnswerConflictError) {
+            return { status: 409 as const, body: { message: e.message } };
+          }
+          throw e;
+        }
+      },
+
       getTeamKbIngest: async ({ params: { id } }) => {
         const kb = await this.kbOf(id);
         if (!kb)

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CreateTeamKbNoteSchema,
   KnowledgeBaseSourceSchema,
   ResolveTeamKbQuestionSchema,
   TeamKbDigestSchema,
@@ -149,6 +150,20 @@ describe("ResolveTeamKbQuestionSchema", () => {
         answer: "a",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("CreateTeamKbNoteSchema", () => {
+  it("trims title and body", () => {
+    expect(CreateTeamKbNoteSchema.parse({ title: "  T ", body: " b " })).toEqual({
+      title: "T",
+      body: "b",
+    });
+  });
+
+  it("rejects an empty body or title", () => {
+    expect(CreateTeamKbNoteSchema.safeParse({ title: "T", body: "   " }).success).toBe(false);
+    expect(CreateTeamKbNoteSchema.safeParse({ title: "", body: "b" }).success).toBe(false);
   });
 });
 
