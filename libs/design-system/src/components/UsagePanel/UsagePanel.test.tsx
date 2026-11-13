@@ -52,4 +52,30 @@ describe("UsagePanel", () => {
     render(<UsagePanel items={[{ label: "5H", value: 5 }]} />);
     expect(screen.queryByTestId(UsagePanelTestId.Reset)).toBeNull();
   });
+
+  it("renders a stat item as label over text, with no ring or meter", () => {
+    render(
+      <UsagePanel
+        items={[
+          { label: "30 DNÍ", stat: "$1.24" },
+          { label: "TOKENY", stat: "412k" },
+        ]}
+      />,
+    );
+    expect(screen.queryByTestId(UsagePanelTestId.Ring)).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(UsagePanelTestId.Stat).map((s) => s.textContent)).toEqual([
+      "$1.24",
+      "412k",
+    ]);
+    expect(screen.getAllByTestId(UsagePanelTestId.Label).map((l) => l.textContent)).toEqual([
+      "30 DNÍ",
+      "TOKENY",
+    ]);
+    expect(screen.getAllByTestId(UsagePanelTestId.Divider)).toHaveLength(1);
+  });
+
+  it("ignores resetsIn on a stat item", () => {
+    render(<UsagePanel items={[{ label: "X", stat: "—", resetsIn: "1h" }]} />);
+    expect(screen.queryByTestId(UsagePanelTestId.Reset)).not.toBeInTheDocument();
+  });
 });

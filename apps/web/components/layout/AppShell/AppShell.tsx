@@ -27,11 +27,8 @@ import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSh
 import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSheetParam";
 import { counterSuffix } from "../../../features/inbox/inbox";
 import { useInboxCounts } from "../../../features/inbox/useInboxCounts";
-import { useLimitsQuery } from "../../../features/limits";
 import { useSelfStatusQuery } from "../../../features/self";
 import { useIsPhone } from "../../../hooks/useIsPhone";
-import { useNow } from "../../../hooks/useNow";
-import { MINUTE_MS, formatCountdown } from "../../../utils/time";
 import { NotificationBell } from "../../../features/notifications";
 import { ApprovalNotifier, AutopilotToggle, useAutopilotQuery } from "../../../features/autopilot";
 import {
@@ -41,7 +38,9 @@ import {
   pinHrefFor,
   usePagePins,
 } from "../../../features/pins";
+import { AiEngineSwitcher } from "../AiEngineSwitcher/AiEngineSwitcher";
 import { HeaderLimits } from "../HeaderLimits/HeaderLimits";
+import { useHeaderLimitItems } from "../HeaderLimits/useHeaderLimitItems";
 import { PageActionsSlotProvider } from "../PageActions";
 import { PageBreadcrumbSlotProvider } from "../PageBreadcrumb";
 import { SelfUpgrade } from "../SelfUpgrade";
@@ -304,32 +303,16 @@ function PhoneMenu({ pathname }: { pathname: string }) {
  *  it can return a plain node for `AppHeader`'s named slot rather than one
  *  wrapping element. */
 function useHeaderTrailing() {
-  const t = useTranslations("shell");
-  const { data: limits } = useLimitsQuery();
   const { data: status } = useSelfStatusQuery();
-  const now = useNow(MINUTE_MS);
-  const resetsIn = (resetsAt: number | null | undefined) =>
-    resetsAt == null ? undefined : formatCountdown(resetsAt - now);
+  const limitItems = useHeaderLimitItems();
 
   return {
     version: status?.appVersion ? `v${status.appVersion}` : undefined,
     limits: (
       <Stack align="center" direction="row" gap="100">
         <SelfUpgrade />
-        <HeaderLimits
-          items={[
-            {
-              label: "5H",
-              value: limits?.rolling.usedPct ?? 0,
-              resetsIn: resetsIn(limits?.rolling.resetsAt),
-            },
-            {
-              label: t("week"),
-              value: limits?.weekly.usedPct ?? 0,
-              resetsIn: resetsIn(limits?.weekly.resetsAt),
-            },
-          ]}
-        />
+        <AiEngineSwitcher />
+        <HeaderLimits items={limitItems} />
       </Stack>
     ),
   };
