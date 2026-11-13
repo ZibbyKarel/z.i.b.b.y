@@ -1,5 +1,6 @@
 import {
   type AiEngine,
+  type AiEngineStatus,
   type ModelTier,
   type OpencodeTierModels,
   resolveTierModel,
@@ -43,10 +44,20 @@ export function tierConcreteModel(
   engine: AiEngine,
   tierModels: OpencodeTierModels | undefined,
   fallback: string,
+  listed?: readonly string[],
 ): string {
   return engine === "claude"
     ? CLAUDE_TIER_NAME[tier]
-    : resolveTierModel(tier, tierModels, fallback);
+    : resolveTierModel(tier, tierModels, fallback, listed);
+}
+
+/**
+ * The model ids the catalog lists, for `resolveTierModel`'s fallback; `undefined` (trust the
+ * mapping) unless opencode is available and lists at least one model.
+ */
+export function catalogIds(engines: AiEngineStatus[] | undefined): string[] | undefined {
+  const oc = engines?.find((e) => e.id === "opencode");
+  return oc?.available && oc.models?.length ? oc.models.map((m) => m.id) : undefined;
 }
 
 /**

@@ -3917,6 +3917,7 @@
     "notSet": "nenastaveno",
     "levelsTitle": "Úrovně modelů",
     "levelsHint": "Agenti volí úroveň, ne model. Prázdná úroveň se nahradí nejbližší nižší namapovanou, pak nejbližší vyšší a nakonec výchozím modelem.",
+    "levelFallback": "→ {model} (úroveň nemá model)",
     "levelRow": "Úroveň {n} ({name})",
     "defaultModel": "Výchozí model",
     "modelNone": "— žádný —",

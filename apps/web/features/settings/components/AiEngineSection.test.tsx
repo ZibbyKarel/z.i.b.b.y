@@ -120,6 +120,21 @@ describe("AiEngineSection", () => {
     });
   });
 
+  it("a level whose model the catalog lacks shows where it falls back", () => {
+    config = {
+      ...config,
+      opencodeTierModels: { opus: "claude-agent/opus", fable: "claude-agent/fable" },
+    };
+    engines = [opencode({ models: ids("claude-agent/opus") })];
+    render(<AiEngineSection />);
+    expect(screen.getByTestId(`${AiEngineSectionTestId.LevelFallback}-fable`)).toHaveTextContent(
+      "→ claude-agent/opus",
+    );
+    expect(
+      screen.queryByTestId(`${AiEngineSectionTestId.LevelFallback}-opus`),
+    ).not.toBeInTheDocument();
+  });
+
   it("maps a level to an opencode model, and clearing it drops the key", async () => {
     config = { ...config, opencodeTierModels: { opus: "anthropic/claude-x" } };
     render(<AiEngineSection />);

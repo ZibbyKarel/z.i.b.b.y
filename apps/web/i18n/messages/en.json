@@ -3917,6 +3917,7 @@
     "notSet": "not set",
     "levelsTitle": "Model levels",
     "levelsHint": "Agents pick a level, not a model. An empty level falls back to the nearest mapped lower level, then the nearest higher one, then the default model.",
+    "levelFallback": "→ {model} (no model at this level)",
     "levelRow": "Level {n} ({name})",
     "defaultModel": "Default model",
     "modelNone": "— none —",
