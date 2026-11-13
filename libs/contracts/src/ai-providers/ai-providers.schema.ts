@@ -81,11 +81,14 @@ export type OpencodeTierModels = z.infer<typeof OpencodeTierModelsSchema>;
  * A20 — the opencode model a tier runs on: its own mapping, else the nearest mapped
  * LOWER tier, else the nearest mapped HIGHER tier, else `fallback` (the global
  * `opencodeModel`). No tier → `fallback`. "" means nothing is chosen at all.
+ * A tier counts when mapped AND (with `listed`, the live catalog) its model is listed —
+ * a family without that model falls back like an unmapped tier (todo-7).
  */
 export function resolveTierModel(
   tier: ModelTier | undefined,
   tierModels: OpencodeTierModels | undefined,
   fallback: string,
+  listed?: readonly string[],
 ): string {
   if (!tier || !tierModels) return fallback;
   const i = MODEL_TIERS.indexOf(tier);
@@ -95,7 +98,7 @@ export function resolveTierModel(
   ];
   for (const t of order) {
     const model = tierModels[t];
-    if (model) return model;
+    if (model && (!listed || listed.includes(model.split("#")[0] ?? model))) return model;
   }
   return fallback;
 }

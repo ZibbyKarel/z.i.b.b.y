@@ -99,4 +99,14 @@ describe("model tiers (A19/A20)", () => {
     expect(resolveTierModel(undefined, m, "g")).toBe("g");
     expect(resolveTierModel("opus", undefined, "")).toBe("");
   });
+
+  it("resolveTierModel skips a mapped tier the catalog lacks (todo-7)", () => {
+    const m = { haiku: "a/h", sonnet: "a/s", opus: "a/o", fable: "a/f" };
+    expect(resolveTierModel("fable", m, "g", ["a/h", "a/s", "a/o"])).toBe("a/o"); // one lower
+    expect(resolveTierModel("fable", m, "g", ["a/h", "a/s"])).toBe("a/s"); // nearest lower
+    expect(resolveTierModel("haiku", m, "g", ["a/o", "a/f"])).toBe("a/o"); // no lower → nearest higher
+    expect(resolveTierModel("opus", m, "g", [])).toBe("g"); // nothing listed → default
+    expect(resolveTierModel("opus", { opus: "a/o#high" }, "g", ["a/o"])).toBe("a/o#high"); // variant dropped for the check
+    expect(resolveTierModel("fable", m, "g", undefined)).toBe("a/f"); // unreadable catalog: trust the mapping
+  });
 });
