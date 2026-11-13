@@ -146,7 +146,7 @@ export function HeaderLimits({ items }: HeaderLimitsProps) {
                 <Typography data-testid={HeaderLimitsTestId.Title} type="label">
                   {title}
                 </Typography>
-                <BudgetsWidget onEmptyChange={noop} />
+                <BudgetsWidget aiUsageOnly onEmptyChange={noop} />
               </Stack>
             </Container>
           </MenuSurface>,
