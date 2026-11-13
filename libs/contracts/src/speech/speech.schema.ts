@@ -93,3 +93,22 @@ export type SpeechTranscribeInput = z.infer<typeof SpeechTranscribeInputSchema>;
 /** `transcribe` result — the cleaned transcript; empty string when no speech was heard. */
 export const SpeechTranscribeResultSchema = z.object({ text: z.string() });
 export type SpeechTranscribeResult = z.infer<typeof SpeechTranscribeResultSchema>;
+
+/**
+ * `startDictation` body — opens a streaming dictation session. `mimeType` is what
+ * `MediaRecorder` produces (one continuous webm/opus or mp4 stream, uploaded chunk by
+ * chunk to `POST /api/speech/dictation/:id/audio`); `language` defaults to Czech.
+ */
+export const SpeechDictationStartInputSchema = z.object({
+  mimeType: z.string().min(1),
+  language: z.string().min(1).optional(),
+});
+export type SpeechDictationStartInput = z.infer<typeof SpeechDictationStartInputSchema>;
+
+/** `startDictation` result — the session id the audio/events/finish routes take. */
+export const SpeechDictationSessionSchema = z.object({ id: z.string().min(1) });
+export type SpeechDictationSession = z.infer<typeof SpeechDictationSessionSchema>;
+
+/** One live update on `GET /api/speech/dictation/:id/events` — `final` is `true` exactly once, last. */
+export const SpeechDictationUpdateSchema = z.object({ text: z.string(), final: z.boolean() });
+export type SpeechDictationUpdate = z.infer<typeof SpeechDictationUpdateSchema>;

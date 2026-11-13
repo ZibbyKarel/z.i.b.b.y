@@ -2,6 +2,8 @@ import { initContract } from "@ts-rest/core";
 import { z } from "zod";
 import { ErrorSchema } from "../common.schema";
 import {
+  SpeechDictationSessionSchema,
+  SpeechDictationStartInputSchema,
   SpeechStatusSchema,
   SpeechSynthesizeInputSchema,
   SpeechSynthesizeResultSchema,
@@ -55,6 +57,31 @@ export const speechContract = c.router(
       },
       summary:
         "Transcribe a dictation clip with the local Hex app — 503 when STT is unavailable, 422 when the audio could not be decoded",
+    },
+    startDictation: {
+      method: "POST",
+      path: "/speech/dictation",
+      body: SpeechDictationStartInputSchema,
+      responses: {
+        201: SpeechDictationSessionSchema,
+        503: ErrorSchema,
+      },
+      summary:
+        "Open a streaming dictation session — upload audio to /speech/dictation/:id/audio, read updates from /speech/dictation/:id/events (both outside the contract); 503 when STT is unavailable",
+    },
+    finishDictation: {
+      method: "POST",
+      path: "/speech/dictation/:id/finish",
+      pathParams: z.object({ id: z.string().min(1) }),
+      body: c.noBody(),
+      responses: {
+        200: SpeechTranscribeResultSchema,
+        404: ErrorSchema,
+        422: ErrorSchema,
+        503: ErrorSchema,
+      },
+      summary:
+        "Close a dictation session and return the full transcript — 404 unknown/expired session, 422 undecodable audio, 503 STT unavailable",
     },
     listVoices: {
       method: "GET",

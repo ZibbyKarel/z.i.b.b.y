@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { DictationStreamService } from "./dictation-stream.service";
 import { SpeechController } from "./speech.controller";
 import { SpeechService } from "./speech.service";
 import { SttService } from "./stt.service";
@@ -11,6 +12,6 @@ import { SttService } from "./stt.service";
  */
 @Module({
   controllers: [SpeechController],
-  providers: [SpeechService, SttService],
+  providers: [SpeechService, SttService, DictationStreamService],
 })
 export class SpeechModule {}

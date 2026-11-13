@@ -6,6 +6,7 @@ import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
 import { Injectable } from "@nestjs/common";
 import type { SpeechStatus, SpeechTranscribeInput, SpeechTranscribeResult } from "@zibby/contracts";
+import { pcmToWav } from "./dictation-stream.session";
 
 const run = promisify(execFile);
 
@@ -35,7 +36,7 @@ const FFMPEG_TIMEOUT_MS = 30_000;
 const EXTRA_BIN_DIRS = ["/opt/homebrew/bin", "/usr/local/bin"];
 
 /** Absolute path of `ffmpeg` on PATH (+ Homebrew dirs), or `null`. */
-async function findFfmpeg(): Promise<string | null> {
+export async function findFfmpeg(): Promise<string | null> {
   const dirs = [...(process.env.PATH ?? "").split(delimiter).filter(Boolean), ...EXTRA_BIN_DIRS];
   for (const dir of dirs) {
     const candidate = join(dir, "ffmpeg");
@@ -139,11 +140,23 @@ export class SttService {
     const ffmpeg = await findFfmpeg();
     if (!ffmpeg) throw new SttUnavailableError("ffmpeg not found — brew install ffmpeg");
     const wav = await toWav(ffmpeg, Buffer.from(input.audioBase64, "base64"));
+    return { text: await this.postWav(api, wav, input.language) };
+  }
 
-    const query = new URLSearchParams({
-      model: await hexModel(),
-      language: input.language ?? DEFAULT_LANGUAGE,
-    });
+  /** Transcribe raw 16 kHz mono s16le PCM (a dictation-stream slice) — no ffmpeg, no temp files. */
+  async transcribePcm(pcm: Buffer, language?: string): Promise<string> {
+    const api = await hexApi();
+    if (!api) throw new SttUnavailableError("Hex is not running — open Hex.app");
+    return this.postWav(api, pcmToWav(pcm), language);
+  }
+
+  /** POST a WAV to Hex's `/transcriptions` and return the cleaned transcript. */
+  private async postWav(
+    api: { port: number; token: string },
+    wav: Buffer,
+    language = DEFAULT_LANGUAGE,
+  ): Promise<string> {
+    const query = new URLSearchParams({ model: await hexModel(), language });
     let res: Response;
     try {
       res = await fetch(`http://127.0.0.1:${api.port}/transcriptions?${query}`, {
@@ -165,6 +178,6 @@ export class SttService {
       if (res.status === 401 || res.status >= 500) throw new SttUnavailableError(detail);
       throw new SttTranscriptionError(detail);
     }
-    return { text: cleanTranscript(typeof body?.transcript === "string" ? body.transcript : "") };
+    return cleanTranscript(typeof body?.transcript === "string" ? body.transcript : "");
   }
 }

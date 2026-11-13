@@ -1,7 +1,11 @@
+import { type Server, request as httpRequest } from "node:http";
+import type { AddressInfo } from "node:net";
 import type { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
+import { of } from "rxjs";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { DictationSessionNotFoundError, DictationStreamService } from "./dictation-stream.service";
 import { SpeakdDaemonError, SpeakdTimeoutError, SpeakdUnreachableError } from "./speech.errors";
 import { SpeechController } from "./speech.controller";
 import { SpeechService } from "./speech.service";
@@ -19,6 +23,7 @@ describe("SpeechController", () => {
   const status = vi.fn();
   const transcribe = vi.fn();
   const sttStatus = vi.fn();
+  const dictation = { create: vi.fn(), write: vi.fn(), finish: vi.fn(), events: vi.fn() };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -26,6 +31,7 @@ describe("SpeechController", () => {
       providers: [
         { provide: SpeechService, useValue: { synthesize, listVoices, status } },
         { provide: SttService, useValue: { transcribe, status: sttStatus } },
+        { provide: DictationStreamService, useValue: dictation },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -42,6 +48,7 @@ describe("SpeechController", () => {
     status.mockReset();
     transcribe.mockReset();
     sttStatus.mockReset();
+    for (const fn of Object.values(dictation)) fn.mockReset();
   });
 
   it("200s a successful synthesize with the service's result verbatim", async () => {
@@ -200,5 +207,113 @@ describe("SpeechController", () => {
     expect(res.status).toBe(200);
     expect(res.body.stt).toEqual({ available: false, reason: "no model" });
     expect(res.body.reachable).toBe(false);
+  });
+
+  describe("dictation sessions", () => {
+    const missing = (id: string) => {
+      throw new DictationSessionNotFoundError(id);
+    };
+
+    it("201s a new session, 503s when STT is unavailable", async () => {
+      dictation.create.mockResolvedValueOnce({ id: "s1" });
+      const ok = await request(app.getHttpServer())
+        .post("/api/speech/dictation")
+        .send({ mimeType: "audio/webm", language: "cs" });
+      expect(ok.status).toBe(201);
+      expect(ok.body).toEqual({ id: "s1" });
+      expect(dictation.create).toHaveBeenCalledWith({ mimeType: "audio/webm", language: "cs" });
+
+      dictation.create.mockRejectedValueOnce(new SttUnavailableError("Hex is not running"));
+      const down = await request(app.getHttpServer())
+        .post("/api/speech/dictation")
+        .send({ mimeType: "audio/webm" });
+      expect(down.status).toBe(503);
+    });
+
+    it("finish: 200 text, 404 unknown, 422 undecodable, 503 unavailable", async () => {
+      const finish = () => request(app.getHttpServer()).post("/api/speech/dictation/s1/finish");
+      dictation.finish.mockResolvedValueOnce("ahoj světe");
+      const ok = await finish();
+      expect(ok.status).toBe(200);
+      expect(ok.body).toEqual({ text: "ahoj světe" });
+      expect(dictation.finish).toHaveBeenCalledWith("s1");
+
+      dictation.finish.mockRejectedValueOnce(new DictationSessionNotFoundError("s1"));
+      expect((await finish()).status).toBe(404);
+      dictation.finish.mockRejectedValueOnce(new SttTranscriptionError("could not decode"));
+      expect((await finish()).status).toBe(422);
+      dictation.finish.mockRejectedValueOnce(new SttUnavailableError("Hex quit"));
+      expect((await finish()).status).toBe(503);
+    });
+
+    it("audio: 204 and writes the raw bytes, 404 unknown session, 413 over 1 MB", async () => {
+      dictation.events.mockReturnValue(of());
+      dictation.write.mockResolvedValue(undefined);
+      const bytes = Buffer.from([0x1a, 0x45, 0xdf, 0xa3, 0x00, 0xff]);
+      const ok = await request(app.getHttpServer())
+        .post("/api/speech/dictation/s1/audio")
+        .set("content-type", "application/octet-stream")
+        .send(bytes);
+      expect(ok.status).toBe(204);
+      expect(dictation.write).toHaveBeenCalledWith("s1", bytes);
+
+      // Headers only: the server must refuse on Content-Length without reading the body
+      // (supertest would EPIPE writing the rest of an upload the server already rejected).
+      const server = app.getHttpServer().listen(0) as Server;
+      const { port } = server.address() as AddressInfo;
+      const tooBig = await new Promise<number | undefined>((resolve, reject) => {
+        const req = httpRequest(
+          {
+            port,
+            method: "POST",
+            path: "/api/speech/dictation/s1/audio",
+            headers: {
+              "content-type": "application/octet-stream",
+              "content-length": 1024 * 1024 + 1,
+            },
+          },
+          (res) => {
+            res.resume();
+            resolve(res.statusCode);
+            req.destroy();
+          },
+        );
+        req.on("error", reject);
+        req.flushHeaders();
+      });
+      server.close();
+      expect(tooBig).toBe(413);
+      expect(dictation.write).toHaveBeenCalledTimes(1);
+
+      dictation.events.mockImplementation(missing);
+      const unknown = await request(app.getHttpServer())
+        .post("/api/speech/dictation/nope/audio")
+        .set("content-type", "application/octet-stream")
+        .send(bytes);
+      expect(unknown.status).toBe(404);
+    });
+
+    it("events: streams {text, final} as SSE data and ends after the final update; 404 unknown", async () => {
+      dictation.events.mockReturnValueOnce(
+        of({ text: "ahoj", final: false }, { text: "ahoj světe", final: true }),
+      );
+      const res = await request(app.getHttpServer())
+        .get("/api/speech/dictation/s1/events")
+        .buffer(true)
+        .parse((response, done) => {
+          let text = "";
+          response.on("data", (chunk: Buffer) => (text += chunk.toString()));
+          response.on("end", () => done(null, text));
+        });
+      expect(res.status).toBe(200);
+      expect(res.headers["content-type"]).toContain("text/event-stream");
+      expect(res.body).toContain('data: {"text":"ahoj","final":false}');
+      expect(res.body).toContain('data: {"text":"ahoj světe","final":true}');
+
+      dictation.events.mockImplementationOnce(missing);
+      expect(
+        (await request(app.getHttpServer()).get("/api/speech/dictation/x/events")).status,
+      ).toBe(404);
+    });
   });
 });

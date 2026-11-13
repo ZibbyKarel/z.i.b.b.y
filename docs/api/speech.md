@@ -79,8 +79,9 @@ and callers can always render a status line.
 ## Dictation (`POST /api/speech/transcribe`, local STT)
 
 Separate from `speakd`: `SttService` (`apps/api/src/speech/stt.service.ts`) uses the
-locally running Hex app over its loopback HTTP API (language `cs` by default). Nothing is
-spawned or kept alive by the API; Hex owns the model.
+locally running Hex app over its loopback HTTP API (language `cs` by default). Hex owns the
+model. The one-shot `transcribe` route spawns nothing long-lived; a streaming session (below)
+keeps one ffmpeg per session.
 
 ```
 POST /speech/transcribe   body { audioBase64, mimeType, language? } → 200 { text }
@@ -97,6 +98,39 @@ GET  /speech/status       additionally carries stt: { available, reason? }
   (Hex not running, ffmpeg missing, Hex unreachable, HTTP 401 or 5xx). `stt.available=false` carries a
   `reason`; the web app then falls back to the browser Web Speech API.
 - Output is cleaned: whitespace collapsed, bracketed tags like `[BLANK_AUDIO]` removed.
+
+### Streaming dictation sessions (`DictationStreamService`)
+
+Hex only transcribes whole clips, so live text is built server-side: the browser uploads
+`MediaRecorder` chunks into a session, one long-lived ffmpeg per session decodes them to
+16 kHz mono s16le PCM as they arrive (`-loglevel error -i pipe:0 -f s16le -ar 16000 -ac 1 pipe:1`;
+measured to stream incrementally from a pipe with no extra flags), and `DictationStreamSession`
+(`dictation-stream.session.ts`) re-transcribes only the unsettled tail via
+`SttService.transcribePcm` (WAV built in memory, no ffmpeg/temp files). At every pause
+(>= 500 ms of silence with >= 1 s of audio before it) the audio before the pause is committed:
+its text never changes again and its PCM is dropped, so each Hex request is about one phrase long.
+An unbroken monologue is force-committed at its quietest point once the tail passes 20 s.
+
+```
+POST /api/speech/dictation             JSON { mimeType, language? } → 201 { id }        | 503
+POST /api/speech/dictation/:id/audio   raw chunk, application/octet-stream → 204         | 404, 413
+GET  /api/speech/dictation/:id/events  SSE, data: {"text":"…","final":false|true}        | 404
+POST /api/speech/dictation/:id/finish  no body → 200 { text }                            | 404, 422, 503
+```
+
+- `audio` and `events` sit outside `speechContract` (raw bytes / SSE); `start` and `finish` are
+  contract routes. Chunks are one continuous container stream: upload them **sequentially**; the
+  server writes them to ffmpeg in arrival order (with backpressure). One chunk is capped at 1 MB.
+- `events` replays the latest update to a late subscriber, skips updates whose text did not change,
+  sends `ping` keep-alives every 25 s, and completes after the single `final: true` update (or when
+  the session is destroyed). `text` is always the whole transcript so far, not a delta.
+- `finish` closes ffmpeg's stdin, waits for all PCM, transcribes the rest and returns the full text.
+  `422` = ffmpeg exited non-zero without decoding anything (or Hex rejected the audio), `503` = Hex
+  unavailable; the session is gone either way, so keep the recording and fall back to
+  `POST /speech/transcribe`.
+- Limits: a session with no `audio` upload for 30 s, or older than 4 min, is destroyed (ffmpeg
+  killed, stream completed, later calls `404`). At most 8 sessions are live at once — a further `POST /speech/dictation`
+  answers `503`. Shutdown (`onModuleDestroy`) kills every ffmpeg.
 
 Requirements (macOS): Hex running, and `brew install ffmpeg`.
 
