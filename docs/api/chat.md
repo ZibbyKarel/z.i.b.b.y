@@ -154,8 +154,13 @@ claude -p <msg> [--resume <sid>] \
 ### Chat on opencode (A24 / A33 — the default path)
 
 Since A31 the default `aiEngine` is `opencode`, so this is how the chat runs for every
-model family (Claude via `claude-agent/*`, OpenAI, OpenCode free). The native Claude path
-above runs only when `aiEngine: "claude"` is stored (or an `@agent` names it).
+model family (Claude via `claude-agent/*`, OpenAI, OpenCode free, BlueCode via
+`bluecode/*`). The native Claude path above runs only when `aiEngine: "claude"` is stored
+(or an `@agent` names it).
+
+When BlueCode is configured (A34), `buildOpencodeChatConfig` adds a `provider.bluecode`
+block (base URL, API key, model snapshot) to the turn's 0600 config, the same file that
+already carries the MCP credentials. See [ai-engines.md](./ai-engines.md).
 
 A turn runs on the **effective engine**: `resolveAiEngine` with the mentioned `@agent`
 (its `engine` / `engineModel`), else `SystemConfig.aiEngine`. The model tier is the

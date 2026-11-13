@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   AgentModelSchema,
   ChatModelSchema,
+  MODEL_FAMILIES,
+  SetBlueCodeInputSchema,
   SetOpenAiKeyInputSchema,
   SystemConfigSchema,
   aiProvidersContract,
@@ -21,6 +23,35 @@ describe("aiProvidersContract", () => {
     expect(SetOpenAiKeyInputSchema.parse({ apiKey: `  ${key} ` }).apiKey).toBe(key);
     expect(SetOpenAiKeyInputSchema.safeParse({ apiKey: "sk-short" }).success).toBe(false);
     expect(SetOpenAiKeyInputSchema.safeParse({ apiKey: "x".repeat(30) }).success).toBe(false);
+  });
+});
+
+describe("BlueCode (A34)", () => {
+  it("is a model family with its own preset and routes", () => {
+    expect(MODEL_FAMILIES).toContain("bluecode");
+    expect(applyModelFamily("bluecode", undefined)).toMatchObject({
+      modelFamily: "bluecode",
+      opencodeModel: "bluecode/llmfactory:local:GLM-5.3",
+      opencodeTierModels: { haiku: "bluecode/llmfactory:local:GLM-5.3-Flash" },
+    });
+    expect(aiProvidersContract.setBlueCode.path).toBe("/api/ai-providers/bluecode");
+    expect(aiProvidersContract.clearBlueCode.method).toBe("DELETE");
+  });
+
+  it("normalises the base URL (https only, no trailing slash) and keeps the key optional", () => {
+    const ok = SetBlueCodeInputSchema.parse({ baseUrl: " https://x.test/projects/1/v1/ " });
+    expect(ok).toEqual({ baseUrl: "https://x.test/projects/1/v1" });
+    expect(SetBlueCodeInputSchema.safeParse({ baseUrl: "http://x.test/v1" }).success).toBe(false);
+    for (const raw of ["https://x.test/p/v1?", "https://x.test/p/v1#", "https://x.test/p/v1/"])
+      expect(SetBlueCodeInputSchema.parse({ baseUrl: raw }).baseUrl).toBe("https://x.test/p/v1");
+    expect(SetBlueCodeInputSchema.safeParse({ baseUrl: "https://x.test/projects/1" }).success).toBe(
+      false,
+    );
+    for (const bad of ["https://u:p@x.test/v1", "https://x.test/v1?a=1", "https://x.test/v1#f"])
+      expect(SetBlueCodeInputSchema.safeParse({ baseUrl: bad }).success).toBe(false);
+    expect(
+      SetBlueCodeInputSchema.safeParse({ baseUrl: "https://x.test", apiKey: "short" }).success,
+    ).toBe(false);
   });
 });
 

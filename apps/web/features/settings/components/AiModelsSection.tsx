@@ -17,6 +17,7 @@ import {
   useSetOpenAiKeyMutation,
 } from "../../ai-providers";
 import { AiEngineSection } from "./AiEngineSection";
+import { BlueCodeCard } from "./BlueCodeCard";
 
 /** Testids for the AI models card (the screen + tests select via these). */
 export enum AiModelsSectionTestId {
@@ -27,7 +28,7 @@ export enum AiModelsSectionTestId {
 }
 
 /**
- * Global AI provider keys. One section per provider (OpenAI only for now); the key
+ * Global AI provider keys. One section per provider (OpenAI and BlueCode); the key
  * is write-only — the status shows just its last 4 characters.
  */
 export function AiModelsSection() {
@@ -108,6 +109,7 @@ export function AiModelsSection() {
           </Stack>
         </Stack>
       </Panel>
+      <BlueCodeCard />
     </Stack>
   );
 }

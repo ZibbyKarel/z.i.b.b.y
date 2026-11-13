@@ -528,7 +528,8 @@ cached catalog lists that variant id. The full picture is in
   that mirrors `CLAUDE_BIN`.
 - **Config.** The system prompt (as agent `zibby`), the MCP servers (`mcp.servers`, local or
   remote, `codemode: false`), `permissions` (`ask *`, plus `deny` for `question`, `execute`,
-  `skill` and every tool the agent's `tools` list lacks) and the gate plugin go in one config. The
+  `skill` and every tool the agent's `tools` list lacks), the gate plugin and, when BlueCode is
+  configured (A34), a `provider.bluecode` block (base URL, API key, model snapshot) go in one config. The
   builder returns it as a string (`RunSpec.opencodeConfig`, persisted with the pending
   spec); RunnerCore writes it to `<runsDir>/.opencode/<hash>.json` (0600, dir 0700),
   outside every run's free zone, before every spawn (start and resume), and passes it via

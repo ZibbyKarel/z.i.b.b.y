@@ -36,18 +36,23 @@ behaviour: `docs/plans/ai-providers-dictation-handoff.md` → _Verified facts_.
 
 ### Model families (A31)
 
-`SystemConfig.modelFamily` (`claude` | `openai` | `opencode`, default `claude`) names an
-opencode provider: `claude-agent`, `openai`, `opencode` (the free models). Picking one in
+`SystemConfig.modelFamily` (`claude` | `openai` | `opencode` | `bluecode`, default `claude`) names an
+opencode provider: `claude-agent`, `openai`, `opencode` (the free models), `bluecode` (A34). Picking one in
 Settings writes `aiEngine: "opencode"`, `modelFamily`, `opencodeModel` and
 `opencodeTierModels` in one `PUT /api/system/config` (operator token). The preset is
 resolved client-side by `applyModelFamily(family, catalogIds)` (`@zibby/contracts`, table
 `MODEL_FAMILY_PRESETS`), against the models `GET /ai-providers/engines` lists:
 
-| Family   | haiku (1)                              | sonnet (2) = default          | opus (3)                           | fable (4)                             |
-| -------- | -------------------------------------- | ----------------------------- | ---------------------------------- | ------------------------------------- |
-| claude   | `claude-agent/haiku`                   | `claude-agent/sonnet`         | `claude-agent/opus`                | `claude-agent/fable`                  |
-| openai   | `openai/gpt-6-luna`                    | `openai/gpt-6.1-terra`        | `openai/gpt-6.1-sol`               | `openai/gpt-6-astra`                  |
-| opencode | `opencode/nemotron-3.5-lightning-free` | `opencode/glm-5.3-flash-free` | `opencode/minimax-m3.1-flash-free` | `opencode/nemotron-3.5-super-vl-free` |
+| Family   | haiku (1)                                 | sonnet (2) = default                            | opus (3)                            | fable (4)                                 |
+| -------- | ----------------------------------------- | ----------------------------------------------- | ----------------------------------- | ----------------------------------------- |
+| claude   | `claude-agent/haiku`                      | `claude-agent/sonnet`                           | `claude-agent/opus`                 | `claude-agent/fable`                      |
+| openai   | `openai/gpt-6-luna`                       | `openai/gpt-6.1-terra`                          | `openai/gpt-6.1-sol`                | `openai/gpt-6-astra`                      |
+| opencode | `opencode/nemotron-3.5-lightning-free`    | `opencode/glm-5.3-flash-free`                   | `opencode/minimax-m3.1-flash-free`  | `opencode/nemotron-3.5-super-vl-free`     |
+| bluecode | `bluecode/llmfactory:local:GLM-5.3-Flash` | `bluecode/llmfactory:local:DeepSeek-V4.1-Flash` | `bluecode/llmfactory:local:GLM-5.3` | `bluecode/llmfactory:local:Kimi-K3.1-Pro` |
+
+`bluecode` is team.blue's internal LLM gateway (BlueCode), opt-in and billed to the project's
+budget. It is configured in Settings → AI models (see [ai-providers.md](./ai-providers.md))
+and injected as a custom opencode `provider` block into every per-run config.
 
 Sources: claude = the `claude-agent` aliases in `opencode models`; openai = the repo's
 `OPENAI_TEXT_MODELS` (cheapest to dearest). `opencode models` lists **no** `openai/*` model

@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("node:child_process", () => ({ spawn: vi.fn() }));
 
 import { spawn } from "node:child_process";
-import { parseOpencodeOneShot, spawnOneShot } from "./spawn-one-shot";
+import { FAKE_BLUECODE_KEY, withBlueCodeDir } from "../ai-providers/bluecode-fixture";
+import { oneShotOpencodeCall, parseOpencodeOneShot, spawnOneShot } from "./spawn-one-shot";
 
 const spawnMock = vi.mocked(spawn);
 
@@ -244,5 +245,25 @@ describe("spawnOneShot", () => {
 describe("parseOpencodeOneShot", () => {
   it("skips non-JSON lines", () => {
     expect(parseOpencodeOneShot(`noise\n${ev("text", { text: "a" })}`, "t").result).toBe("a");
+  });
+});
+
+describe("BlueCode provider block (A34)", () => {
+  it("is in the config only when BlueCode is configured", async () => {
+    for (const configured of [true, false]) {
+      const bc = await withBlueCodeDir(configured);
+      try {
+        const config = JSON.parse(
+          oneShotOpencodeCall({ prompt: "p", model: "m", dir: "/tmp/x" }).config,
+        );
+        if (configured)
+          expect(config.provider).toMatchObject({
+            bluecode: { npm: "@ai-sdk/openai-compatible", options: { apiKey: FAKE_BLUECODE_KEY } },
+          });
+        else expect(config).not.toHaveProperty("provider");
+      } finally {
+        await bc.restore();
+      }
+    }
   });
 });

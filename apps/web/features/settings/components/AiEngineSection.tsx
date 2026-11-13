@@ -120,10 +120,12 @@ function AiEngineEditor({ config, engines }: AiEngineEditorProps) {
             tone="warn"
             type="text"
           >
-            {t("familyNotConnected", {
-              family: t(`family.${f}`),
-              command: `opencode auth login ${MODEL_FAMILY_PROVIDER[f]}`,
-            })}
+            {f === "bluecode"
+              ? t("familyBlueCodeNotConnected", { family: t(`family.${f}`) })
+              : t("familyNotConnected", {
+                  family: t(`family.${f}`),
+                  command: `opencode auth login ${MODEL_FAMILY_PROVIDER[f]}`,
+                })}
           </Typography>
         ))}
         {!catalogReadable && (

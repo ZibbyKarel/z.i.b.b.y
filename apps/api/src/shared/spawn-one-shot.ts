@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { Agent, AiEngine, ModelTier, SystemConfig } from "@zibby/contracts";
+import { bluecodeConfigPart } from "../ai-providers/bluecode-provider";
 import { applyThinkingVariant, opencodeBin, resolveAiEngine } from "../runner/ai-engine";
 import {
   APPROVAL_HOOK,
@@ -132,6 +133,7 @@ export function oneShotOpencodeCall(
     // The gate plugin runs the approval hook on every read: it denies the operator-token
     // dir (the same guard `readGuardSettings` gives the claude advisor).
     ...(tools === "none" ? {} : { plugins: [OPENCODE_GATE_PLUGIN] }),
+    ...bluecodeConfigPart(),
   };
   const gateEnv: Record<string, string> =
     tools === "none"

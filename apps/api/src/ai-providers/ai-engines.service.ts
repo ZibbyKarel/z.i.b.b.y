@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { AiEngineModel, AiEngines, AiProvidersUsage, AiUsage } from "@zibby/contracts";
 import { opencodeCached, opencodeCatalog, opencodeModels, variantIds } from "../runner/ai-engine";
+import { bluecodeVariantIds } from "./bluecode-provider";
 import { ClaudePreflightService } from "../runner/claude-preflight.service";
 
 /**
@@ -37,7 +38,9 @@ export class AiEnginesService {
           ...(available
             ? {
                 providers: parseProviders(auth, models),
-                models: markFree(models, freeInCatalog(catalog)),
+                models: markFree(models, freeInCatalog(catalog)).map((m) =>
+                  m.id.startsWith("bluecode/") ? { ...m, variants: bluecodeVariantIds(m.id) } : m,
+                ),
               }
             : {}),
         },

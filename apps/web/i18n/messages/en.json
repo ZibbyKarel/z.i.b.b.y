@@ -1065,7 +1065,20 @@
       "save": "Save",
       "clear": "Clear key",
       "clearConfirm": "Confirm clear",
-      "saveFailed": "Saving the key failed — check the operator token and the key format."
+      "saveFailed": "Saving the key failed — check the operator token and the key format.",
+      "bluecode": {
+        "title": "BlueCode",
+        "hint": "team.blue's internal LLM gateway (OpenAI-compatible), run through opencode. Usage is billed to the BlueCode project's budget — it is not free. The gateway URL and key are stored on this machine (not in git); the model list is a snapshot taken when you save, so use Refresh models after the gateway changes.",
+        "configured": "Configured ({hint}) — {url} — {count} models",
+        "notConfigured": "Not configured",
+        "baseUrlLabel": "Gateway base URL (https://…/projects/ID/v1)",
+        "keyLabel": "BlueCode API key",
+        "save": "Save",
+        "refresh": "Refresh models",
+        "clear": "Remove BlueCode",
+        "clearConfirm": "Confirm remove",
+        "saveFailed": "Saving failed — check the base URL, the key and the operator token."
+      }
     },
     "operatorChannel": {
       "title": "Operator channel (Slack)",
@@ -3858,9 +3871,11 @@
     "family": {
       "claude": "Claude",
       "openai": "OpenAI",
-      "opencode": "OpenCode (free)"
+      "opencode": "OpenCode (free)",
+      "bluecode": "BlueCode"
     },
     "familyNotConnected": "{family} is not connected yet. Connect it yourself in a terminal: {command}. ZibbyOS never asks for credentials.",
+    "familyBlueCodeNotConnected": "{family} is not connected yet. Add its gateway URL and key in the BlueCode card below.",
     "presetUnchecked": "The model catalog could not be read, so a family preset is saved without checking that its models exist.",
     "available": "{name}: installed ({version})",
     "notInstalled": "{name}: not installed",

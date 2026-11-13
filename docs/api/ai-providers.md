@@ -31,6 +31,22 @@ Every route requires the operator token.
   when the key is invalid.
 - `DELETE /api/ai-providers/openai` clears the key. It is idempotent and returns the
   status.
+- `GET /api/ai-providers` also returns `bluecode: { configured, keyHint?, baseUrl?, modelCount? }`.
+- `PUT /api/ai-providers/bluecode` takes `{ baseUrl, apiKey? }` (A34). `baseUrl` is trimmed,
+  must be `https` without credentials, query or fragment, and loses a trailing slash;
+  `apiKey` is trimmed, at least 20 characters. The API checks the key with
+  `GET <baseUrl>/models` and reads the model list from `<baseUrl minus /v1>/.well-known/opencode`
+  (no redirects followed). Exactly one provider is accepted. Each model is reduced to an
+  allowlist (`name`, `limit`, `modalities`, `capabilities`, `reasoning`, `tool_call`,
+  `attachment`, `temperature`, `cost`, `variants`; anything else, e.g. `headers` or `options`,
+  is dropped) and ids must match `[\w.:-]+`. It writes `<dir>/bluecode.json`
+  (`{ baseUrl, apiKey, models }`) and `<dir>/bluecode-probe.json` (the provider-only config the
+  `opencode models` probe uses), both mode `0600` from creation. Without `apiKey` the stored key
+  is kept and only the model list is refreshed, but only for the same `baseUrl`. Returns the
+  status, or `422` with a readable message (no stored key, base URL changed without a key, key
+  refused, gateway unreachable, unreadable / empty / unsafe model list).
+- `DELETE /api/ai-providers/bluecode` removes both files (idempotent).
+
 - `GET /api/ai-providers/spend` returns `{ month: "YYYY-MM", openai: { spentUsd } }`: what
   ZIBBY itself spent through the OpenAI API this month (Europe/Prague). OpenAI has no
   remaining-credit endpoint, so this is spend only, not a balance.

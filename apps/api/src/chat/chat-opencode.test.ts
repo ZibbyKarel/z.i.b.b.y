@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { FAKE_BLUECODE_KEY, withBlueCodeDir } from "../ai-providers/bluecode-fixture";
 import { describe, expect, it } from "vitest";
 import {
   OPENCODE_CHAT_BUILTIN_TOOLS,
@@ -305,5 +306,23 @@ describe("preferGlobalBin", () => {
     ]);
     expect(preferGlobalBin("npx", ["other"], root)).toEqual(["npx", "other"]);
     expect(preferGlobalBin("serena", ["a"], root)).toEqual(["serena", "a"]);
+  });
+});
+
+describe("BlueCode provider block (A34)", () => {
+  it("is in the config only when BlueCode is configured", async () => {
+    for (const configured of [true, false]) {
+      const bc = await withBlueCodeDir(configured);
+      try {
+        const config = buildOpencodeChatConfig("P", {}).config;
+        if (configured)
+          expect(config.provider).toMatchObject({
+            bluecode: { npm: "@ai-sdk/openai-compatible", options: { apiKey: FAKE_BLUECODE_KEY } },
+          });
+        else expect(config).not.toHaveProperty("provider");
+      } finally {
+        await bc.restore();
+      }
+    }
   });
 });

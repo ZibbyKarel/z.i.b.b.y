@@ -36,10 +36,15 @@ export async function fileExists(file: string): Promise<boolean> {
  * The caller is responsible for ensuring the target directory exists. Accepts
  * a `Buffer` too (e.g. binary avatar asset bytes), not just text content.
  */
-export async function writeFileAtomic(file: string, content: string | Buffer): Promise<void> {
+export async function writeFileAtomic(
+  file: string,
+  content: string | Buffer,
+  /** File mode of the temp file (e.g. `0o600` for a secret), so it is never wider, even briefly. */
+  mode?: number,
+): Promise<void> {
   const tmp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
   try {
-    await fs.writeFile(tmp, content, "utf8");
+    await fs.writeFile(tmp, content, { encoding: "utf8", ...(mode === undefined ? {} : { mode }) });
     await fs.rename(tmp, file);
   } catch (error) {
     await fs.rm(tmp, { force: true });

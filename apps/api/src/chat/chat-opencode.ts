@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import * as path from "node:path";
+import { bluecodeConfigPart } from "../ai-providers/bluecode-provider";
 import { agentBaseEnv } from "../shared/agent-env";
 import type { ChatStreamEvent } from "./chat-stream-parser";
 
@@ -138,6 +139,7 @@ export function buildOpencodeChatConfig(
       ],
       plugins: [OPENCODE_CHAT_GATE_PLUGIN],
       ...(serverIds.length ? { mcp: { servers } } : {}),
+      ...bluecodeConfigPart(),
     },
   };
 }

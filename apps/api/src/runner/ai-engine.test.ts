@@ -12,6 +12,7 @@ import {
   stageEngineTarget,
   stageSpendsClaude,
 } from "./ai-engine";
+import { withBlueCodeDir } from "../ai-providers/bluecode-fixture";
 import { ClaudeUnavailableError } from "./claude-preflight.service";
 
 describe("resolveAiEngine", () => {
@@ -174,6 +175,42 @@ describe("assertOpencodeReady", () => {
     expect(err).toBeInstanceOf(OpencodeUnavailableError);
     expect(err).toBeInstanceOf(ClaudeUnavailableError);
     expect(String((err as Error).message)).toMatch(/^opencode unavailable: /);
+  });
+
+  it("probes plain `models` when BlueCode is not configured", async () => {
+    const bc = await withBlueCodeDir(false);
+    try {
+      await fakeBin('echo "args=$*" >&2; echo "opencode/big-pickle"; [ "$*" = "models" ]');
+      await expect(assertOpencodeReady("opencode/big-pickle")).resolves.toBeUndefined();
+    } finally {
+      await bc.restore();
+    }
+  });
+
+  it("probes `models --standalone` on the BlueCode provider config when configured (A34)", async () => {
+    const bc = await withBlueCodeDir(true);
+    try {
+      await fakeBin(
+        'if [ "$*" = "models --standalone" ] && [ "$OPENCODE_DISABLE_PROJECT_CONFIG" = 1 ] && grep -q bluecode "$OPENCODE_CONFIG"; then echo "bluecode/llmfactory:local:GLM-5.3"; fi',
+      );
+      await expect(
+        assertOpencodeReady("bluecode/llmfactory:local:GLM-5.3"),
+      ).resolves.toBeUndefined();
+      await expect(
+        applyThinkingVariant(
+          { engine: "opencode", model: "bluecode/llmfactory:local:GLM-5.3" },
+          "high",
+        ),
+      ).resolves.toEqual({ engine: "opencode", model: "bluecode/llmfactory:local:GLM-5.3#high" });
+      // a variant the gateway marks disabled is not offered
+      const same = { engine: "opencode" as const, model: "bluecode/llmfactory:local:GLM-5.3" };
+      await expect(applyThinkingVariant(same, "medium")).resolves.toEqual(same);
+      await expect(assertOpencodeReady("bluecode/llmfactory:local:Nope")).rejects.toThrow(
+        /BlueCode/,
+      );
+    } finally {
+      await bc.restore();
+    }
   });
 
   describe("applyThinkingVariant (A26)", () => {

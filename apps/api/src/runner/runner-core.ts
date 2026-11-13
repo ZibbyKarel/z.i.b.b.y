@@ -1382,9 +1382,12 @@ export class RunnerCore<R extends BaseRun> {
   private async writePendingSpec(runId: string, spec: RunSpec): Promise<void> {
     // Atomic for the same reason as the sidecar — a torn pending spec strands an
     // approval-parked run that can't be resumed after a restart.
-    await writeFileAtomic(path.join(this.dir, `${runId}.pending.json`), JSON.stringify(spec)).catch(
-      () => {},
-    );
+    // 0600: the spec carries the per-run opencode config, which can hold a provider key.
+    await writeFileAtomic(
+      path.join(this.dir, `${runId}.pending.json`),
+      JSON.stringify(spec),
+      0o600,
+    ).catch(() => {});
   }
 
   private async readPendingSpec(runId: string): Promise<RunSpec | undefined> {

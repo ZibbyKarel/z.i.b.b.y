@@ -10,6 +10,7 @@ import {
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { AgentsStorageService } from "../agents/agents.storage.service";
+import { bluecodeConfigPart } from "../ai-providers/bluecode-provider";
 import { HooksStorageService } from "../hooks/hooks.storage.service";
 import { resolveClaudeLocations } from "../inventory/claude-locations";
 import { type OperatorMcpServer, readOperatorMcpServers } from "../inventory/operator-mcp-servers";
@@ -677,6 +678,7 @@ export class ClaudeRunCommandService {
       ],
       plugins: [OPENCODE_GATE_PLUGIN],
       ...(Object.keys(servers).length ? { mcp: { servers } } : {}),
+      ...bluecodeConfigPart(),
     };
     const args = [
       "run",

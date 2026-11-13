@@ -17,6 +17,7 @@ import type { MarketplacesStore } from "../marketplaces/marketplaces.store";
 import type { McpCredentialsStore } from "../mcp/mcp-credentials.store";
 import type { McpServersStorageService } from "../mcp/mcp.storage.service";
 import { externalSkillPrompt } from "../external-skills/skill-repo";
+import { FAKE_BLUECODE_KEY, withBlueCodeDir } from "../ai-providers/bluecode-fixture";
 import { GRANT_DIRS_ENV, freeDirs } from "./runner-core";
 import type { SkillsStorageService } from "../skills/skills.storage.service";
 import {
@@ -1374,4 +1375,26 @@ it("A28: DROPS a custom PreToolUse hook that could match an MCP tool (Law 1)", a
   const settings = JSON.parse(flagValue(args, "--settings") ?? "{}");
   expect(settings.hooks.PreToolUse).toHaveLength(1);
   expect(settings.hooks.PreToolUse[0].matcher).toBe("Bash|Task|Read|Grep|Glob|Write|Edit|mcp__.*");
+});
+
+describe("buildOpencodeCommand BlueCode provider block (A34)", () => {
+  it("is in the config only when BlueCode is configured", async () => {
+    for (const configured of [true, false]) {
+      const bc = await withBlueCodeDir(configured);
+      try {
+        const { opencodeConfig } = await makeService([CODER], []).buildOpencodeCommand(
+          { instructions: "x", task: "t" },
+          "opencode/big-pickle",
+        );
+        const config = JSON.parse(opencodeConfig);
+        if (configured)
+          expect(config.provider).toMatchObject({
+            bluecode: { npm: "@ai-sdk/openai-compatible", options: { apiKey: FAKE_BLUECODE_KEY } },
+          });
+        else expect(config).not.toHaveProperty("provider");
+      } finally {
+        await bc.restore();
+      }
+    }
+  });
 });

@@ -6,6 +6,7 @@ import {
   AiProvidersStatusSchema,
   AiProvidersUsageQuerySchema,
   AiProvidersUsageSchema,
+  SetBlueCodeInputSchema,
   SetOpenAiKeyInputSchema,
 } from "./ai-providers.schema";
 
@@ -57,6 +58,21 @@ export const aiProvidersContract = c.router(
       body: c.noBody(),
       responses: { 200: AiProvidersStatusSchema },
       summary: "Remove the stored OpenAI API key",
+    },
+    setBlueCode: {
+      method: "PUT",
+      path: "/ai-providers/bluecode",
+      body: SetBlueCodeInputSchema,
+      responses: { 200: AiProvidersStatusSchema, 422: ErrorSchema },
+      summary:
+        "Verify and store BlueCode's gateway URL + key and snapshot its models; key write-only",
+    },
+    clearBlueCode: {
+      method: "DELETE",
+      path: "/ai-providers/bluecode",
+      body: c.noBody(),
+      responses: { 200: AiProvidersStatusSchema },
+      summary: "Remove the stored BlueCode config",
     },
   },
   { pathPrefix: "/api", strictStatusCodes: true },

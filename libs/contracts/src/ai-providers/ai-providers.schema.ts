@@ -7,7 +7,17 @@ export const AiProviderStatusSchema = z.object({
 });
 export type AiProviderStatus = z.infer<typeof AiProviderStatusSchema>;
 
-export const AiProvidersStatusSchema = z.object({ openai: AiProviderStatusSchema });
+/** BlueCode (team.blue's LLM gateway): the key hint plus the saved gateway URL and model count. */
+export const BlueCodeStatusSchema = AiProviderStatusSchema.extend({
+  baseUrl: z.string().optional(),
+  modelCount: z.number().int().nonnegative().optional(),
+});
+export type BlueCodeStatus = z.infer<typeof BlueCodeStatusSchema>;
+
+export const AiProvidersStatusSchema = z.object({
+  openai: AiProviderStatusSchema,
+  bluecode: BlueCodeStatusSchema,
+});
 export type AiProvidersStatus = z.infer<typeof AiProvidersStatusSchema>;
 
 /**
@@ -92,10 +102,11 @@ export function resolveTierModel(
 
 /**
  * A31 — a model family is an opencode provider id: claude → `claude-agent`, openai →
- * `openai`, opencode → `opencode` (the free models). Picking one presets the tier models
+ * `openai`, opencode → `opencode` (the free models), bluecode → `bluecode` (team.blue's
+ * gateway, a custom opencode provider). Picking one presets the tier models
  * and the default model.
  */
-export const MODEL_FAMILIES = ["claude", "openai", "opencode"] as const;
+export const MODEL_FAMILIES = ["claude", "openai", "opencode", "bluecode"] as const;
 export const ModelFamilySchema = z.enum(MODEL_FAMILIES);
 export type ModelFamily = z.infer<typeof ModelFamilySchema>;
 
@@ -103,6 +114,7 @@ export const MODEL_FAMILY_PROVIDER: Record<ModelFamily, string> = {
   claude: "claude-agent",
   openai: "openai",
   opencode: "opencode",
+  bluecode: "bluecode",
 };
 
 /**
@@ -142,6 +154,15 @@ export const MODEL_FAMILY_PRESETS: Record<
       fable: "opencode/nemotron-3.5-super-vl-free",
     },
     default: "opencode/glm-5.3-flash-free",
+  },
+  bluecode: {
+    tiers: {
+      haiku: "bluecode/llmfactory:local:GLM-5.3-Flash",
+      sonnet: "bluecode/llmfactory:local:DeepSeek-V4.1-Flash",
+      opus: "bluecode/llmfactory:local:GLM-5.3",
+      fable: "bluecode/llmfactory:local:Kimi-K3.1-Pro",
+    },
+    default: "bluecode/llmfactory:local:GLM-5.3",
   },
 };
 
@@ -246,3 +267,35 @@ export const SetOpenAiKeyInputSchema = z.object({
     .refine((v) => v.startsWith("sk-"), { message: 'must start with "sk-"' }),
 });
 export type SetOpenAiKeyInput = z.infer<typeof SetOpenAiKeyInputSchema>;
+
+function isPlainHttpsUrl(v: string): boolean {
+  try {
+    const u = new URL(v);
+    return u.protocol === "https:" && !u.username && !u.password && !u.search && !u.hash;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Save BlueCode: the project's gateway URL (`https://…/projects/<id>/v1`) and its key.
+ * Omitting `apiKey` keeps the stored one and only refreshes the model list.
+ */
+export const SetBlueCodeInputSchema = z.object({
+  baseUrl: z
+    .string()
+    .trim()
+    .refine(isPlainHttpsUrl, {
+      message: "must be an https URL without credentials, query or fragment",
+    })
+    // Normalise from the parsed URL: a bare trailing `?` / `#` and slashes drop out.
+    .transform((v) => {
+      const u = new URL(v);
+      return (u.origin + u.pathname).replace(/\/+$/, "");
+    })
+    .refine((v) => v.endsWith("/v1"), {
+      message: "the base URL must end with /v1, e.g. https://bluecode.ai.team.blue/projects/ID/v1",
+    }),
+  apiKey: z.string().trim().min(20).optional(),
+});
+export type SetBlueCodeInput = z.infer<typeof SetBlueCodeInputSchema>;

@@ -7,6 +7,7 @@ import {
   type WorkflowPhase,
   resolveTierModel,
 } from "@zibby/contracts";
+import { bluecodeProbe, bluecodeVariantIds } from "../ai-providers/bluecode-provider";
 import { agentBaseEnv } from "../shared/agent-env";
 import { ClaudeUnavailableError } from "./claude-preflight.service";
 
@@ -89,13 +90,17 @@ export function opencodeBin(): string {
 }
 
 /** Run `opencode <args>`; stdout on exit 0, `null` on anything else (missing, timeout, error). */
-export function opencodeExec(args: string[], timeoutMs = 10_000): Promise<string | null> {
+export function opencodeExec(
+  args: string[],
+  timeoutMs = 10_000,
+  env?: Record<string, string>,
+): Promise<string | null> {
   return new Promise((resolve) => {
     try {
       execFile(
         opencodeBin(),
         args,
-        { timeout: timeoutMs, env: agentBaseEnv(), maxBuffer: 16 * 1024 * 1024 },
+        { timeout: timeoutMs, env: agentBaseEnv(env), maxBuffer: 16 * 1024 * 1024 },
         (error, stdout) => resolve(error ? null : stdout),
       );
     } catch {
@@ -112,11 +117,15 @@ const cache = new Map<string, { at: number; value: Promise<string | null> }>();
  * {@link opencodeExec}, memoised for {@link CACHE_TTL_MS} per binary + args. A failed
  * probe is cached too, so a missing binary is not re-spawned on every request.
  */
-export function opencodeCached(args: string[], timeoutMs?: number): Promise<string | null> {
+export function opencodeCached(
+  args: string[],
+  timeoutMs?: number,
+  env?: Record<string, string>,
+): Promise<string | null> {
   const key = `${opencodeBin()}\0${args.join("\0")}`;
   const hit = cache.get(key);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;
-  const value = opencodeExec(args, timeoutMs);
+  const value = opencodeExec(args, timeoutMs, env);
   cache.set(key, { at: Date.now(), value });
   return value;
 }
@@ -126,9 +135,16 @@ export function clearOpencodeCache(): void {
   cache.clear();
 }
 
-/** `opencode models` → `provider/model` ids, or `null` when opencode can't be run. */
+/**
+ * `opencode models` → `provider/model` ids, or `null` when opencode can't be run. With
+ * BlueCode configured it runs `--standalone` on a config carrying the custom provider
+ * (the background service would not see it); otherwise it is the plain `models`.
+ */
 export async function opencodeModels(): Promise<string[] | null> {
-  const out = await opencodeCached(["models"], 15_000);
+  const probe = bluecodeProbe();
+  const out = probe
+    ? await opencodeCached(["models", "--standalone"], 15_000, probe.env)
+    : await opencodeCached(["models"], 15_000);
   if (out === null) return null;
   return out
     .split("\n")
@@ -167,6 +183,11 @@ export async function applyThinkingVariant(
 ): Promise<ResolvedAiEngine> {
   const model = engine.model;
   if (engine.engine !== "opencode" || !model || !thinking || model.includes("#")) return engine;
+  // The standalone catalog is empty, so BlueCode's variants come from its stored snapshot.
+  if (model.startsWith("bluecode/"))
+    return bluecodeVariantIds(model).includes(thinking)
+      ? { ...engine, model: `${model}#${thinking}` }
+      : engine;
   let raw: unknown;
   try {
     raw = JSON.parse((await opencodeCatalog()) ?? "");
@@ -215,7 +236,9 @@ export async function assertOpencodeReady(model: string | undefined): Promise<vo
   // A `#variant` suffix selects a model variant; the listing has the bare id.
   if (!models.includes(model.split("#")[0] ?? model)) {
     throw new OpencodeUnavailableError(
-      `model "${model}" is not in \`opencode models\` — connect its provider with \`opencode auth login\``,
+      model.startsWith("bluecode/")
+        ? `model "${model}" is not in BlueCode's model list — refresh or re-save it in Settings → AI models → BlueCode`
+        : `model "${model}" is not in \`opencode models\` — connect its provider with \`opencode auth login\``,
     );
   }
 }

@@ -1065,7 +1065,20 @@
       "save": "Uložit",
       "clear": "Smazat klíč",
       "clearConfirm": "Potvrdit smazání",
-      "saveFailed": "Uložení klíče selhalo — zkontroluj operátorský token a formát klíče."
+      "saveFailed": "Uložení klíče selhalo — zkontroluj operátorský token a formát klíče.",
+      "bluecode": {
+        "title": "BlueCode",
+        "hint": "Interní LLM brána team.blue (kompatibilní s OpenAI), spouštěná přes opencode. Použití se účtuje do rozpočtu projektu BlueCode — není zdarma. URL brány a klíč jsou uložené na tomto stroji (ne v gitu); seznam modelů je snímek pořízený při uložení, po změně brány použij Obnovit modely.",
+        "configured": "Nastaveno ({hint}) — {url} — modelů: {count}",
+        "notConfigured": "Nenastaveno",
+        "baseUrlLabel": "Základní URL brány (https://…/projects/ID/v1)",
+        "keyLabel": "API klíč BlueCode",
+        "save": "Uložit",
+        "refresh": "Obnovit modely",
+        "clear": "Odebrat BlueCode",
+        "clearConfirm": "Potvrdit odebrání",
+        "saveFailed": "Uložení selhalo — zkontroluj základní URL, klíč a operátorský token."
+      }
     },
     "operatorChannel": {
       "title": "Kanál operátora (Slack)",
@@ -3858,9 +3871,11 @@
     "family": {
       "claude": "Claude",
       "openai": "OpenAI",
-      "opencode": "OpenCode (zdarma)"
+      "opencode": "OpenCode (zdarma)",
+      "bluecode": "BlueCode"
     },
     "familyNotConnected": "{family} ještě není připojeno. Připoj ho sám v terminálu: {command}. ZibbyOS nikdy nežádá přihlašovací údaje.",
+    "familyBlueCodeNotConnected": "{family} ještě není připojeno. Přidej URL brány a klíč na kartě BlueCode níže.",
     "presetUnchecked": "Katalog modelů se nepodařilo načíst, proto se předvolba rodiny uloží bez ověření, že její modely existují.",
     "available": "{name}: nainstalováno ({version})",
     "notInstalled": "{name}: není nainstalováno",

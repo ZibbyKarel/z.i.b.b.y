@@ -83,6 +83,13 @@ describe("AiEngineSection", () => {
     expect(setConfig).not.toHaveBeenCalled();
   });
 
+  it("points an unconnected BlueCode family to the BlueCode card, not a terminal command", () => {
+    render(<AiEngineSection />);
+    const hint = screen.getByTestId(`${AiEngineSectionTestId.FamilyHint}-bluecode`);
+    expect(hint).toHaveTextContent("kartě BlueCode");
+    expect(hint).not.toHaveTextContent("opencode auth login");
+  });
+
   it("writes the unfiltered preset and says so when the catalog is unreadable", async () => {
     engines = [opencode({ models: [] })];
     render(<AiEngineSection />);
