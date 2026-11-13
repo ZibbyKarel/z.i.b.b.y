@@ -49,6 +49,7 @@ describe("noteTitle", () => {
     expect(noteTitle("\n\n## Nápad: X\nbody")).toBe("Nápad: X");
     expect(noteTitle("   ")).toBe("");
     expect(noteTitle("a".repeat(100)).length).toBe(80);
+    expect(noteTitle(`${"a".repeat(79)} b`)).toBe("a".repeat(79));
   });
 });
 

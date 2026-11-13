@@ -106,7 +106,7 @@ export const teamsContract = c.router(
       body: CreateTeamKbNoteSchema,
       responses: { 201: TeamKbNoteSummarySchema, 404: ErrorSchema, 409: ErrorSchema },
       summary:
-        "Write one operator note to the team KB's inbox/; 404 when the team or its KB is missing, 409 when inbox/ is unsafe",
+        "Write one operator note to the team KB's inbox/; 404 when the team or its KB is missing, 409 when inbox/ is unsafe or the note file already exists",
     },
     getTeamKbIngest: {
       method: "GET",

@@ -26,8 +26,10 @@ vi.mock("../../../features/autopilot", async (importOriginal) => ({
 }));
 let mockPhone = false;
 vi.mock("../../../features/knowledge/components/NoteDock", () => ({
-  NoteDock: ({ open }: { open: boolean }) => (
-    <div data-open={String(open)} data-testid="note-dock-stub" />
+  NoteDock: ({ open, onClose }: { open: boolean; onClose: () => void }) => (
+    <div data-open={String(open)} data-testid="note-dock-stub">
+      <button data-testid="note-dock-close" onClick={onClose} type="button" />
+    </div>
   ),
 }));
 vi.mock("../../../hooks/useIsPhone", () => ({ useIsPhone: () => mockPhone }));
@@ -248,7 +250,17 @@ describe("AppShell New note button", () => {
     expect(screen.getByTestId(ChatDockTestId.Root)).toBeInTheDocument();
     await userEvent.click(screen.getByTestId(AppShellTestId.NewNote));
     expect(screen.getByTestId("note-dock-stub")).toHaveAttribute("data-open", "true");
-    expect(screen.queryByTestId(ChatDockTestId.Root)).toBeNull();
+    expect(screen.getByTestId(ChatDockTestId.Root)).not.toBeVisible();
+  });
+
+  it("keeps the chat dock mounted while the note is open and shows it again after", async () => {
+    renderShell();
+    const chat = screen.getByTestId(ChatDockTestId.Root);
+    await userEvent.click(screen.getByTestId(AppShellTestId.NewNote));
+    expect(chat).not.toBeVisible();
+    await userEvent.click(screen.getByTestId("note-dock-close"));
+    expect(screen.getByTestId(ChatDockTestId.Root)).toBe(chat);
+    expect(chat).toBeVisible();
   });
 
   it("keeps New note on the new-task page", () => {

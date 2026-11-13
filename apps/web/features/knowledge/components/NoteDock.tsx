@@ -25,8 +25,8 @@ export function noteTitle(markdown: string): string {
   const line = markdown.split("\n").find((l) => l.trim()) ?? "";
   return line
     .replace(/^[\s#]+/, "")
-    .trim()
-    .slice(0, TITLE_MAX);
+    .slice(0, TITLE_MAX)
+    .trim();
 }
 
 export interface NoteDockProps {
@@ -74,11 +74,12 @@ export function NoteDock({ open, onClose }: NoteDockProps) {
         onClose();
       },
     };
-    if (target === NOTE_TARGET_VAULT) {
+    const dest = options.some((o) => o.value === target) ? target : NOTE_TARGET_VAULT;
+    if (dest === NOTE_TARGET_VAULT) {
       const id = `${slug(title, { fallback: "note", maxLength: 100 })}-${Date.now().toString(36)}`;
       createNote.mutate({ body: { id, title, body } }, callbacks);
     } else {
-      createKbNote.mutate({ params: { id: target }, body: { title, body } }, callbacks);
+      createKbNote.mutate({ params: { id: dest }, body: { title, body } }, callbacks);
     }
   };
 

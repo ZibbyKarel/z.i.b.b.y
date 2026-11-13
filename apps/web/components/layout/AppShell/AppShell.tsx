@@ -9,6 +9,7 @@ import {
   AppFrame,
   AppHeader,
   Button,
+  Container,
   MobileMenu,
   MobileToolbar,
   ScreenGlow,
@@ -21,7 +22,7 @@ import {
 import { CatalogProvider } from "../../../state/store";
 import { NEW_TASK_PAGE_HREF, NewTaskProvider, useNewTaskPageHotkey } from "../../../features/tasks";
 import { NoteDock } from "../../../features/knowledge/components/NoteDock";
-import { ChatDock, ChatProvider } from "../../../features/chat";
+import { ChatDock, ChatProvider, useChat } from "../../../features/chat";
 import { CommandPaletteHost, useCommandPaletteHotkey } from "../../../features/command-palette";
 import { ApprovalSheet } from "../../../features/approvals/components/ApprovalSheet";
 import { useApprovalSheetParam } from "../../../features/approvals/useApprovalSheetParam";
@@ -345,6 +346,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
   const approvalSheet = useApprovalSheetParam();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
+  const { setDockOpen } = useChat();
   const [noteOpen, setNoteOpen] = useState(false);
   const [crumbSlot, setCrumbSlot] = useState<HTMLElement | null>(null);
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
@@ -359,7 +361,11 @@ function AppShellChrome({ children }: { children: ReactNode }) {
 
   const currentHref = pinHrefFor(pathname, searchParams.toString());
   const onPinRequested = () => setPinDialogOpen(true);
-  const openNote = () => setNoteOpen(true);
+  const openNote = () => {
+    // Close the chat so its mic turns off and its Esc listener does not also close the note.
+    setDockOpen(false);
+    setNoteOpen(true);
+  };
   // `display: contents` — the portalled controls join the actions row's own flex
   // gap; an empty slot takes no room. The slot lives in the sub-nav (desktop) or
   // the toolbar (phone).
@@ -378,7 +384,10 @@ function AppShellChrome({ children }: { children: ReactNode }) {
           dock={
             <>
               <NoteDock onClose={() => setNoteOpen(false)} open={noteOpen} />
-              {!noteOpen && <ChatDock />}
+              {/* Hidden, not unmounted: unmounting drops the composer draft, the in-flight stream and the open thread. */}
+              <Container hidden={noteOpen}>
+                <ChatDock />
+              </Container>
             </>
           }
           fullBleed={pathname === "/dashboard"}
