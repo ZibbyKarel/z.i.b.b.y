@@ -45,6 +45,7 @@ const TARGET_GLYPH = {
   // pre-approved as the fallback (reused from `memory-distill`, same memory domain).
   "self-knowledge": "brain",
   "vault-lint": "brain",
+  "slack-digest": "chat",
   // NS2 F5a — Security's scheduled security watch: the DS "shield" glyph.
   "security-scan": "shield",
   // NS2 F5c — Arch's nightly quality audit: the DS "code" glyph.
@@ -134,17 +135,19 @@ export function AutomationCard({
           ? t("targetSelfKnowledge")
           : target.type === "vault-lint"
             ? t("targetVaultLint")
-            : target.type === "security-scan"
-              ? t("targetSentinelScan")
-              : target.type === "arch-audit"
-                ? t("targetLoomAudit")
-                : target.type === "review-learn"
-                  ? t("targetReviewLearn")
-                  : target.type === "external-skills-sync"
-                    ? t("targetExternalSkillsSync")
-                    : target.type === "task"
-                      ? (targetName ?? target.target?.name ?? t("targetTask"))
-                      : (targetName ?? targetIdOf(target));
+            : target.type === "slack-digest"
+              ? t("targetSlackDigest")
+              : target.type === "security-scan"
+                ? t("targetSentinelScan")
+                : target.type === "arch-audit"
+                  ? t("targetLoomAudit")
+                  : target.type === "review-learn"
+                    ? t("targetReviewLearn")
+                    : target.type === "external-skills-sync"
+                      ? t("targetExternalSkillsSync")
+                      : target.type === "task"
+                        ? (targetName ?? target.target?.name ?? t("targetTask"))
+                        : (targetName ?? targetIdOf(target));
 
   return (
     <Card background="surface" data-testid={AutomationCardTestId.Root}>
@@ -310,6 +313,7 @@ function targetKindKey(
   | "targetAgentFactory"
   | "targetSelfKnowledge"
   | "targetVaultLint"
+  | "targetSlackDigest"
   | "targetSentinelScan"
   | "targetLoomAudit"
   | "targetReviewLearn"
@@ -335,6 +339,8 @@ function targetKindKey(
       return "targetSelfKnowledge";
     case "vault-lint":
       return "targetVaultLint";
+    case "slack-digest":
+      return "targetSlackDigest";
     case "security-scan":
       return "targetSentinelScan";
     case "arch-audit":

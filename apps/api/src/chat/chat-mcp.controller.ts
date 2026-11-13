@@ -230,7 +230,8 @@ export class ChatMcpController {
       {
         description:
           "Search ZIBBY's second-brain memory (the Obsidian vault) and return the top " +
-          "matching notes. Use when the operator asks what you remember / know about something.",
+          "matching notes. Use when the operator asks what you remember / know about something." +
+          " Also covers the daily Slack digests: use it when the operator asks who they discussed something with or what was agreed; answer with date and time, place (channel/DM), people, the agreement and the Slack link from the entry.",
         inputSchema: {
           query: z.string().describe("What to look up in memory."),
         },

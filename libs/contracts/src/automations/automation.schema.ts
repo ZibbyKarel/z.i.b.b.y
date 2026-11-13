@@ -79,6 +79,10 @@ export const TargetSchema = z.discriminatedUnion("type", [
   // Vault lint: nightly report-only pass over the vault (broken links, orphans,
   // stale notes, tag bloat) written to `knowledge/vault-lint.md`. Deterministic.
   z.object({ type: z.literal("vault-lint") }),
+  // Slack digest: every evening one headless, READ-ONLY `claude -p` turn reads the
+  // operator's Slack for the day through the claude.ai Slack connector and the digest
+  // is stored in the vault as `slack-<date>`. ref = `slack-digest:<note id|empty|error>`.
+  z.object({ type: z.literal("slack-digest") }),
   // Agent Factory (Phase 4b): scan recurring `orchestrator-fallback` activity for a
   // missing specialist, draft a deterministic candidate agent `.md`, and park it
   // behind an `agent-proposal` approval. Deterministic; proposes ≠ activates (only

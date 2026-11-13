@@ -2081,6 +2081,7 @@
     "targetAgentFactory": "Továrna agentů",
     "targetSelfKnowledge": "Obnova sebeznalosti",
     "targetVaultLint": "Lint vaultu",
+    "targetSlackDigest": "Souhrn Slacku",
     "targetSentinelScan": "Bezpečnostní hlídka",
     "targetLoomAudit": "Audit kvality",
     "targetReviewLearn": "Učení z review",
@@ -3406,6 +3407,7 @@
         "input": "Nová položka k implementaci",
         "add": "Přidat",
         "implementLabel": "Implementovat „{name}“",
+        "openInSlack": "Otevřít ve Slacku",
         "deleteLabel": "Smazat „{name}“"
       },
       "quickActions": {

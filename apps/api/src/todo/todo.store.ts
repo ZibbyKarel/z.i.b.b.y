@@ -73,7 +73,7 @@ export class TodoStore {
   }
 
   /** Append a note (text already trimmed by the contract). Throws {@link TodoFullError} at the cap. */
-  async create(text: string): Promise<TodoItem> {
+  async create(text: string, sourceUrl?: string): Promise<TodoItem> {
     return withPathLock(this.file, async () => {
       const { items, damaged, unreadable } = await this.load();
       if (items.length >= TODO_MAX_ITEMS) throw new TodoFullError();
@@ -82,6 +82,7 @@ export class TodoStore {
         id: `todo_${randomBytes(6).toString("hex")}`,
         text,
         createdAt: new Date().toISOString(),
+        ...(sourceUrl ? { sourceUrl } : {}),
       };
       await this.save([...items, item]);
       return item;

@@ -72,6 +72,7 @@ export const API_MODULE_DOC_MAP = {
   shared: null,
   "external-skills": "docs/api/extensibility.md",
   skills: "docs/api/extensibility.md",
+  "slack-digest": "docs/api/memory.md",
   speech: "docs/api/speech.md",
   departments: "docs/api/departments.md",
   "run-slots": "docs/api/tasks.md",

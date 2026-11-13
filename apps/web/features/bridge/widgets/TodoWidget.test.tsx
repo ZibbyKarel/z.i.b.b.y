@@ -107,6 +107,27 @@ describe("TodoWidget", () => {
     expect(screen.getByTestId(CommandLineTestId.Input)).toHaveValue("");
   });
 
+  it("shows an Open in Slack button only for items with a sourceUrl, opening it detached", async () => {
+    d.items = [
+      { ...item("todo_1", "Linked"), sourceUrl: "https://t.slack.com/archives/C1/p1" },
+      item("todo_2", "Plain"),
+    ];
+    const open = vi.spyOn(window, "open").mockReturnValue(null);
+    const user = userEvent.setup();
+    renderWithProviders(<TodoWidget {...props()} />);
+    const buttons = screen.getAllByTestId(TodoWidgetTestId.OpenInSlack);
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toHaveAccessibleName("Otevřít ve Slacku");
+    await user.click(buttons[0] as HTMLElement);
+    expect(open).toHaveBeenCalledWith(
+      "https://t.slack.com/archives/C1/p1",
+      "_blank",
+      "noopener,noreferrer",
+    );
+    expect(d.push).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
   it("Delete calls DELETE for that id only and fires nothing else", async () => {
     d.items = [item("todo_1", "First"), item("todo_2", "Second")];
     const user = userEvent.setup();

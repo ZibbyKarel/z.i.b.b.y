@@ -83,6 +83,11 @@ interface MemoryDistillTarget {
   // nightly memory distillation — see System automations
 }
 
+interface SlackDigestTarget {
+  type: "slack-digest";
+  // evening read-only Slack digest into the vault — see System automations
+}
+
 interface PatternExtractTarget {
   type: "pattern-extract";
   // scans 30 days of approval-decision activity, drafts rule proposals to the vault
@@ -180,6 +185,7 @@ when the config changes.
    - `agent` → the same, with target `{ kind: "agent", id }`
    - `briefing` → `BriefingService.generate(...)`
    - `memory-distill` → `MemoryDistillerService.distill()`
+   - `slack-digest` → `SlackDigestService.run()` (fail-open), ref `slack-digest:<note id|empty|error>`
    - `pattern-extract` → `PatternExtractorService.extract(now, { automationId })`
    - `gap-detect` → `GapDetectorService.detect(now, { automationId })` — both pass the
      firing automation's id as proposal provenance (TODO 14, `docs/api/proposals.md`)
@@ -262,12 +268,13 @@ agent. Such automations have `system: true`:
   page.
 
 Definitions live in the `SYSTEM_AUTOMATIONS` constant
-(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds twelve:
+(`apps/api/src/automations/automations.storage.service.ts`). Today it seeds thirteen:
 
 | id (data file)         | target.type            | default schedule                                         | enabled |
 | ---------------------- | ---------------------- | -------------------------------------------------------- | ------- |
 | `morning-briefing`     | `briefing`             | `0 7 * * *`                                              | yes     |
 | `memory-distill`       | `memory-distill`       | `0 3 * * *`                                              | yes     |
+| `slack-digest`         | `slack-digest`         | `0 22 * * *`                                             | yes     |
 | `nightly-patterns`     | `pattern-extract`      | `0 23 * * *`                                             | yes     |
 | `gap-detect`           | `gap-detect`           | `0 23 * * *`                                             | no      |
 | `agent-factory`        | `agent-factory`        | `0 4 * * 1`                                              | no      |
@@ -311,11 +318,48 @@ way grounding writes context _in_).
 
 ### Vault lint (`vault-lint`)
 
-Default cron `30 3 * * *`, on by default (no model, no network).
+Default cron `30 3 * * *`, on by default.
 `VaultLintService.run()` (`apps/api/src/memory/vault-lint.service.ts`) rewrites the
-report-only note `knowledge/vault-lint.md` — broken wikilinks, orphans, stale notes
-(`updated` > 90 days), missing `updated`, notes with > 15 tags — and never edits any
-other note. Fail-open; returns `vault-lint:<broken>/<orphans>/<stale>`.
+report note `knowledge/vault-lint.md` — broken wikilinks, orphans, stale notes
+(`updated` > 90 days), missing `updated`, notes with > 15 tags. That part uses no model
+and no network. Fail-open; returns `vault-lint:<broken>/<orphans>/<stale>`.
+
+The one thing it edits besides its report: Slack digests (`slack-YYYY-MM-DD`) older
+than 30 days are compacted in place into a short summary and marked
+`compacted: true` — one cheap, tool-less model pass per note, at most 5 per night, the
+note left untouched when the pass fails. See _Slack digests_ in `docs/api/memory.md`.
+
+### Slack digest (`slack-digest`)
+
+Default cron `0 22 * * *` (Europe/Prague), on by default.
+`SlackDigestService.run(date = today)` (`apps/api/src/slack-digest/slack-digest.service.ts`)
+loads the `slack-daily-digest` skill (a recipe in `recipes/skills/`) and spawns one headless
+`claude -p` turn (model `sonnet`) that reads the operator's Slack for the day and returns a
+Czech digest. **Requires the operator to be logged into claude.ai with the Slack
+connector** — the turn loads the user settings (`--setting-sources user`, hooks, CLAUDE.md
+and auto-memory off), the same way the chat turn does; a normal task run drops connectors.
+
+**Read-only containment (Law 4 — Slack content is untrusted data).** Only the Slack
+read/search tools are allowed (`CHAT_SLACK_TOOLS` minus the draft tool); the turn runs
+under `--permission-mode dontAsk`, so every off-list tool (other connectors, Slack write
+tools) is denied rather than prompted or auto-approved, and `--disallowedTools` names
+all built-ins (Bash, Write, Edit, Web\*, Agent/Task, …), `ToolSearch` and the Slack write
+tools explicitly. Timeout 10 min.
+
+Result: `NO_ACTIVITY` → nothing written (`slack-digest:empty`); a non-zero exit,
+timeout, empty output or output not starting with `# Slack` → nothing written, a warning
+(`slack-digest:error`; a missing skill is the same). Otherwise the digest is stored as
+`knowledge/slack-<date>.md` (title `Slack <date>`, tag `slack`; a re-run replaces it) and
+the MOC `slack-index` gets one line per day, newest first
+(`- [[slack-<date>]] — <first sentence of "## Přehled">`; a re-run replaces that day's
+line). Fail-open: the service never throws.
+
+Todos: only when the day's note is created for the first time (a re-run never re-adds
+what the operator already ticked off), the `## Úkoly a termíny` lines owned by exactly `já`
+are added to the Bridge TODO widget as `<co> (do <date>)` (or just `<co>` for `bez termínu`).
+The line's link becomes the todo's `sourceUrl` only if it is an `https` URL on `slack.com` or
+`*.slack.com`. Fail-open per item (a full list never fails the digest). Notes older than 30 days are compacted by
+`vault-lint`.
 
 ### Review learning (`review-learn`)
 

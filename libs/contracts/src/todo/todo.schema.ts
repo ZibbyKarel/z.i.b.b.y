@@ -16,6 +16,8 @@ export const TodoItemSchema = z.object({
   id: z.string().min(1),
   text: TodoTextSchema,
   createdAt: z.iso.datetime(),
+  /** Where the note came from (e.g. a Slack message); server-set, never in the create body. */
+  sourceUrl: z.url().optional(),
 });
 export type TodoItem = z.infer<typeof TodoItemSchema>;
 

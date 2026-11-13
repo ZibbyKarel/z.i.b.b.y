@@ -17,6 +17,7 @@ import { useWidgetReport } from "./useWidgetReport";
 
 export enum TodoWidgetTestId {
   Add = "todo-widget-add",
+  OpenInSlack = "todo-widget-open-slack",
   Implement = "todo-widget-implement",
   Delete = "todo-widget-delete",
 }
@@ -61,6 +62,20 @@ export function TodoWidget({ widget, adding, onEmptyChange, onCountChange }: Bri
         <BoardRow
           action={
             <Stack direction="row" gap="100">
+              {item.sourceUrl ? (
+                <Button
+                  aria-label={t("openInSlack")}
+                  data-testid={TodoWidgetTestId.OpenInSlack}
+                  icon="chat"
+                  intent="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // DS Button has no link rendering; noopener keeps the new tab detached.
+                    window.open(item.sourceUrl, "_blank", "noopener,noreferrer");
+                  }}
+                  size="sm"
+                />
+              ) : null}
               <Button
                 aria-label={t("implementLabel", { name: item.text })}
                 data-testid={TodoWidgetTestId.Implement}

@@ -1,7 +1,9 @@
 # TODO notes (Bridge TODO widget)
 
 The **todo** module backs the Bridge TODO widget: the operator's own quick notes, each
-`{ id, text, createdAt }`. A note is NOT a roadmap item — it needs no project, and its `text`
+`{ id, text, createdAt, sourceUrl? }`. `sourceUrl` is server-set (the Slack digest adds the
+operator's own next steps with a link to the message) and never accepted by `POST /api/todo`;
+the widget shows an "Open in Slack" button for it. A note is NOT a roadmap item — it needs no project, and its `text`
 carries the same `@Name` / `#Name` / `/Name` mention tokens the chat composer writes.
 
 ## Pieces

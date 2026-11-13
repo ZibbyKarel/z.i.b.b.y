@@ -17,6 +17,16 @@ describe("TodoStore", () => {
     await fs.rm(dir, { recursive: true, force: true });
   });
 
+  it("persists an optional sourceUrl", async () => {
+    const store = new TodoStore(file);
+    const a = await store.create("plain");
+    const b = await store.create("linked", "https://x.slack.com/archives/C1/p1");
+    expect(a.sourceUrl).toBeUndefined();
+    expect((await store.list()).find((i) => i.id === b.id)?.sourceUrl).toBe(
+      "https://x.slack.com/archives/C1/p1",
+    );
+  });
+
   it("reads an empty list when the file is missing", async () => {
     expect(await new TodoStore(file).list()).toEqual([]);
   });

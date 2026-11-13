@@ -11,6 +11,7 @@ import { PatternsModule } from "../patterns/patterns.module";
 import { WorkflowsModule } from "../workflows/workflows.module";
 import { ReviewLearningModule } from "../review-learning/review-learning.module";
 import { SelfKnowledgeModule } from "../self-knowledge/self-knowledge.module";
+import { SlackDigestModule } from "../slack-digest/slack-digest.module";
 import { SecurityModule } from "../security/security.module";
 import { dataDir, recipesDir } from "../shared/data-dir";
 import { TasksModule } from "../tasks/tasks.module";
@@ -68,6 +69,7 @@ export function resolveAutomationsDir(): string {
     SelfKnowledgeModule,
     SecurityModule,
     SignalBusModule,
+    SlackDigestModule,
     TasksModule,
   ],
   controllers: [AutomationsController, AutomationFireLogsController],

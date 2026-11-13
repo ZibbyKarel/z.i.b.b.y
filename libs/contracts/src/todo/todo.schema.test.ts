@@ -28,6 +28,18 @@ describe("TodoItemSchema", () => {
     expect(TodoItemSchema.safeParse({ ...item, createdAt: "yesterday" }).success).toBe(false);
   });
 
+  it("accepts an optional sourceUrl, but the create body stays strict", () => {
+    const item = { id: "todo_a", text: "a", createdAt: "2026-10-24T10:00:00.000Z" };
+    expect(
+      TodoItemSchema.safeParse({ ...item, sourceUrl: "https://x.slack.com/archives/C1/p1" })
+        .success,
+    ).toBe(true);
+    expect(TodoItemSchema.safeParse({ ...item, sourceUrl: "nope" }).success).toBe(false);
+    expect(
+      CreateTodoBodySchema.safeParse({ text: "a", sourceUrl: "https://x.slack.com/" }).success,
+    ).toBe(false);
+  });
+
   it("caps the list at 200", () => {
     expect(TODO_MAX_ITEMS).toBe(200);
   });

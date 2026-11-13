@@ -200,11 +200,41 @@ automations doc for details.
 
 ## Vault lint
 
-A nightly `vault-lint` system automation (03:30) writes the report-only
-`knowledge/vault-lint.md`: broken links, orphans, stale notes (>90d) and tag bloat. It
-never edits other notes. Orphans exclude `daily/`, North Star, self-knowledge, MOCs and
-the machine notes; `vault-log` and `vault-lint` are scanned as link-less so they don't
-mask orphans. Service: `vault-lint.service.ts`.
+A nightly `vault-lint` system automation (03:30) writes the report
+`knowledge/vault-lint.md`: broken links, orphans, stale notes (>90d) and tag bloat.
+Orphans exclude `daily/`, North Star, self-knowledge, MOCs and the machine notes;
+`vault-log` and `vault-lint` are scanned as link-less so they don't mask orphans.
+Service: `vault-lint.service.ts`.
+
+The lint edits no note, with one exception — Slack digest compaction (below).
+
+## Slack digests (long-term memory)
+
+The `slack-digest` system automation (22:00, see `docs/api/automations.md`) stores one
+note per day, id `slack-YYYY-MM-DD` (tag `slack`): a Czech digest of the operator's
+Slack day — per conversation who, where, when, the Slack permalink, what was agreed,
+next steps and deadlines. `slack-index` is the MOC, one line per day.
+
+Retention is two-stage:
+
+- **0–30 days** — the note keeps the complete digest.
+- **Older than 30 days** (by the date in the id) — the nightly vault lint compacts the
+  note **in place**: the body is replaced by a short summary (one bullet per
+  conversation, keeping people, agreement, deadline and the permalink) and the
+  frontmatter gets `compacted: true`. The note id never changes and nothing is deleted,
+  so wikilinks keep working. At most 5 notes are compacted per night; a backlog drains
+  over the following nights.
+
+Compaction is one cheap, tool-less model pass per note (the same CLI distiller as
+memory distillation); the note body is passed as data, not instructions. A note is
+overwritten only when the pass succeeded and returned a well-formed summary shorter
+than the original — otherwise it is left untouched and retried on a later night.
+Compacted notes are listed in the lint report.
+
+`recall_memory` (chat MCP and the entity-directory MCP) returns the matching
+conversation entries of a Slack digest verbatim rather than a generic snippet, so an
+answer to "who did I discuss X with and what did we agree" can carry the date, place,
+people, agreement and Slack link.
 
 ## Knowledge sources (web `/knowledge/*`)
 

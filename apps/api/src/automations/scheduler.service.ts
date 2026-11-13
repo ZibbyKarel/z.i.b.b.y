@@ -5,6 +5,7 @@ import { AgentFactoryService } from "../agent-factory/agent-factory.service";
 import { BriefingService } from "../briefing/briefing.service";
 import { ExternalSkillsService } from "../external-skills/external-skills.service";
 import { VaultLintService } from "../memory/vault-lint.service";
+import { SlackDigestService } from "../slack-digest/slack-digest.service";
 import { MemoryDistillerService } from "../memory/memory-distiller.service";
 import { PatternExtractorService } from "../patterns/pattern-extractor.service";
 import { GapDetectorService } from "../gaps/gap-detector.service";
@@ -67,6 +68,7 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
     private readonly vaultLint: VaultLintService,
     private readonly externalSkills: ExternalSkillsService,
     private readonly fires: AutomationFiresStore,
+    private readonly slackDigest: SlackDigestService,
   ) {
     super();
     this.log = logger.child(SchedulerService.name);
@@ -332,6 +334,16 @@ export class SchedulerService extends TickingWatcherBase implements OnModuleInit
         } catch (error) {
           this.log.warn("vault lint failed", { error: String(error) });
           return { ref: "vault-lint:error" };
+        }
+      }
+      case "slack-digest": {
+        // Evening read-only claude turn over the day's Slack → vault `slack-<date>`.
+        // Fail-open: `run` never throws; the guard is for a vault/DI surprise.
+        try {
+          return { ref: await this.slackDigest.run() };
+        } catch (error) {
+          this.log.warn("slack digest failed", { error: String(error) });
+          return { ref: "slack-digest:error" };
         }
       }
       case "security-scan": {

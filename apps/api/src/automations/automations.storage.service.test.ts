@@ -14,6 +14,7 @@ import {
   RETIRED_SYSTEM_AUTOMATION_IDS,
   SECURITY_SCAN_AUTOMATION_ID,
   SELF_KNOWLEDGE_AUTOMATION_ID,
+  SLACK_DIGEST_AUTOMATION_ID,
   SystemAutomationError,
 } from "./automations.storage.service";
 
@@ -122,6 +123,14 @@ describe("AutomationsStorageService", () => {
     expect(seeded.system).toBe(true);
     expect(seeded.target).toEqual({ type: "memory-distill" });
     expect(seeded.trigger.type).toBe("cron");
+  });
+
+  it("seeds the slack-digest system automation (22:00, enabled)", async () => {
+    const seeded = await service.get(SLACK_DIGEST_AUTOMATION_ID);
+    expect(seeded.system).toBe(true);
+    expect(seeded.enabled).toBe(true);
+    expect(seeded.target).toEqual({ type: "slack-digest" });
+    expect(seeded.trigger).toEqual({ type: "cron", expr: "0 22 * * *" });
   });
 
   it("refuses to delete a system automation", async () => {

@@ -38,6 +38,8 @@ export interface SpawnClaudeCliOptions {
    * read the project's repo. Additive — existing callers are unaffected.
    */
   cwd?: string;
+  /** Extra env vars layered over {@link agentBaseEnv} (claude path only; ignored with `bin`). */
+  extraEnv?: Record<string, string>;
   /**
    * Another binary with its own env (`spawnOneShot` runs `opencode` through this body).
    * Set = the argv is passed as-is (no `--setting-sources`) and `env` replaces
@@ -75,7 +77,7 @@ export function spawnClaudeCli(opts: SpawnClaudeCliOptions): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(opts.bin?.command ?? process.env.CLAUDE_BIN ?? "claude", args, {
       stdio: ["ignore", "pipe", "pipe"],
-      env: opts.bin?.env ?? agentBaseEnv(),
+      env: opts.bin?.env ?? { ...agentBaseEnv(), ...opts.extraEnv },
       ...(opts.cwd ? { cwd: opts.cwd } : {}),
     });
 

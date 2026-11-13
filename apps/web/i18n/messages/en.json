@@ -2081,6 +2081,7 @@
     "targetAgentFactory": "Agent factory",
     "targetSelfKnowledge": "Self-knowledge refresh",
     "targetVaultLint": "Vault lint",
+    "targetSlackDigest": "Slack digest",
     "targetSentinelScan": "Security watch",
     "targetLoomAudit": "Quality audit",
     "targetReviewLearn": "Review learning",
@@ -3406,6 +3407,7 @@
         "input": "New item to implement",
         "add": "Add",
         "implementLabel": "Implement “{name}”",
+        "openInSlack": "Open in Slack",
         "deleteLabel": "Delete “{name}”"
       },
       "quickActions": {

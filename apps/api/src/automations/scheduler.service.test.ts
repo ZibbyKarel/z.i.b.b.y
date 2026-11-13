@@ -108,6 +108,7 @@ function makeService(opts: {
   reviewLearning?: { learn: ReturnType<typeof vi.fn> };
   externalSkills?: { syncAll: ReturnType<typeof vi.fn> };
   gaps?: { detect: ReturnType<typeof vi.fn> };
+  slackDigest?: { run: ReturnType<typeof vi.fn> };
   fires?: AutomationFiresStore;
 }): {
   service: SchedulerService;
@@ -158,6 +159,7 @@ function makeService(opts: {
       begin: vi.fn(async () => Promise.reject(new Error("no store"))),
       reconcile: vi.fn(async () => {}),
     }) as never,
+    (opts.slackDigest ?? { run: vi.fn(async () => "slack-digest:empty") }) as never,
   );
   return { service, storage, registered: () => registered };
 }
@@ -710,5 +712,31 @@ describe("SchedulerService — every fire is recorded (todo-4)", () => {
       status: "error",
       error: "interrupted (process restart)",
     });
+  });
+});
+
+describe("SchedulerService — dispatch (slack-digest case)", () => {
+  const automation = (): Automation => ({
+    id: "slack-digest",
+    name: "Denní souhrn Slacku",
+    trigger: { type: "cron", expr: "0 22 * * *" },
+    target: { type: "slack-digest" },
+    enabled: true,
+    system: true,
+  });
+
+  it("dispatches to SlackDigestService.run and returns its ref", async () => {
+    const run = vi.fn(async () => "slack-digest:slack-2026-11-13");
+    const { service } = makeService({ automation: automation(), slackDigest: { run } });
+    expect(await service.trigger("slack-digest")).toBe("slack-digest:slack-2026-11-13");
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("is fail-open when the service throws", async () => {
+    const run = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    const { service } = makeService({ automation: automation(), slackDigest: { run } });
+    expect(await service.trigger("slack-digest")).toBe("slack-digest:error");
   });
 });

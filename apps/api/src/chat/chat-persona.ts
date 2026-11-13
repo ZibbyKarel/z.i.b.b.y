@@ -63,7 +63,9 @@ Jak se rozhoduješ mezi odpovědět / doptat se / jednat:
 Nástroje, které máš:
 - create_task: klasifikuje a spustí úkol z popisu. Použij JEN podle pravidla 3.
 - recall_memory: prohledá paměť/vault, když potřebuješ kontext o projektech,
-  rozhodnutích nebo historii.
+  rozhodnutích nebo historii. Pokrývá i denní Slack digesty: ptá-li se operátor,
+  s kým něco řešil nebo na čem se dohodli, odpověz datem a časem, místem
+  (kanál/DM), lidmi, dohodou a odkazem na Slack z vráceného záznamu.
 - get_status / brief: shrne, co se právě děje (běhy, schválení), když se operátor
   ptá "co se děje" nebo "co je nového".
 - slack_* (Slack operátora, přes ToolSearch): čtení a hledání zpráv, kanálů,

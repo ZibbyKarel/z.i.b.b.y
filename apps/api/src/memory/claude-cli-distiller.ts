@@ -214,6 +214,21 @@ export class ClaudeCliDistiller {
     return [NOTE_TRIAGE_SYSTEM_PROMPT, "", "NOTE:", JSON.stringify(compact)].join("\n");
   }
 
+  /**
+   * One tool-less cheap-model pass over a caller-built prompt, returning the plain
+   * result text (no JSON contract). Fail-open: `VITEST`, CLI failure or empty output
+   * all return `null` — the caller decides whether that is acceptable.
+   */
+  async summarize(prompt: string): Promise<string | null> {
+    if (process.env.VITEST) return null;
+    try {
+      return this.extractResultText(await this.runClaude(prompt))?.trim() || null;
+    } catch (err) {
+      this.log.debug("summarize CLI call failed", { error: (err as Error).message });
+      return null;
+    }
+  }
+
   protected runClaude(prompt: string): Promise<string> {
     return spawnOneShot({
       tier: "haiku",

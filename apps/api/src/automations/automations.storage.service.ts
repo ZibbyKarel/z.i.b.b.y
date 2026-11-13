@@ -48,6 +48,8 @@ export const MEMORY_DISTILL_AUTOMATION_ID = "memory-distill";
 export const SELF_KNOWLEDGE_AUTOMATION_ID = "self-knowledge-refresh";
 /** Stable id of the nightly vault-lint system automation. */
 export const VAULT_LINT_AUTOMATION_ID = "vault-lint";
+/** Stable id of the evening Slack-digest system automation. */
+export const SLACK_DIGEST_AUTOMATION_ID = "slack-digest";
 /** Stable id of the weekly Security security-scan system automation (F5a). */
 export const SECURITY_SCAN_AUTOMATION_ID = "security-scan";
 /** Stable id of the nightly Arch quality-audit system automation (F5c). */
@@ -149,9 +151,19 @@ export const SYSTEM_AUTOMATIONS: readonly Automation[] = [
     id: VAULT_LINT_AUTOMATION_ID,
     name: "Lint vaultu",
     description:
-      "Noční kontrola vaultu: rozbité odkazy, osiřelé a zastaralé poznámky, bujení tagů. Jen report, nic nemění.",
+      "Noční kontrola vaultu: rozbité odkazy, osiřelé a zastaralé poznámky, bujení tagů. Slack souhrny starší 30 dní zhustí na krátké shrnutí.",
     trigger: { type: "cron", expr: "30 3 * * *" },
     target: { type: "vault-lint" },
+    enabled: true,
+    system: true,
+  },
+  {
+    id: SLACK_DIGEST_AUTOMATION_ID,
+    name: "Denní souhrn Slacku",
+    description:
+      "Každý večer přečte přes claude.ai Slack konektor dnešní Slack a uloží souhrn do vaultu jako slack-<datum>.",
+    trigger: { type: "cron", expr: "0 22 * * *" },
+    target: { type: "slack-digest" },
     enabled: true,
     system: true,
   },

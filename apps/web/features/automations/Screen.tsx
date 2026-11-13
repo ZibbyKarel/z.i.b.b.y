@@ -61,6 +61,7 @@ export function Screen() {
     if (target.type === "memory-distill") return { glyph: "brain" };
     if (target.type === "self-knowledge") return { glyph: "brain" };
     if (target.type === "vault-lint") return { glyph: "brain" };
+    if (target.type === "slack-digest") return { glyph: "chat" };
     if (target.type === "security-scan") return { glyph: "shield" };
     if (target.type === "arch-audit") return { glyph: "code" };
     if (target.type === "task") {

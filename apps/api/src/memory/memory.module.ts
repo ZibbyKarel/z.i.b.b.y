@@ -16,6 +16,7 @@ import { McpModule } from "../mcp/mcp.module";
 import { PROJECTS_DIR, ProjectsStorageService } from "../projects/projects.storage.service";
 import { dataDir, recipesDir, resolveVaultDir } from "../shared/data-dir";
 import { SkillsModule } from "../skills/skills.module";
+import { ClaudeCliDistiller } from "./claude-cli-distiller";
 import { EntityMcpController } from "./entity-mcp.controller";
 import { GroundingService } from "./grounding.service";
 import { MemoryController } from "./memory.controller";
@@ -55,6 +56,8 @@ export { resolveVaultDir };
     { provide: VAULT_DIR, useFactory: resolveVaultDir },
     VaultService,
     VaultLintService,
+    // Stateless; re-provided here (MemoryDistillerModule imports this module) for lint compaction.
+    ClaudeCliDistiller,
     MemoryImportService,
     GroundingService,
     // Fresh-install seeding (F4c) — MemoryModule only, see VaultSeedService's doc.
