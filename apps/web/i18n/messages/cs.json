@@ -104,6 +104,16 @@
     "emptyDescription": "Ve vaultu zatím nejsou žádné poznámky. Objeví se tu, jak do něj zapisují běhy — nebo vytvoř první.",
     "untriaged": "Netříděno",
     "departmentBadge": "Polička oddělení",
+    "noteDock": {
+      "placeholder": "Napiš nebo nadiktuj poznámku (Markdown)…",
+      "editorLabel": "Poznámka",
+      "target": "Uložit do",
+      "vault": "Vault",
+      "save": "Uložit",
+      "close": "Zavřít",
+      "saved": "Poznámka uložena",
+      "untitled": "Poznámka"
+    },
     "quickCapture": {
       "trigger": "Rychlý zápis",
       "title": "Rychlý zápis",
