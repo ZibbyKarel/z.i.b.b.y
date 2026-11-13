@@ -245,6 +245,7 @@ describe("BudgetsWidget", () => {
   });
 
   it("aiUsageOnly shows no empty-budgets copy when nothing is set", () => {
+    d.budget = { global: global({ stale: true }), projects: [] };
     renderWithProviders(<BudgetsWidget aiUsageOnly {...setup()} />);
     expect(screen.queryByTestId(BudgetsWidgetTestId.Empty)).not.toBeInTheDocument();
     expect(screen.getByTestId("ai-usage-stub")).toBeInTheDocument();
