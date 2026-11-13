@@ -25,7 +25,11 @@ vi.mock("../../projects/queries", () => ({
   }),
   useProjectsQuery: () => ({ data: d.projects, isPending: false, isError: false }),
 }));
-vi.mock("./AiUsageSection", () => ({ AiUsageSection: () => null }));
+vi.mock("./AiUsageSection", () => ({
+  AiUsageSection: ({ claudeLimits = true }: { claudeLimits?: boolean }) => (
+    <div data-claude-limits={String(claudeLimits)} data-testid="ai-usage-stub" />
+  ),
+}));
 vi.mock("../../ai-providers", () => ({
   useAiProvidersQuery: () => ({ data: { openai: { configured: d.openaiConfigured } } }),
   useAiProvidersSpendQuery: () => ({
@@ -224,5 +228,42 @@ describe("BudgetsWidget", () => {
   it("hides the OpenAI row when there is no key and no spend", () => {
     renderWithProviders(<BudgetsWidget {...setup()} />);
     expect(screen.queryByTestId(BudgetsWidgetTestId.ProviderRow)).not.toBeInTheDocument();
+  });
+
+  it("aiUsageOnly renders no budget rows, only the OpenAI spend and AI usage without session lines", () => {
+    d.budget = {
+      global: global({ rolling: { usedPct: 85, resetsAt: null } }),
+      projects: [proj("p1", { daily: { used: 9, cap: 10 } })],
+    };
+    d.projects = [{ id: "p1", name: "P1" }];
+    d.openaiConfigured = true;
+    d.openaiSpent = 1.5;
+    renderWithProviders(<BudgetsWidget aiUsageOnly {...setup()} />);
+    expect(screen.queryAllByTestId(BudgetsWidgetTestId.Row)).toHaveLength(0);
+    expect(screen.getByTestId(BudgetsWidgetTestId.ProviderRow)).toBeInTheDocument();
+    expect(screen.getByTestId("ai-usage-stub")).toHaveAttribute("data-claude-limits", "false");
+  });
+
+  it("aiUsageOnly shows no empty-budgets copy when nothing is set", () => {
+    d.budget = { global: global({ stale: true }), projects: [] };
+    renderWithProviders(<BudgetsWidget aiUsageOnly {...setup()} />);
+    expect(screen.queryByTestId(BudgetsWidgetTestId.Empty)).not.toBeInTheDocument();
+    expect(screen.getByTestId("ai-usage-stub")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["errored", { error: true }],
+    ["pending", { pending: true }],
+  ] as const)("aiUsageOnly still shows AI usage while the budget is %s", (_, state) => {
+    d.budget = undefined;
+    Object.assign(d, state);
+    renderWithProviders(<BudgetsWidget aiUsageOnly {...setup()} />);
+    expect(screen.queryByTestId(LoadErrorTestId.Root)).not.toBeInTheDocument();
+    expect(screen.getByTestId("ai-usage-stub")).toBeInTheDocument();
+  });
+
+  it("the dashboard widget keeps Claude's session lines", () => {
+    renderWithProviders(<BudgetsWidget {...setup()} />);
+    expect(screen.getByTestId("ai-usage-stub")).toHaveAttribute("data-claude-limits", "true");
   });
 });

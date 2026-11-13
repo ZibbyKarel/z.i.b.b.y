@@ -138,4 +138,20 @@ describe("AiUsageSection", () => {
     renderWithProviders(<AiUsageSection />);
     expect(screen.getByTestId(AiUsageSectionTestId.Claude)).toHaveTextContent("Limity zatím");
   });
+
+  it("claudeLimits={false} drops the 5h and weekly lines but keeps the Claude block", () => {
+    renderWithProviders(<AiUsageSection claudeLimits={false} />);
+    const claude = screen.getByTestId(AiUsageSectionTestId.Claude);
+    expect(claude).toHaveTextContent("Claude");
+    expect(claude).not.toHaveTextContent("42%");
+    expect(claude).not.toHaveTextContent("7%");
+  });
+
+  it("claudeLimits={false} shows no limits-unknown line while limits are missing", () => {
+    d.limits = undefined;
+    renderWithProviders(<AiUsageSection claudeLimits={false} />);
+    expect(screen.getByTestId(AiUsageSectionTestId.Claude)).not.toHaveTextContent(
+      "Limity zatím nejsou k dispozici.",
+    );
+  });
 });

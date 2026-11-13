@@ -25,13 +25,18 @@ export enum AiUsageSectionTestId {
 
 const NOW_TICK_MS = 30_000;
 
+export interface AiUsageSectionProps {
+  /** Claude's 5h + weekly lines (default true). The top bar's sheet passes false: the bar already shows them as rings. */
+  claudeLimits?: boolean;
+}
+
 /**
  * "AI usage" block of the Budgets widget (the dashboard's limits home — the widget catalog is a
  * contract enum, so this lives inside the existing widget instead of a new type): Claude's 5h and
  * weekly limits, and opencode's active model plus recorded usage per provider/model. opencode
  * exposes no quota, so there are no percentages for it. Marks the globally selected engine.
  */
-export function AiUsageSection() {
+export function AiUsageSection({ claudeLimits = true }: AiUsageSectionProps) {
   const t = useTranslations("bridge.widgets.aiUsage");
   const now = useNow(NOW_TICK_MS);
   const limits = useLimitsQuery().data;
@@ -63,16 +68,17 @@ export function AiUsageSection() {
             <BoardText kind="title">{t("claude")}</BoardText>
             {globalTag("claude")}
           </BoardLine>
-          {limits ? (
-            <>
-              <PopoverRow label="limits.rollingLabel" now={now} window={limits.rolling} />
-              <PopoverRow label="limits.weeklyLabel" now={now} window={limits.weekly} />
-            </>
-          ) : (
-            <BoardText kind="meta" tone="ink3">
-              {t("limitsUnknown")}
-            </BoardText>
-          )}
+          {claudeLimits &&
+            (limits ? (
+              <>
+                <PopoverRow label="limits.rollingLabel" now={now} window={limits.rolling} />
+                <PopoverRow label="limits.weeklyLabel" now={now} window={limits.weekly} />
+              </>
+            ) : (
+              <BoardText kind="meta" tone="ink3">
+                {t("limitsUnknown")}
+              </BoardText>
+            ))}
           {active === "opencode" && (
             <span data-testid={AiUsageSectionTestId.ClaudeNote}>
               <Typography leading="snug" size="2xs" type="note" variant="tertiary">

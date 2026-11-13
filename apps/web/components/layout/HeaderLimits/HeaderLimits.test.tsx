@@ -4,8 +4,8 @@ import { act, fireEvent, renderWithProviders, screen } from "../../../test/rende
 import { HeaderLimits, HeaderLimitsTestId } from "./HeaderLimits";
 
 vi.mock("../../../features/bridge/widgets/BudgetsWidget", () => ({
-  BudgetsWidget: () => (
-    <div data-testid="budgets-widget-stub">
+  BudgetsWidget: ({ aiUsageOnly }: { aiUsageOnly?: boolean }) => (
+    <div data-ai-usage-only={String(aiUsageOnly)} data-testid="budgets-widget-stub">
       <a data-testid="widget-link-1" href="#a">
         a
       </a>
@@ -43,7 +43,7 @@ describe("HeaderLimits", () => {
     expect(popover()).not.toBeInTheDocument();
     fireEvent.mouseEnter(root);
     expect(popover()).toBeInTheDocument();
-    expect(screen.getByTestId("budgets-widget-stub")).toBeInTheDocument();
+    expect(screen.getByTestId("budgets-widget-stub")).toHaveAttribute("data-ai-usage-only", "true");
     expect(screen.getByTestId(HeaderLimitsTestId.Title)).toHaveTextContent("Budgety a limity");
     fireEvent.mouseLeave(root);
     expect(popover()).not.toBeInTheDocument();
