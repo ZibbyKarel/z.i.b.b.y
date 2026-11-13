@@ -6,6 +6,8 @@ const mutateAsync = vi.hoisted(() => vi.fn());
 vi.mock("../mutations", () => ({ useTranscribeSpeechMutation: () => ({ mutateAsync }) }));
 
 const started = { current: 0 };
+const startArgs: unknown[] = [];
+const instances: FakeRecorder[] = [];
 const ctorOptions: unknown[] = [];
 let ctorThrows = false;
 
@@ -18,8 +20,10 @@ class FakeRecorder {
   constructor(_stream: unknown, options: unknown) {
     if (ctorThrows) throw new Error("bad options");
     ctorOptions.push(options);
+    instances.push(this);
   }
-  start() {
+  start(timeslice?: number) {
+    startArgs.push(timeslice);
     started.current++;
     this.state = "recording";
   }
@@ -49,6 +53,8 @@ function setup() {
 describe("useDictationRecorder", () => {
   beforeEach(() => {
     started.current = 0;
+    startArgs.length = 0;
+    instances.length = 0;
     ctorOptions.length = 0;
     ctorThrows = false;
     mutateAsync.mockReset();
@@ -159,5 +165,75 @@ describe("useDictationRecorder", () => {
     await waitFor(() => expect(onError).toHaveBeenCalledWith("network"));
     expect(trackStop).toHaveBeenCalled();
     expect(result.current.state).toBe("idle");
+  });
+
+  describe("interim", () => {
+    const chunk = (n: number) => ({ data: new Blob([new Uint8Array(n)]) });
+
+    it("starts MediaRecorder with a 2s timeslice", async () => {
+      const { result } = setup();
+      await record(result, 1);
+      expect(startArgs[0]).toBe(2000);
+    });
+
+    it("surfaces the cumulative transcript as interim while recording", async () => {
+      const d = deferred<unknown>();
+      mutateAsync.mockReturnValueOnce(d.promise).mockReturnValue(new Promise(() => {}));
+      const { result } = setup();
+      await record(result, 1);
+      const rec = instances[0]!;
+      rec.state = "recording";
+      act(() => rec.ondataavailable?.(chunk(3)));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      await act(async () => d.resolve({ status: 200, body: { text: " ahoj " } }));
+      await waitFor(() => expect(result.current.interim).toBe("ahoj"));
+      expect(result.current.state).toBe("recording");
+
+      act(() => rec.ondataavailable?.(chunk(4)));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+      expect(mutateAsync.mock.calls[1]?.[0].body).toMatchObject({
+        audioBase64: btoa(String.fromCharCode(...new Uint8Array(7))),
+        language: "cs",
+      });
+    });
+
+    it("sends at most one interim request at a time", async () => {
+      mutateAsync.mockReturnValue(new Promise(() => {}));
+      const { result } = setup();
+      await record(result, 1);
+      const rec = instances[0]!;
+      act(() => {
+        rec.ondataavailable?.(chunk(1));
+        rec.ondataavailable?.(chunk(1));
+      });
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(mutateAsync).toHaveBeenCalledTimes(1);
+    });
+
+    it("drops an interim result that lands after stop", async () => {
+      const d = deferred<unknown>();
+      mutateAsync
+        .mockReturnValueOnce(d.promise)
+        .mockResolvedValue({ status: 200, body: { text: "" } });
+      const { result } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      act(() => result.current.stop());
+      await act(async () => d.resolve({ status: 200, body: { text: "late" } }));
+      expect(result.current.interim).toBe("");
+    });
+
+    it("does not call onError when an interim request fails", async () => {
+      mutateAsync.mockRejectedValue(new Error("503"));
+      const { result, onError } = setup();
+      await record(result, 1);
+      act(() => instances[0]!.ondataavailable?.(chunk(2)));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(onError).not.toHaveBeenCalled();
+      expect(result.current.state).toBe("recording");
+    });
   });
 });

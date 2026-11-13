@@ -19,6 +19,8 @@ export interface DictationRecorder {
   /** Whether this runtime can record audio at all (`MediaRecorder` + `getUserMedia`). */
   supported: boolean;
   state: DictationRecorderState;
+  /** Transcript of the recording so far (refreshed while recording); `""` when idle. */
+  interim: string;
   start: () => void;
   /** Ends the recording and sends it for transcription. No-op when not recording. */
   stop: () => void;
@@ -29,6 +31,8 @@ export interface DictationRecorder {
 const AUDIO_BITS_PER_SECOND = 32_000;
 /** Auto-stop (and transcribe) a recording that runs this long. */
 const MAX_RECORDING_MS = 180_000;
+/** MediaRecorder timeslice: a chunk (and so an interim transcription) every 2 s. */
+const INTERIM_SLICE_MS = 2_000;
 
 const MIME_CANDIDATES = [
   "audio/webm;codecs=opus",
@@ -61,8 +65,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 /**
  * Dictation by recording (Decision B4): `start` opens the mic and collects chunks
  * with `MediaRecorder`; `stop` builds the blob, base64-encodes it and sends it to
- * `POST /api/speech/transcribe`, then hands the text to `onFinal`. There is no
- * live interim text. A transcript is always delivered while the hook is mounted —
+ * `POST /api/speech/transcribe`, then hands the text to `onFinal`. While
+ * recording, the cumulative clip is re-transcribed (one request at a time, failures
+ * silent) to expose a progressive `interim`. A transcript is always delivered while the hook is mounted —
  * even if recording was restarted meanwhile (several transcriptions may overlap).
  * Unmounting discards a recording in progress and any pending result.
  */
@@ -73,6 +78,8 @@ export function useDictationRecorder({
 }: UseDictationRecorderOptions): DictationRecorder {
   const [recording, setRecording] = useState(false);
   const [pending, setPending] = useState(0);
+  const [interim, setInterim] = useState("");
+  const interimBusy = useRef(false);
   const [supported] = useState(isSupported);
   const transcribe = useTranscribeSpeechMutation();
   // `recId` guards a stale getUserMedia (stop/unmount before the mic opened);
@@ -107,6 +114,7 @@ export function useDictationRecorder({
     if (!isSupported() || recorder.current || starting.current) return;
     const id = ++recId.current;
     starting.current = true;
+    setInterim("");
     setRecording(true);
     navigator.mediaDevices
       .getUserMedia({ audio: true })
@@ -124,6 +132,26 @@ export function useDictationRecorder({
           const cap: { id?: ReturnType<typeof setTimeout> } = {};
           rec.ondataavailable = (e) => {
             if (e.data.size > 0) chunks.push(e.data);
+            if (recorder.current !== rec || rec.state !== "recording" || interimBusy.current)
+              return;
+            interimBusy.current = true;
+            const type = rec.mimeType || mimeType || "audio/webm";
+            // Cumulative from the first chunk: the webm header lives only there.
+            void (async () => {
+              try {
+                const audioBase64 = await blobToBase64(new Blob(chunks, { type }));
+                const { lang: language, mutateAsync } = callbacks.current;
+                const res = await mutateAsync({
+                  body: { audioBase64, mimeType: type, language: language.split("-")[0] },
+                });
+                if (res.status === 200 && recorder.current === rec && mounted.current)
+                  setInterim(res.body.text.trim());
+              } catch {
+                // Interim is best-effort; the final transcription reports real failures.
+              } finally {
+                interimBusy.current = false;
+              }
+            })();
           };
           rec.onstop = () => {
             clearTimeout(cap.id);
@@ -131,11 +159,12 @@ export function useDictationRecorder({
             if (recorder.current === rec) recorder.current = null;
             if (!mounted.current) return;
             setRecording(false);
+            setInterim("");
             if (chunks.length > 0)
               void transcribeClip(chunks, rec.mimeType || mimeType || "audio/webm");
           };
           recorder.current = rec;
-          rec.start();
+          rec.start(INTERIM_SLICE_MS);
           cap.id = setTimeout(() => rec.state !== "inactive" && rec.stop(), MAX_RECORDING_MS);
         } catch {
           // MediaRecorder rejected the stream/options — don't leave the mic indicator on.
@@ -185,5 +214,5 @@ export function useDictationRecorder({
     : pending > 0
       ? "transcribing"
       : "idle";
-  return { supported, state, start, stop };
+  return { supported, state, interim, start, stop };
 }

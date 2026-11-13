@@ -18,6 +18,7 @@ const statusPending = vi.hoisted(() => ({ value: false }));
 const recorderMock = vi.hoisted(() => ({
   supported: true,
   state: "idle" as "idle" | "recording" | "transcribing",
+  interim: "",
   start: vi.fn(),
   stop: vi.fn(),
 }));
@@ -46,6 +47,7 @@ describe("useVoiceMode", () => {
     sttStatus.available = false;
     statusPending.value = false;
     recorderMock.state = "idle";
+    recorderMock.interim = "";
     recorderMock.start.mockReset();
     recorderMock.stop.mockReset();
     installMockSpeechRecognition();
@@ -96,6 +98,13 @@ describe("useVoiceMode", () => {
     const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
     expect(result.current.transcribing).toBe(true);
     expect(result.current.listening).toBe(false);
+  });
+
+  it("exposes the recorder interim on the recorder path", () => {
+    sttStatus.available = true;
+    recorderMock.interim = "x";
+    const { result } = renderHook(() => useVoiceMode({ onFinal: vi.fn() }), { wrapper });
+    expect(result.current.interim).toBe("x");
   });
 
   it("reports no support when the browser lacks the API", () => {
