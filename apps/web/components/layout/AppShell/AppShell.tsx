@@ -9,7 +9,6 @@ import {
   AppFrame,
   AppHeader,
   Button,
-  Container,
   MobileMenu,
   MobileToolbar,
   ScreenGlow,
@@ -385,9 +384,7 @@ function AppShellChrome({ children }: { children: ReactNode }) {
             <>
               <NoteDock onClose={() => setNoteOpen(false)} open={noteOpen} />
               {/* Hidden, not unmounted: unmounting drops the composer draft, the in-flight stream and the open thread. */}
-              <Container hidden={noteOpen}>
-                <ChatDock />
-              </Container>
+              <ChatDock hidden={noteOpen} />
             </>
           }
           fullBleed={pathname === "/dashboard"}

@@ -22,6 +22,8 @@ export enum ChatDockTestId {
 }
 
 export interface ChatDockProps {
+  /** Hides the dock without unmounting it, so its state survives. */
+  hidden?: boolean;
   /** Controlled open state — omit to let `ChatDock` manage it internally. */
   open?: boolean;
   /** Initial state when uncontrolled. */
@@ -83,6 +85,7 @@ export function ChatDock({
   compact = false,
   launcherLabel = "Open chat",
   scrollKey,
+  hidden,
   ref,
 }: ChatDockProps) {
   const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -121,7 +124,7 @@ export function ChatDock({
 
   if (compact && !isOpen) {
     return (
-      <div data-testid={ChatDockTestId.Root} ref={ref}>
+      <div data-testid={ChatDockTestId.Root} hidden={hidden} ref={ref}>
         <button
           aria-label={launcherLabel}
           className={cn(
@@ -157,6 +160,7 @@ export function ChatDock({
         isOpen && isSidebarOpen && "flex-row",
       )}
       data-testid={ChatDockTestId.Root}
+      hidden={hidden}
       ref={ref}
     >
       {isOpen && isSidebarOpen && (

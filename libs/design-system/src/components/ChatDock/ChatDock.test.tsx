@@ -7,6 +7,13 @@ import { ChatDock, ChatDockTestId } from "./ChatDock";
 const composer = <input aria-label="Message" />;
 
 describe("ChatDock", () => {
+  it("hides the root without unmounting when hidden", () => {
+    const { rerender } = render(<ChatDock hidden composer={composer} />);
+    expect(screen.getByTestId(ChatDockTestId.Root)).not.toBeVisible();
+    rerender(<ChatDock composer={composer} />);
+    expect(screen.getByTestId(ChatDockTestId.Root)).toBeVisible();
+  });
+
   it("renders collapsed by default: only the bar, no transcript", () => {
     render(<ChatDock composer={composer} />);
     expect(screen.queryByTestId(ChatDockTestId.Transcript)).toBeNull();

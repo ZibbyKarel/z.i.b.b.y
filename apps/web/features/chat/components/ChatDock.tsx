@@ -68,7 +68,7 @@ function targetLabel(target: TaskTarget): string {
  *   hand-off of the conversation up to that reply (the server compacts a long
  *   thread and references the full transcript), never just the reply's text.
  */
-export function ChatDock() {
+export function ChatDock({ hidden }: { hidden?: boolean }) {
   const t = useTranslations("chat");
   const tierLabel = useTierLabel();
   const modelOptions = CHAT_MODELS.map((m) => ({ value: m, label: tierLabel(m) }));
@@ -243,6 +243,7 @@ export function ChatDock() {
       closeLabel={t("close")}
       compact={phone}
       composer={composer}
+      hidden={hidden}
       launcherLabel={t("dock.launcher")}
       newChatLabel={t("newChat")}
       onNewChat={newChat}
