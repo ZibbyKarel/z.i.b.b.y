@@ -29,6 +29,11 @@ export function noteTitle(markdown: string): string {
     .trim();
 }
 
+/** Appends dictated text to the draft with a single joining space. */
+export function appendDictation(body: string, text: string): string {
+  return body.trim() ? `${body.trimEnd()} ${text}` : text;
+}
+
 export interface NoteDockProps {
   open: boolean;
   onClose: () => void;
@@ -48,7 +53,7 @@ export function NoteDock({ open, onClose }: NoteDockProps) {
   const [target, setTarget] = useState(NOTE_TARGET_VAULT);
 
   const voice = useVoiceMode({
-    onFinal: (text) => setBody((b) => (b.trim() ? `${b.trimEnd()} ${text}` : text)),
+    onFinal: (text) => setBody((b) => appendDictation(b, text)),
   });
   const voiceOff = voice.off;
   useEffect(() => {
@@ -87,23 +92,17 @@ export function NoteDock({ open, onClose }: NoteDockProps) {
     <Stack align="stretch" direction="col" gap="100">
       {voice.active && (
         <VoiceStatusStrip
-          interim={voice.interim}
+          interim=""
           listening={voice.listening}
           transcribing={voice.transcribing}
         />
       )}
       <Stack align="center" direction="row" gap="100" justify="between">
-        <Container data-testid={NoteDockTestId.Target}>
-          <Dropdown
-            aria-label={t("noteDock.target")}
-            onChange={setTarget}
-            options={options}
-            size="sm"
-            value={target}
-            variant="inline"
-          />
-        </Container>
-        {voice.supported && <VoiceToggleButton active={voice.active} onToggle={voice.toggle} />}
+        {voice.supported ? (
+          <VoiceToggleButton prominent active={voice.active} onToggle={voice.toggle} />
+        ) : (
+          <Container />
+        )}
         <Button
           data-testid={NoteDockTestId.Save}
           disabled={!body.trim() || pending}
@@ -124,15 +123,29 @@ export function NoteDock({ open, onClose }: NoteDockProps) {
       closeLabel={t("noteDock.close")}
       compact={phone}
       composer={composer}
+      headerStart={
+        <Container data-testid={NoteDockTestId.Target}>
+          <Dropdown
+            aria-label={t("noteDock.target")}
+            onChange={setTarget}
+            options={options}
+            size="sm"
+            value={target}
+            variant="inline"
+          />
+        </Container>
+      }
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
       transcript={
         <MarkdownEditor
+          fill
           ariaLabel={t("noteDock.editorLabel")}
           onChange={setBody}
           placeholder={t("noteDock.placeholder")}
-          value={body}
+          readOnly={!!voice.interim}
+          value={voice.interim ? appendDictation(body, voice.interim) : body}
         />
       }
     />
