@@ -2573,6 +2573,7 @@
   "shell": {
     "menu": "Menu",
     "menuClose": "Close menu",
+    "newNote": "New note",
     "newTask": "New task",
     "operatorFallback": "CEO",
     "active": "active",

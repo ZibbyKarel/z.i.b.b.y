@@ -2573,6 +2573,7 @@
   "shell": {
     "menu": "Menu",
     "menuClose": "Zavřít menu",
+    "newNote": "Nová poznámka",
     "newTask": "Nový úkol",
     "operatorFallback": "CEO",
     "active": "aktivních",

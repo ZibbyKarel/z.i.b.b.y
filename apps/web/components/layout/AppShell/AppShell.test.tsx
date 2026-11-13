@@ -4,6 +4,7 @@ import {
   APP_FRAME_MAIN_CONTENT_ID,
   AppFrameTestId,
   AppHeaderTestId,
+  ChatDockTestId,
   MenuButtonTestId,
   MobileMenuTestId,
   MobileToolbarTestId,
@@ -24,6 +25,11 @@ vi.mock("../../../features/autopilot", async (importOriginal) => ({
   }),
 }));
 let mockPhone = false;
+vi.mock("../../../features/knowledge/components/NoteDock", () => ({
+  NoteDock: ({ open }: { open: boolean }) => (
+    <div data-open={String(open)} data-testid="note-dock-stub" />
+  ),
+}));
 vi.mock("../../../hooks/useIsPhone", () => ({ useIsPhone: () => mockPhone }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn(), prefetch: vi.fn() }),
@@ -221,6 +227,41 @@ describe("AppShell", () => {
   });
 });
 
+describe("AppShell New note button", () => {
+  const renderShell = () =>
+    renderWithProviders(
+      <AppShell>
+        <div />
+      </AppShell>,
+    );
+
+  it("shows the New note button next to New task", () => {
+    renderShell();
+    const button = screen.getByTestId(AppShellTestId.NewNote);
+    expect(button).toHaveAccessibleName("Nová poznámka");
+    expect(button.nextElementSibling).toBe(screen.getByTestId(AppShellTestId.NewTask));
+  });
+
+  it("opens the note window and hides the chat dock", async () => {
+    renderShell();
+    expect(screen.getByTestId("note-dock-stub")).toHaveAttribute("data-open", "false");
+    expect(screen.getByTestId(ChatDockTestId.Root)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId(AppShellTestId.NewNote));
+    expect(screen.getByTestId("note-dock-stub")).toHaveAttribute("data-open", "true");
+    expect(screen.queryByTestId(ChatDockTestId.Root)).toBeNull();
+  });
+
+  it("keeps New note on the new-task page", () => {
+    mockPath = "/work/tasks/new";
+    try {
+      renderShell();
+      expect(screen.getByTestId(AppShellTestId.NewNote)).toBeInTheDocument();
+    } finally {
+      mockPath = "/chat";
+    }
+  });
+});
+
 describe("AppShell top menu sections", () => {
   it.each([
     ["/work/automations", "work"],
@@ -270,6 +311,7 @@ describe("AppShell phone layout", () => {
     expect(screen.queryByTestId(AppFrameTestId.Rail)).toBeNull();
     const actions = screen.getByTestId(MobileToolbarTestId.Actions);
     expect(actions).toContainElement(screen.getByTestId(AppShellTestId.PinToggle));
+    expect(actions).toContainElement(screen.getByTestId(AppShellTestId.NewNote));
     expect(actions).toContainElement(screen.getByTestId(AppShellTestId.NewTask));
     expect(actions).toContainElement(screen.getByTestId(AppShellTestId.PageActions));
   });
