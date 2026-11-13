@@ -140,10 +140,14 @@ describe("ChatDock (ZB-12)", () => {
     window.localStorage.clear();
   });
 
-  it("renders collapsed with no target chip for the automatic default and the attach control back (D-020)", () => {
+  it("renders closed as the chat bubble; opening it shows the composer with attach and no default target chip (D-020)", async () => {
     renderDock({ open: false });
     expect(screen.getByTestId(DockFrameTestId.Root)).toBeInTheDocument();
+    const launcher = screen.getByTestId(DockFrameTestId.Launcher);
+    expect(launcher).toHaveAccessibleName("Otevřít chat");
     expect(screen.queryByTestId(DockFrameTestId.Transcript)).not.toBeInTheDocument();
+    await userEvent.setup().click(launcher);
+    expect(screen.getByTestId(DockFrameTestId.Transcript)).toBeInTheDocument();
     // No chip for the obvious default (item 28) — only an explicit explicit
     // target earns one (see the department-scoped test below).
     expect(screen.queryByTestId(ChatDockTestId.TargetChip)).not.toBeInTheDocument();
@@ -389,9 +393,16 @@ describe("ChatDock (ZB-12)", () => {
     expect(screen.getAllByTestId(TypingDotsTestId.Dot)).toHaveLength(3);
   });
 
-  it("still sends from the collapsed dock when the server has no active thread (mints after hydration settles)", async () => {
+  it("focuses the message box (not the hidden file input) after opening from the bubble", async () => {
+    renderDock({ open: false });
+    await userEvent.setup().click(screen.getByTestId(DockFrameTestId.Launcher));
+    expect(screen.getByTestId(CommandLineTestId.Input)).toHaveFocus();
+  });
+
+  it("sends after opening from the bubble when the server has no active thread (mints after hydration settles)", async () => {
     transcriptState.isError = true;
     renderDock({ open: false });
+    await userEvent.setup().click(screen.getByTestId(DockFrameTestId.Launcher));
     await typeAndSend("first message ever");
     expect(sendMutate).toHaveBeenCalledTimes(1);
     const body = sendMutate.mock.calls[0]?.[0]?.body as Record<string, unknown>;
