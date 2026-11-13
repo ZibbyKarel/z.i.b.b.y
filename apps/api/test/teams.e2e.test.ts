@@ -150,6 +150,33 @@ describe("Teams API (e2e)", () => {
     await fs.rm(kb, { recursive: true, force: true });
   });
 
+  it("writes an operator note into the team KB inbox", async () => {
+    const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-capture-"));
+    const http = app.getHttpServer();
+    await request(http)
+      .post(BASE)
+      .send({
+        id: "captureteam",
+        name: "C",
+        desc: "d",
+        knowledgeBase: { kind: "vault", path: kb, readOnly: true },
+      })
+      .expect(201);
+    const url = `${BASE}/captureteam/kb/notes`;
+
+    const ok = await request(http)
+      .post(url)
+      .send({ title: "Hello", body: "# Hello\n\nworld" })
+      .expect(201);
+    expect(ok.body.id).toMatch(/^inbox\/note-hello-[a-z0-9]+\.md$/);
+    await fs.access(path.join(kb, ok.body.id));
+    await request(http).post(`${BASE}/ghost/kb/notes`).send({ title: "x", body: "y" }).expect(404);
+    await request(http).post(url).send({ title: "x", body: "" }).expect(400);
+
+    await request(http).delete(`${BASE}/captureteam`).expect(200);
+    await fs.rm(kb, { recursive: true, force: true });
+  });
+
   it("browses a team KB read-only: list, open note, 404s, no escape", async () => {
     const kb = await fs.mkdtemp(path.join(os.tmpdir(), "teams-e2e-kb-browse-"));
     const outside = path.join(path.dirname(kb), `outside-${path.basename(kb)}.md`);

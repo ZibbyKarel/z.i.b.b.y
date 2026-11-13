@@ -3,6 +3,7 @@ import { z } from "zod";
 import { MemoryGraphSchema } from "../memory/memory.schema";
 import { EmptyBodySchema, ErrorSchema } from "../common.schema";
 import {
+  CreateTeamKbNoteSchema,
   CreateTeamSchema,
   ResolveTeamKbQuestionSchema,
   TeamIdSchema,
@@ -97,6 +98,15 @@ export const teamsContract = c.router(
       responses: { 201: TeamKbAnswerSchema, 404: ErrorSchema, 409: ErrorSchema },
       summary:
         "Resolve an open question: writes an answer note to the KB inbox/ so the digest stops listing it; 404 when the team, KB or question is missing, 409 when it is already answered",
+    },
+    createTeamKbNote: {
+      method: "POST",
+      path: "/teams/:id/kb/notes",
+      pathParams: z.object({ id: TeamIdSchema }),
+      body: CreateTeamKbNoteSchema,
+      responses: { 201: TeamKbNoteSummarySchema, 404: ErrorSchema, 409: ErrorSchema },
+      summary:
+        "Write one operator note to the team KB's inbox/; 404 when the team or its KB is missing, 409 when inbox/ is unsafe",
     },
     getTeamKbIngest: {
       method: "GET",

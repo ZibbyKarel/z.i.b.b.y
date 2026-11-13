@@ -9,6 +9,7 @@ import {
   KbAnswerService,
   KbQuestionNotFoundError,
   answerFileName,
+  noteFileName,
 } from "./kb-answer.service";
 import { KbReaderService } from "./kb-reader.service";
 
@@ -80,6 +81,61 @@ describe("KbAnswerService", () => {
   it("refuses a symlinked inbox", async () => {
     await fs.symlink(other, path.join(root, "inbox"));
     await expect(service.resolve(kb(), input)).rejects.toBeInstanceOf(KbAnswerConflictError);
+    expect(await fs.readdir(other)).toEqual([]);
+  });
+});
+
+describe("KbAnswerService.capture", () => {
+  let root: string;
+  let other: string;
+  const service = new KbAnswerService(new KbReaderService());
+  const kb = (): KnowledgeBaseSource => ({ kind: "vault", path: root, readOnly: true });
+  const now = 1_700_000_000_000;
+
+  beforeEach(async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "kb-capture-test-"));
+    other = await fs.mkdtemp(path.join(os.tmpdir(), "kb-capture-other-"));
+  });
+  afterEach(async () => {
+    await fs.rm(root, { recursive: true, force: true });
+    await fs.rm(other, { recursive: true, force: true });
+  });
+
+  it("writes one inbox note with title/created frontmatter", async () => {
+    const out = await service.capture(
+      kb(),
+      { title: "Nápad X", body: "# Nápad X\n\ntext" },
+      "2026-11-13",
+      now,
+    );
+    expect(out).toEqual({
+      id: `inbox/${noteFileName("Nápad X", now)}`,
+      title: "Nápad X",
+      folder: "inbox",
+    });
+    const parsed = matter(await fs.readFile(path.join(root, out.id), "utf8"));
+    expect(parsed.data).toEqual({ title: "Nápad X", created: "2026-11-13" });
+    expect(parsed.content).toContain("text");
+  });
+
+  it("noteFileName is filename-safe", () => {
+    expect(noteFileName("Nápad X", 36)).toBe("note-napad-x-10.md");
+    expect(noteFileName("???", 36)).toBe("note-note-10.md");
+  });
+
+  it("409 when the same file already exists", async () => {
+    const first = await service.capture(kb(), { title: "A", body: "one" }, "2026-11-13", now);
+    await expect(
+      service.capture(kb(), { title: "A", body: "two" }, "2026-11-13", now),
+    ).rejects.toBeInstanceOf(KbAnswerConflictError);
+    expect(await fs.readFile(path.join(root, first.id), "utf8")).toContain("one");
+  });
+
+  it("refuses a symlinked inbox", async () => {
+    await fs.symlink(other, path.join(root, "inbox"));
+    await expect(
+      service.capture(kb(), { title: "A", body: "b" }, "2026-11-13", now),
+    ).rejects.toBeInstanceOf(KbAnswerConflictError);
     expect(await fs.readdir(other)).toEqual([]);
   });
 });
