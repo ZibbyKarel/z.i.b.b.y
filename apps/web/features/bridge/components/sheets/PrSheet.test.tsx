@@ -15,12 +15,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ChatAboutButtonTestId } from "../../../chat/components/ChatAboutButton";
 import { ChatProvider, useChat } from "../../../chat/ChatContext";
 import { fireEvent, renderWithProviders, screen, within } from "../../../../test/render";
+import { prListHref } from "../../../inbox/inbox";
 import { PrActionsTestId } from "../../../inbox/components/PrActionButtons";
 import { PrReviewersTestId } from "../../../inbox/components/PrReviewers";
 import { EntityRunListTestId } from "../../../runs/components/EntityRunList";
 import { PrSheet, PrSheetTestId } from "./PrSheet";
 
-const { hooks, setDraft, closePr } = vi.hoisted(() => ({
+const { hooks, setDraft, closePr, push } = vi.hoisted(() => ({
+  push: vi.fn(),
   setDraft: vi.fn(),
   closePr: vi.fn(),
   hooks: {
@@ -31,7 +33,7 @@ const { hooks, setDraft, closePr } = vi.hoisted(() => ({
   },
 }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn() }),
   usePathname: () => "/dashboard",
   useSearchParams: () => new URLSearchParams(""),
 }));
@@ -138,6 +140,7 @@ const confirmClose = () => {
 afterEach(() => {
   setDraft.mockReset();
   closePr.mockReset();
+  push.mockReset();
   hooks.prs = [];
   hooks.diff = "";
   hooks.items = [];
@@ -212,7 +215,7 @@ describe("PrSheet header actions", () => {
 });
 
 describe("PrSheet content", () => {
-  it("renders status, the stack breadcrumb and no stat cells", () => {
+  it("renders status, the stack as the header's last row and no stat cells", () => {
     const base = pr(10, { headRef: "base", baseRef: "main" });
     const top = pr(11, {
       headRef: "top",
@@ -225,6 +228,37 @@ describe("PrSheet content", () => {
     expect(screen.queryByTestId(StatCellTestId.Root)).toBeNull();
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`)).toHaveTextContent("#11");
     expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`)).toHaveTextContent("#10");
+    const trail = screen.getByTestId(AnchoredSheetTestId.Trail);
+    expect(screen.getByTestId(AnchoredSheetTestId.Header).lastElementChild).toBe(trail);
+    expect(trail).toContainElement(screen.getByTestId(StackCrumbsTestId.Root));
+    expect(
+      screen.getByTestId(AnchoredSheetTestId.Meta).compareDocumentPosition(trail) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("has no trail without a stack", () => {
+    show(pr(12, {}));
+    expect(screen.queryByTestId(AnchoredSheetTestId.Trail)).toBeNull();
+  });
+
+  it("stack PR ids open that PR's sheet; the current one is not a link", () => {
+    const base = pr(10, { headRef: "base", baseRef: "main" });
+    const top = pr(11, { headRef: "top", baseRef: "base" });
+    hooks.prs = [base, top];
+    const onOpen = vi.fn();
+    const { unmount } = renderWithProviders(
+      <PrSheet anchor={anchor} id={top.url} onClose={() => {}} onOpen={onOpen} />,
+    );
+    fireEvent.click(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`));
+    expect(onOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "pr", id: base.url, widgetId: "prs" }),
+    );
+    expect(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${top.url}`).tagName).not.toBe("BUTTON");
+    unmount();
+    renderWithProviders(<PrSheet anchor={anchor} id={top.url} onClose={() => {}} />);
+    fireEvent.click(screen.getByTestId(`${StackCrumbsTestId.Crumb}-${base.url}`));
+    expect(push).toHaveBeenCalledWith(prListHref(base.url));
   });
 
   it("makes the PR number in the header copyable", () => {
@@ -270,6 +304,9 @@ describe("PrSheet content", () => {
     expect(project).toHaveTextContent("API service");
     expect(project).toHaveTextContent("acme/api");
     expect(screen.getByTestId(`${MetricStripTestId.Item}-issue`)).toHaveTextContent("ZB-9");
+    const link = screen.getByTestId(PrSheetTestId.IssueLink);
+    expect(link).toHaveTextContent(/^ZB-9$/);
+    expect(within(link).getByTestId(PrSheetTestId.IssueSource)).toHaveAccessibleName("Jira");
   });
 
   it("drops the Issue column when no issue is linked", () => {
@@ -303,7 +340,11 @@ describe("PrSheet content", () => {
   it("puts Fix CI into the checks summary when CI is red, not into the header", () => {
     const { unmount } = show(pr(14, { ci: "failing", headRef: "feat" }));
     const checks = screen.getByTestId(`${MetricStripTestId.Item}-checks`);
-    expect(within(checks).getByTestId(PrActionsTestId.FixCi)).toBeInTheDocument();
+    expect(
+      within(within(checks).getByTestId(MetricStripTestId.ValueRow)).getByTestId(
+        PrActionsTestId.FixCi,
+      ),
+    ).toBeInTheDocument();
     expect(
       within(screen.getByTestId(AnchoredSheetTestId.Actions)).queryByTestId(PrActionsTestId.FixCi),
     ).toBeNull();
@@ -315,6 +356,11 @@ describe("PrSheet content", () => {
   it("offers convert-to-draft / ready-for-review on my PR by its draft state", () => {
     const { unmount } = show(pr(40, {}));
     const state = screen.getByTestId(`${MetricStripTestId.Item}-state`);
+    expect(
+      within(within(state).getByTestId(MetricStripTestId.ValueRow)).getByTestId(
+        PrSheetTestId.DraftToggle,
+      ),
+    ).toBeInTheDocument();
     fireEvent.click(within(state).getByTestId(PrSheetTestId.DraftToggle));
     expect(screen.getByTestId(PrSheetTestId.DraftToggle)).toHaveTextContent("Převést na draft");
     expect(setDraft).toHaveBeenCalledWith(
@@ -508,7 +554,7 @@ describe("PrSheet runs and issue link", () => {
     expect(screen.queryByTestId(EntityRunListTestId.Root)).toBeNull();
   });
 
-  it("shows the reviewers tree next to the runs, and alone without runs", () => {
+  it("shows the reviewers next to the summary strip, not in the runs section", () => {
     hooks.reviewers = {
       teams: [],
       users: [{ login: "ann", state: "approved", commented: false }],
@@ -521,10 +567,12 @@ describe("PrSheet runs and issue link", () => {
       }),
     );
     const reviewers = screen.getByTestId(PrReviewersTestId.Root);
-    // Same row as the runs, as its last (right-most) child.
     const row = reviewers.parentElement!;
-    expect(row).toContainElement(screen.getByTestId(EntityRunListTestId.Root));
+    expect(row).toContainElement(screen.getByTestId(MetricStripTestId.Root));
     expect(row.lastElementChild).toBe(reviewers);
+    expect(row).not.toContainElement(screen.getByTestId(EntityRunListTestId.Root));
+    expect(screen.getByTestId(PrSheetTestId.Summary)).toContainElement(reviewers);
+    expect(row).toHaveStyle({ flexWrap: "wrap" });
     unmount();
     show(pr(33, {}));
     expect(screen.getByTestId(PrReviewersTestId.Root)).toBeInTheDocument();
