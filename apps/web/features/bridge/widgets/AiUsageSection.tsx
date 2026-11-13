@@ -26,7 +26,7 @@ export enum AiUsageSectionTestId {
 const NOW_TICK_MS = 30_000;
 
 export interface AiUsageSectionProps {
-  /** Claude's 5h + weekly lines (default true). The top bar's sheet passes false: the bar already shows them as rings. */
+  /** Claude's 5h + weekly lines (default true). The top bar's sheet passes false: the operator trimmed them from the sheet (todo-5). */
   claudeLimits?: boolean;
 }
 
