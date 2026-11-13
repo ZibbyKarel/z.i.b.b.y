@@ -16,6 +16,7 @@ export enum AnchoredSheetTestId {
   Actions = "anchored-sheet-actions",
   Chip = "anchored-sheet-chip",
   Meta = "anchored-sheet-meta",
+  Trail = "anchored-sheet-trail",
   Body = "anchored-sheet-body",
   Footer = "anchored-sheet-footer",
   FooterNote = "anchored-sheet-footer-note",
@@ -42,6 +43,8 @@ export interface AnchoredSheetProps {
   meta?: ReactNode;
   /** Meta chips under the title. */
   chips?: readonly string[];
+  /** Last header row, under meta and chips (e.g. a PR stack). */
+  trail?: ReactNode;
   /** Colour of the 4px top border. */
   tone?: SheetTone;
   onClose: () => void;
@@ -80,6 +83,7 @@ export function AnchoredSheet({
   actions,
   meta,
   chips = [],
+  trail,
   tone = "neutral",
   onClose,
   closeLabel,
@@ -202,6 +206,7 @@ export function AnchoredSheet({
               ))}
             </div>
           ) : null}
+          {trail ? <div data-testid={AnchoredSheetTestId.Trail}>{trail}</div> : null}
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto" data-testid={AnchoredSheetTestId.Body}>
           {children}

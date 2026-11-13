@@ -128,6 +128,33 @@ describe("AnchoredSheet", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
     expect(screen.getByTestId(AnchoredSheetTestId.Close)).toHaveAccessibleName("Close");
   });
+  it("renders the trail as the header's last row only when given", () => {
+    const { rerender } = render(
+      <AnchoredSheet
+        closeLabel="Close"
+        kind="K"
+        meta={<span>m</span>}
+        onClose={() => {}}
+        title="T"
+        trail={<span>STACK</span>}
+        {...geo}
+      />,
+    );
+    const trail = screen.getByTestId(AnchoredSheetTestId.Trail);
+    expect(screen.getByTestId(AnchoredSheetTestId.Header).lastElementChild).toBe(trail);
+    expect(trail).toHaveTextContent("STACK");
+    rerender(
+      <AnchoredSheet
+        closeLabel="Close"
+        kind="K"
+        meta={<span>m</span>}
+        onClose={() => {}}
+        title="T"
+        {...geo}
+      />,
+    );
+    expect(screen.queryByTestId(AnchoredSheetTestId.Trail)).toBeNull();
+  });
 });
 
 describe("SheetAction", () => {

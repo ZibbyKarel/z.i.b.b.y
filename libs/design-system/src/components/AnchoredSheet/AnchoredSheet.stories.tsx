@@ -17,6 +17,15 @@ const meta: Meta<typeof AnchoredSheet> = {
     hint: "J / K · ESC",
     title: "Add retry budget to the runner",
     chips: ["ZIBBY/API", "FEAT → MAIN", "BY YOU"],
+    trail: (
+      <StackCrumbs
+        crumbs={[
+          { id: "1", label: "#212", tone: "done", onSelect: () => {} },
+          { id: "2", label: "#214", tone: "blocked", current: true },
+        ]}
+        label="STACK"
+      />
+    ),
     tone: "blocked",
     closeLabel: "Close",
     onClose: () => {},
@@ -49,13 +58,6 @@ const body = (
       <StatCell label="CHECKS" tone="working" value="4 / 4" />
       <StatCell label="CHANGES" tone="faint" value="+120 −14" />
     </StatCellGrid>
-    <StackCrumbs
-      crumbs={[
-        { id: "1", label: "#212", tone: "done" },
-        { id: "2", label: "#214", tone: "blocked", current: true },
-      ]}
-      label="STACK"
-    />
     <SheetSection>
       <SheetBlock label="DESCRIPTION">
         <SheetText lines={["Adds a bounded retry budget so a flaky step cannot loop forever."]} />
